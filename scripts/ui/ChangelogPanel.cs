@@ -1,4 +1,5 @@
 using Godot;
+using System.Collections.Generic;
 
 [GlobalClass]
 public partial class ChangelogPanel : UiPanel
@@ -61,14 +62,10 @@ public partial class ChangelogPanel : UiPanel
         Open();
     }
 
-    public void ShowControllerLayerOffer(string bodyText, string acceptText, string declineText)
-    {
-        ShowPrompt(PromptSubject.ControllerLayer, bodyText, acceptText, declineText);
-    }
-
     public void ShowPrompt(PromptSubject subject, string bodyText, string acceptText, string declineText)
     {
         ActiveSubject = subject;
+        RemoveChoices();
 
         if (notesLabel != null)
         {
@@ -81,13 +78,107 @@ public partial class ChangelogPanel : UiPanel
         Open();
     }
 
+    [Signal]
+    public delegate void ChoiceMadeEventHandler(int choiceIndex);
+
+    private VBoxContainer choiceList;
+
+    public bool IsShowingChoices => choiceList != null;
+
+    public void ShowChoices(PromptSubject subject, string bodyText, IReadOnlyList<string> choiceTexts, int focusedChoiceIndex)
+    {
+        ActiveSubject = subject;
+        RemoveChoices();
+
+        if (notesLabel != null)
+        {
+            notesLabel.Text = bodyText;
+        }
+
+        Control buttonRow = acceptButton?.GetParent<Control>();
+        Node promptLayout = buttonRow?.GetParent();
+
+        if (promptLayout == null)
+        {
+            return;
+        }
+
+        choiceList = new VBoxContainer();
+        choiceList.AddThemeConstantOverride("separation", 5);
+
+        for (int choiceIndex = 0; choiceIndex < choiceTexts.Count; choiceIndex++)
+        {
+            int pressedChoiceIndex = choiceIndex;
+            var choiceButton = new Button();
+            choiceButton.ThemeTypeVariation = "ListButton";
+            choiceButton.Text = choiceTexts[choiceIndex];
+            choiceButton.Pressed += () => EmitSignal(SignalName.ChoiceMade, pressedChoiceIndex);
+            choiceList.AddChild(choiceButton);
+        }
+
+        promptLayout.AddChild(choiceList);
+        promptLayout.MoveChild(choiceList, buttonRow.GetIndex());
+        buttonRow.Visible = false;
+
+        Open();
+
+        Button focusedChoice = choiceList.GetChild<Button>(System.Math.Clamp(focusedChoiceIndex, 0, choiceTexts.Count - 1));
+        focusedChoice.CallDeferred(Control.MethodName.GrabFocus);
+    }
+
+    private void RemoveChoices()
+    {
+        if (choiceList == null)
+        {
+            return;
+        }
+
+        choiceList.QueueFree();
+        choiceList = null;
+
+        if (acceptButton?.GetParent() is Control buttonRow)
+        {
+            buttonRow.Visible = true;
+        }
+    }
+
     public override bool HandleInput(InputEvent inputEvent)
     {
         if (State == PanelState.Closing) return true;
 
+        if (IsShowingChoices)
+        {
+            return HandleChoiceInput(inputEvent);
+        }
+
         if (inputEvent.IsActionPressed("ui_accept") || inputEvent.IsActionPressed("Select"))
         {
             EmitAccepted();
+        }
+        else if (inputEvent.IsActionPressed("ui_cancel") || inputEvent.IsActionPressed("Back"))
+        {
+            EmitDismissed();
+        }
+
+        return true;
+    }
+
+    private bool HandleChoiceInput(InputEvent inputEvent)
+    {
+        if (inputEvent.IsActionPressed("ui_up", true) || inputEvent.IsActionPressed("MoveUp"))
+        {
+            FocusCycler.Cycle(choiceList, -1);
+        }
+        else if (inputEvent.IsActionPressed("ui_down", true) || inputEvent.IsActionPressed("MoveDown"))
+        {
+            FocusCycler.Cycle(choiceList, 1);
+        }
+        else if (inputEvent.IsActionPressed("ui_accept") || inputEvent.IsActionPressed("Select"))
+        {
+            if (GetViewport().GuiGetFocusOwner() is Button focusedChoice && focusedChoice.GetParent() == choiceList)
+            {
+                EmitSignal(SignalName.ChoiceMade, focusedChoice.GetIndex());
+            }
         }
         else if (inputEvent.IsActionPressed("ui_cancel") || inputEvent.IsActionPressed("Back"))
         {

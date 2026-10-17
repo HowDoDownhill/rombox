@@ -107,9 +107,14 @@ host's router needs UPnP turned on.
 
 Any controller your PC recognises works in the app. For games:
 
-- **Windows**: the app offers, once, to install a small driver (Automatic Controller Mapping). With it, every emulator sees the same virtual Xbox controller, whatever you are
-  holding, and you set player order by pressing a button on each pad
-  (**Start > Assign Controllers**).
+- **Windows**: at first startup the app asks how to set up controllers for your emulators:
+  - **Steam Input**, if you start the app from Steam with Steam Input on.
+  - **ViGEm**, if you start the app on its own. Xbox controllers go straight to the emulator and
+    other controllers appear as an Xbox 360 pad through a small driver.
+  - **Manual**, to set up each emulator yourself.
+
+  With Steam Input or ViGEm, player 1 is always your first controller; set the order with
+  **Start > Assign Controllers**. [Controller setup](docs/CONTROLLERS.md) has a guide for each.
 - **Linux**: emulators use your controller directly. Xbox-style pads work without setup.
 - **Wii** games use real Wii Remotes over Bluetooth. Press 1+2 on the remote while the game runs.
 
@@ -122,7 +127,7 @@ Open **Start > Settings**.
 - **General Settings**: app theme, background style, interface size (useful on a TV or a
   handheld), and on Windows a preference for the dedicated GPU.
 - **Input Settings**: the combination that closes an emulator and how long to hold it, and on
-  Windows the Automatic Controller Mapping switch.
+  Windows the Controller Setup method.
 - **Each system**: which emulator it uses and that emulator's options, such as resolution or,
   for RetroArch, the core.
 
@@ -147,8 +152,9 @@ To move games, saves, BIOS or emulators to another drive, see
   and that the API key is still valid in RomM.
 - **A game won't start**: open the system's settings and try reinstalling its emulator, or pick
   a different one. Some systems (PS1, PS2) need a BIOS file in RomM's firmware section.
-- **Wrong buttons in a game**: on Windows, turn on **Automatic Controller Mapping** in
-  **Settings > Input Settings**.
+- **Wrong buttons or no controller in a game**: on Windows, check **Controller Setup** in
+  **Settings > Input Settings** matches how you started the app. See
+  [Controller setup](docs/CONTROLLERS.md#when-a-controller-does-not-work).
 - **Report a problem**: open an
   [issue](https://github.com/HowDoDownhill/romm-frontend/issues) and include
   `romm-frontend.console.exe` output on Windows, or the terminal output of `romm-frontend.sh`

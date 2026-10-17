@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 public class MainSceneInputHandler
@@ -158,13 +159,21 @@ public class MainSceneInputHandler
 
     private const float DriverInstallResultVisibleSeconds = 3.0f;
 
-    private const string ControllerLayerOfferBody =
-        "[b]Set up your controllers automatically?[/b]\n\n" +
-        "RomM can present every controller to your emulators as an Xbox 360 pad, and configure each emulator's controls for you.\n\n" +
-        "• Any controller works the same. PlayStation, Switch Pro, 8BitDo and others are translated to the Xbox 360 layout emulators expect.\n" +
-        "• Player 1 stays Player 1, in the order you plug controllers in.\n" +
-        "• Emulator controls are set up for you, instead of configuring each one by hand.\n\n" +
-        "This writes controller settings into your emulator configuration files. You can turn it off at any time in Settings.";
+    private static string BuildControllerSetupOfferBody()
+    {
+        var body = new System.Text.StringBuilder();
+        body.Append("[b]How should RomM set up your controllers?[/b]\n\n");
+        body.Append("RomM can point each emulator at the right controller for every player, so Player 1 stays Player 1.\n\n");
+
+        foreach (ControllerSetupMethod method in ControllerSetupMethod.All)
+        {
+            string recommendation = method == ControllerSetupMethod.Recommended ? " (Recommended)" : "";
+            body.Append($"• [b]{method.Title}{recommendation}[/b]: {method.Description}\n");
+        }
+
+        body.Append("\nYou can change this at any time in Settings > Input Settings.");
+        return body.ToString();
+    }
 
     public void OfferControllerLayerIfNotYetAsked()
     {
@@ -173,7 +182,7 @@ public class MainSceneInputHandler
             return;
         }
 
-        if (OS.HasFeature("android"))
+        if (!OperatingSystem.IsWindows() || OS.HasFeature("android"))
         {
             return;
         }
@@ -183,15 +192,26 @@ public class MainSceneInputHandler
             return;
         }
 
-        mainScene.changelogPanel.ShowControllerLayerOffer(ControllerLayerOfferBody, "Set Up Controllers", "No Thanks");
+        List<string> choiceTexts = ControllerSetupMethod.All
+            .Select(method => method == ControllerSetupMethod.Recommended ? $"{method.Title} (Recommended)" : method.Title)
+            .ToList();
+
+        mainScene.changelogPanel.ShowChoices(
+            ChangelogPanel.PromptSubject.ControllerLayer,
+            BuildControllerSetupOfferBody(),
+            choiceTexts,
+            ControllerSetupMethod.All.ToList().IndexOf(ControllerSetupMethod.Recommended));
     }
 
-    public async void OnControllerLayerOfferAccepted()
+    public async void OnControllerSetupMethodChosen(ControllerSetupMethod method)
     {
-        appInstance.configManager.SaveControllerMappingConsent(ConfigManager.ControllerMappingConsentAccepted);
-        GD.Print("[InputLayer] the user accepted automatic controller mapping.");
+        appInstance.configManager.SaveControllerMappingConsent(method.ConsentValue);
+        GD.Print($"[InputLayer] the user chose {method.Title} for controller setup.");
 
-        await InstallVirtualPadDriverIfMissing();
+        if (method == ControllerSetupMethod.VirtualPads)
+        {
+            await InstallVirtualPadDriverIfMissing();
+        }
     }
 
     private async Task InstallVirtualPadDriverIfMissing()
@@ -217,12 +237,6 @@ public class MainSceneInputHandler
         {
             GD.PrintErr("[InputLayer] the virtual controller driver is unavailable; emulators will keep their own controller settings.");
         }
-    }
-
-    public void OnControllerLayerOfferDeclined()
-    {
-        appInstance.configManager.SaveControllerMappingConsent(ConfigManager.ControllerMappingConsentDeclined);
-        GD.Print("[InputLayer] the user declined automatic controller mapping; emulators keep their own controller settings.");
     }
 
     public void BeginControllerAssignment()
@@ -291,7 +305,7 @@ public class MainSceneInputHandler
         if (isListeningForControllerAssignment)
         {
             int nextPlayerNumber = assignedControllerDeviceIds.Count + 1;
-            mainScene.assignControllersButton.Text = $"Press a Button on Player {nextPlayerNumber}'s Controller...";
+            mainScene.assignControllersButton.Text = $"Player {nextPlayerNumber}: Press a Button";
             return;
         }
 
@@ -299,7 +313,7 @@ public class MainSceneInputHandler
 
         mainScene.assignControllersButton.Text = assignedOrder == null || assignedOrder.Count == 0
             ? "Assign Controllers"
-            : $"Assign Controllers [{assignedOrder.Count} in Order]";
+            : $"Assign Controllers ({assignedOrder.Count} Set)";
     }
 
     public void UpdateEmulatorCloseHotkeysBtnText()

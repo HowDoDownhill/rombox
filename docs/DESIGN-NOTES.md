@@ -3379,6 +3379,31 @@ Steam Input falls out of the same rule. Inside a process Steam hooks, every pad 
 pad (`28DE/11FF`) that reports an XInput slot, so all of them pass through and no ViGEm pad is made
 for Steam to wrap.
 
+### Controller setup is a choice of three methods
+
+The first-run prompt used to be yes or no on the virtual-pad layer. Steam Input made a third case
+worth naming: inside Steam every pad is already a virtual Xbox pad, ViGEm adds nothing, and asking
+a Steam user to install a kernel driver is a cost with no benefit. The prompt now offers Steam
+Input, ViGEm and Manual, stored in `[Input] ControllerMappingConsent` as `steam_input`, `accepted`
+and `declined`. The old values keep their meaning, so existing configs need no migration.
+
+| Method | Players | Virtual pads | Driver install |
+|---|---|---|---|
+| Steam Input | every pad passes through, XInput slot or not | never | never |
+| ViGEm | XInput pads pass through, others get a virtual pad | for non-XInput pads | offered on choosing it |
+| Manual | no session | never | never |
+
+Steam Input passes non-XInput pads through too. Under Steam with Steam Input on there are none, and
+outside Steam the probe can still match a passed-through pad by VID/PID for emulators that number by
+list position or name; slot-numbered emulators (PCSX2, DuckStation) get an empty reference for it.
+The recommendation follows `SteamAppId`, which Steam sets for a non-Steam shortcut.
+
+The prompt and the Settings row are Windows-only. On Linux no virtual-pad backend exists and the
+layer never starts a session, so the question had no effect there.
+
+The prompt is the update panel's choice mode: a focusable list of options below the text, cycled
+with up and down. Back picks Manual, as "No Thanks" did.
+
 ### Device references come from probing the emulator's own SDL view
 
 The index macros were measured with only virtual pads visible, which made "player N is device N"

@@ -222,7 +222,15 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
 
 - [ ] Linux: startup logs no `InputLayer` exception, and the controller settings report virtual
       controllers as unavailable on this platform.
-- [ ] First launch asks once whether to use the controller layer. The answer persists.
+- [ ] Windows first launch asks once for a Controller Setup method (Steam Input, ViGEm, Manual),
+      with Steam Input recommended when started from Steam and ViGEm otherwise. The answer
+      persists and shows in **Settings > Input Settings > Controller Setup**. Linux never asks.
+- [ ] Steam Input: no ViGEm prompt appears, and the launch log reports `0 on virtual pads` with
+      every pad passed through.
+- [ ] Manual: launching a game writes no `[InputLayer]` binding lines and leaves emulator
+      controller configs unchanged.
+- [ ] **Start > Assign Controllers** keeps the start menu its usual width while it shows
+      `Player N: Press a Button`, at every interface size.
 - [ ] Windows: accepting installs ViGEmBus with a single UAC prompt, and the layer reports working
       afterwards. Declining UAC leaves the app usable with the layer off.
 - [ ] With the layer on, each emulator gets every player in player order, whatever is physically

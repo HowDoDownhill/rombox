@@ -8,6 +8,7 @@ public enum InputLayerConsent
 {
     Unasked,
     Accepted,
+    SteamInput,
     Declined
 }
 
@@ -148,7 +149,9 @@ public partial class InputLayer : Node
     {
         EndSession();
 
-        if (ResolveConsent() != InputLayerConsent.Accepted)
+        InputLayerConsent consent = ResolveConsent();
+
+        if (consent != InputLayerConsent.Accepted && consent != InputLayerConsent.SteamInput)
         {
             LastSessionFailureReason = "automatic controller mapping has not been enabled";
             return false;
@@ -167,6 +170,11 @@ public partial class InputLayer : Node
             .Take(Math.Min(physicalPads.Count, ResolveMaximumPlayers(emulatorMetadata)))
             .Select(DescribePlayer)
             .ToList();
+
+        if (consent == InputLayerConsent.SteamInput)
+        {
+            candidatePlayers.ForEach(player => player.IsPassthrough = true);
+        }
 
         if (candidatePlayers.Any(player => !player.IsPassthrough) && !virtualPadBackend.IsAvailable)
         {
@@ -502,8 +510,9 @@ public partial class InputLayer : Node
 
         switch (storedConsent)
         {
-            case "accepted": return InputLayerConsent.Accepted;
-            case "declined": return InputLayerConsent.Declined;
+            case ConfigManager.ControllerMappingConsentAccepted: return InputLayerConsent.Accepted;
+            case ConfigManager.ControllerMappingConsentSteamInput: return InputLayerConsent.SteamInput;
+            case ConfigManager.ControllerMappingConsentDeclined: return InputLayerConsent.Declined;
             default: return InputLayerConsent.Unasked;
         }
     }

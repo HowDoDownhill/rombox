@@ -184,8 +184,8 @@ Supported config formats: INI, CFG and TOML, JSON, and BML.
 ## Controller bindings
 
 Most emulators ship a controller config in `install_scripts/<emulator>/default_config/`. With
-Automatic Controller Mapping on (Windows), the app also points each emulator at its virtual
-controller on every launch. Dolphin identifies pads by name: if yours shows as disconnected,
+Controller Setup set to Steam Input or ViGEm (Windows), the app also points each emulator at every
+player's controller on every launch; see [Controller setup](CONTROLLERS.md). Dolphin identifies pads by name: if yours shows as disconnected,
 select it once in Dolphin's own controller settings.
 
 ## Custom themes

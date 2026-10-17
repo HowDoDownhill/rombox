@@ -117,6 +117,8 @@ text = "Join Session"
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Assign Controllers"
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="SettingsButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
 theme_type_variation = &"ListButton"

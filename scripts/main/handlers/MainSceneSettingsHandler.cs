@@ -500,33 +500,41 @@ public class MainSceneSettingsHandler
         scrollContainer.AddChild(vbox);
         mainScene.sectionOptionsContainer.AddChild(formContainer);
 
-        HBoxContainer automaticMappingBox = new HBoxContainer();
-        Label automaticMappingLabel = new Label();
-        automaticMappingLabel.Text = "Automatic Controller Mapping";
-        automaticMappingLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        automaticMappingBox.AddChild(automaticMappingLabel);
+        HBoxContainer controllerSetupBox = new HBoxContainer();
+        Label controllerSetupLabel = new Label();
+        controllerSetupLabel.Text = "Controller Setup";
+        controllerSetupLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        controllerSetupBox.AddChild(controllerSetupLabel);
 
-        Label automaticMappingStatus = new Label();
-        automaticMappingStatus.Text = DescribeInputLayerAvailability();
-        automaticMappingStatus.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
-        automaticMappingBox.AddChild(automaticMappingStatus);
+        Label controllerSetupStatus = new Label();
+        controllerSetupStatus.Text = DescribeInputLayerAvailability();
+        controllerSetupStatus.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
+        controllerSetupBox.AddChild(controllerSetupStatus);
 
-        CheckButton automaticMappingCheckbox = new CheckButton();
-        automaticMappingCheckbox.ButtonPressed = appInstance.configManager.ControllerMappingConsent == ConfigManager.ControllerMappingConsentAccepted;
+        CarouselButton controllerSetupOptionButton = new CarouselButton();
+        ControllerSetupMethod currentSetupMethod = ControllerSetupMethod.FromConsent(appInstance.configManager.ControllerMappingConsent) ?? ControllerSetupMethod.Manual;
 
-        automaticMappingCheckbox.Toggled += (bool toggledOn) =>
+        for (int methodIndex = 0; methodIndex < ControllerSetupMethod.All.Count; methodIndex++)
         {
-            appInstance.configManager.SaveControllerMappingConsent(toggledOn
-                ? ConfigManager.ControllerMappingConsentAccepted
-                : ConfigManager.ControllerMappingConsentDeclined);
-            automaticMappingStatus.Text = DescribeInputLayerAvailability();
+            controllerSetupOptionButton.AddItem(ControllerSetupMethod.All[methodIndex].Title, methodIndex);
+
+            if (ControllerSetupMethod.All[methodIndex] == currentSetupMethod)
+            {
+                controllerSetupOptionButton.Select(methodIndex);
+            }
+        }
+
+        controllerSetupOptionButton.ItemSelected += (long index) =>
+        {
+            mainScene.InputHandler.OnControllerSetupMethodChosen(ControllerSetupMethod.All[(int)index]);
+            controllerSetupStatus.Text = DescribeInputLayerAvailability();
         };
 
-        automaticMappingBox.AddChild(automaticMappingCheckbox);
-        var automaticMappingEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
-        automaticMappingEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(automaticMappingBox);
-        automaticMappingEntry.Visible = !OS.HasFeature("android");
-        vbox.AddChild(automaticMappingEntry);
+        controllerSetupBox.AddChild(controllerSetupOptionButton);
+        var controllerSetupEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        controllerSetupEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(controllerSetupBox);
+        controllerSetupEntry.Visible = OperatingSystem.IsWindows() && !OS.HasFeature("android");
+        vbox.AddChild(controllerSetupEntry);
 
         HBoxContainer countBox = new HBoxContainer();
         Label countLabel = new Label();
@@ -875,13 +883,20 @@ public class MainSceneSettingsHandler
             return "Unavailable";
         }
 
-        if (appInstance.configManager.ControllerMappingConsent != ConfigManager.ControllerMappingConsentAccepted)
+        InputLayerConsent consent = appInstance.inputLayer.ResolveConsent();
+
+        if (consent == InputLayerConsent.SteamInput)
+        {
+            return ControllerSetupMethod.IsLaunchedThroughSteam ? "Steam Handles Your Controllers" : "Not Launched Through Steam";
+        }
+
+        if (consent != InputLayerConsent.Accepted)
         {
             return "Emulators Use Their Own Controller Settings";
         }
 
         return appInstance.inputLayer.IsVirtualPadBackendAvailable
-            ? "Emulators Will See One Xbox 360 Pad Per Player"
+            ? "Non-Xbox Pads Appear as Xbox 360 Pads"
             : CapitaliseFirstLetter(appInstance.inputLayer.VirtualPadBackendUnavailableReason);
     }
 

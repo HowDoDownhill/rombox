@@ -204,6 +204,7 @@ public partial class ConfigManager : Node
     public const string ControllerMappingConsentUnasked = "unasked";
     public const string ControllerMappingConsentAccepted = "accepted";
     public const string ControllerMappingConsentDeclined = "declined";
+    public const string ControllerMappingConsentSteamInput = "steam_input";
 
     public int EmulatorCloseHotkeyCount { get; private set; }
     public float EmulatorCloseHoldSeconds { get; private set; }

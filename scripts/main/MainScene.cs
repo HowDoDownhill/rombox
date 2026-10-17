@@ -211,6 +211,7 @@ public partial class MainScene : Control
             panelStack.Register(changelogPanel);
             changelogPanel.Accepted += OnChangelogPanelAccepted;
             changelogPanel.Dismissed += OnChangelogPanelDismissed;
+            changelogPanel.ChoiceMade += OnChangelogPanelChoiceMade;
         }
 
         GameListHandler.SelectSystemByIndex(0);
@@ -1000,14 +1001,16 @@ public partial class MainScene : Control
             return;
         }
 
+        UpdaterHandler.OnAcceptUpdatePressed();
+    }
+
+    private void OnChangelogPanelChoiceMade(int choiceIndex)
+    {
         if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.ControllerLayer)
         {
             changelogPanel.Close();
-            InputHandler.OnControllerLayerOfferAccepted();
-            return;
+            InputHandler.OnControllerSetupMethodChosen(ControllerSetupMethod.All[choiceIndex]);
         }
-
-        UpdaterHandler.OnAcceptUpdatePressed();
     }
 
     private void OnChangelogPanelDismissed()
@@ -1029,7 +1032,7 @@ public partial class MainScene : Control
         if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.ControllerLayer)
         {
             changelogPanel.Close();
-            InputHandler.OnControllerLayerOfferDeclined();
+            InputHandler.OnControllerSetupMethodChosen(ControllerSetupMethod.Manual);
             return;
         }
 
