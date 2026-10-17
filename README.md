@@ -115,7 +115,8 @@ Any controller your PC recognises works in the app. For games:
 
   With ViGEm, set player order with **Start > Assign Controllers**; with Steam Input, Steam sets
   it. [Controller setup](docs/CONTROLLERS.md) has a guide for each.
-- **Linux**: emulators use your controller directly. Xbox-style pads work without setup.
+- **Linux**: emulators use your controller directly, and the app points Dolphin and gopher64 at
+  each player's controller when a game starts.
 - **Wii** games use real Wii Remotes over Bluetooth. Press 1+2 on the remote while the game runs.
 
 ## Settings

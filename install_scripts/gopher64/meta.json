@@ -10,6 +10,17 @@
     "linux": "gopher64",
     "macos": "gopher64"
   },
+  "controller_commands": {
+    "platforms": ["windows", "linux"],
+    "list_args": "--list-controllers",
+    "list_pattern": "^Controller ([0-9]+): (.*)$",
+    "first_controller_number": 1,
+    "assign_args": "--assign-controller {number} --port {port}",
+    "port_count": 4,
+    "config_file_relative_path": "portable_data/config/config.json",
+    "assignment_json_path": "input.controller_assignment",
+    "enabled_json_path": "input.controller_enabled"
+  },
   "launch_args_with_game": "\"{rom_path}\"",
   "launch_args_without_game": "",
   "install_recipe": {

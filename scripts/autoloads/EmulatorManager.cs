@@ -668,6 +668,9 @@ public class EmulatorMeta
     [JsonPropertyName("controller_config")]
     public ControllerConfig ControllerConfig { get; set; }
 
+    [JsonPropertyName("controller_commands")]
+    public ControllerCommands ControllerCommands { get; set; }
+
     [JsonPropertyName("netplay")]
     public NetplayConfig Netplay { get; set; }
 
@@ -940,6 +943,8 @@ public class ControllerConfig
 
     public string ResolveConfigFileRelativePath(string operatingSystem) => EmulatorSettingField.ResolveOsScopedValue(ConfigFileRelativePath, operatingSystem);
 
+    public List<ControllerSection> SectionsFor(string operatingSystem) => (ControllerSections ?? new List<ControllerSection>()).Where(section => section.AppliesTo(operatingSystem)).ToList();
+
     [JsonPropertyName("format")]
     public string Format { get; set; }
 
@@ -1020,6 +1025,11 @@ public class ControllerSection
 
     [JsonPropertyName("binding_value_replacements")]
     public Dictionary<string, string> BindingValueReplacements { get; set; }
+
+    [JsonPropertyName("platforms")]
+    public List<string> Platforms { get; set; }
+
+    public bool AppliesTo(string operatingSystem) => Platforms == null ? operatingSystem == "windows" : Platforms.Contains(operatingSystem);
 }
 
 public partial class EmulatorManager : Node
@@ -2504,7 +2514,7 @@ public partial class EmulatorManager : Node
                 return;
             }
 
-            launchArguments = launchArguments.Replace("{rom_path}", fullRomPath);
+            launchArguments = launchArguments.Replace("{rom_path}", fullRomPath).Replace("{emulator_dir}", Path.GetFullPath(emulatorInstallDirectory));
             launchArguments = ResolveSystemPlaceholder(launchArguments, emulatorMetadata, game.System.Slug);
 
             string firmwarePath = ResolveFirmwarePath(game.System);
@@ -2555,6 +2565,7 @@ public partial class EmulatorManager : Node
             }
 
             await WriteInputLayerDeviceBindings(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
+            await AssignControllersThroughEmulatorCommands(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
 
             DateTime sessionStart = DateTime.UtcNow;
 
@@ -2752,7 +2763,7 @@ public partial class EmulatorManager : Node
 
             SaveStore.LinkEmulatorSaveDirectories(appInstance, emulatorName, emulatorMetadata, currentOperatingSystem, currentGameSystem?.Slug);
 
-            string launchArguments = emulatorMetadata.LaunchArgsWithoutGame;
+            string launchArguments = (emulatorMetadata.LaunchArgsWithoutGame ?? "").Replace("{emulator_dir}", Path.GetFullPath(emulatorInstallDirectory));
             launchArguments = ResolveSystemPlaceholder(launchArguments, emulatorMetadata, currentGameSystem?.Slug);
 
             if (currentGameSystem != null)
@@ -2771,6 +2782,7 @@ public partial class EmulatorManager : Node
             }
 
             await WriteInputLayerDeviceBindings(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
+            await AssignControllersThroughEmulatorCommands(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
 
             Process emulatorProcess = BuildAndStartEmulatorProcess(fullExecutablePath, launchArguments, emulatorInstallDirectory, emulatorMetadata);
 
@@ -2932,12 +2944,12 @@ public partial class EmulatorManager : Node
 
         RemoveStaleControllerProfiles(controllerConfig, configFilePath);
 
-        foreach (ControllerSection controllerSection in controllerConfig.ControllerSections ?? new List<ControllerSection>())
+        foreach (ControllerSection controllerSection in controllerConfig.SectionsFor(OS.GetName().ToLower()))
         {
             RemoveStaleIndexedDeviceKeys(controllerSection, controllerConfig, configFilePath, deviceView);
         }
 
-        foreach (ControllerSection controllerSection in controllerConfig.ControllerSections ?? new List<ControllerSection>())
+        foreach (ControllerSection controllerSection in controllerConfig.SectionsFor(OS.GetName().ToLower()))
         {
             if (controllerSection.OtherDevices)
             {
@@ -2961,7 +2973,7 @@ public partial class EmulatorManager : Node
 
     private static bool NeedsDeviceProbe(ControllerConfig controllerConfig)
     {
-        return OperatingSystem.IsWindows() && controllerConfig.ControllerSections != null && controllerConfig.ControllerSections.Any(controllerSection =>
+        return OperatingSystem.IsWindows() && controllerConfig.SectionsFor(OS.GetName().ToLower()).Any(controllerSection =>
             controllerSection.OtherDevices
             || new[] { controllerSection.DeviceKey, controllerSection.DeviceTemplate, controllerSection.DeviceBindingTemplate }
                 .Concat(controllerSection.Mappings?.Values ?? Enumerable.Empty<string>())

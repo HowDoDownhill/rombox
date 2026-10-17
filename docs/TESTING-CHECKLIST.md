@@ -232,6 +232,11 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
       log shows `player order is now [...]`).
 - [ ] Dolphin ports read `XInput/<slot>/Gamepad`, and the face buttons in each port read
       `Button A/B/X/Y`.
+- [ ] Linux: Dolphin launches with `-u .../emulators/dolphin/User`, its ports read
+      `SDL/<n>/<pad name>`, and a Switch Pro plus an Xbox pad each drive their own port.
+- [ ] gopher64 (Windows and Linux): starting from a config with no assignments, the log lists the
+      pads (`gopher64 lists N controller(s)`), each player gets a port, and only player ports are
+      enabled in `portable_data/config/config.json`. Each pad drives its own player in a game.
 - [ ] Manual: launching a game writes no `[InputLayer]` binding lines and leaves emulator
       controller configs unchanged.
 - [ ] **Start > Assign Controllers** keeps the start menu its usual width while it shows

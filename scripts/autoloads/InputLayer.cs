@@ -47,6 +47,7 @@ public partial class InputLayer : Node
 
     public bool IsSessionActive { get; private set; }
     public bool IsSteamInputSession { get; private set; }
+    public bool IsPassthroughOnlySession { get; private set; }
     public string LastSessionFailureReason { get; private set; } = "";
 
     public override void _Ready()
@@ -156,8 +157,12 @@ public partial class InputLayer : Node
         EndSession();
 
         InputLayerConsent consent = ResolveConsent();
+        bool passesEveryPadThrough = consent == InputLayerConsent.SteamInput || OperatingSystem.IsLinux();
+        bool isEnabled = OperatingSystem.IsLinux()
+            ? consent != InputLayerConsent.Declined
+            : consent == InputLayerConsent.Accepted || consent == InputLayerConsent.SteamInput;
 
-        if (consent != InputLayerConsent.Accepted && consent != InputLayerConsent.SteamInput)
+        if (!isEnabled)
         {
             LastSessionFailureReason = "automatic controller mapping has not been enabled";
             return false;
@@ -177,7 +182,7 @@ public partial class InputLayer : Node
             .Select(DescribePlayer)
             .ToList();
 
-        if (consent == InputLayerConsent.SteamInput)
+        if (passesEveryPadThrough)
         {
             candidatePlayers.ForEach(player => player.IsPassthrough = true);
         }
@@ -219,6 +224,7 @@ public partial class InputLayer : Node
 
         IsSessionActive = true;
         IsSteamInputSession = consent == InputLayerConsent.SteamInput;
+        IsPassthroughOnlySession = passesEveryPadThrough;
         LastSessionFailureReason = "";
         SetProcess(virtualPadPlayers.Count > 0);
 
@@ -285,7 +291,7 @@ public partial class InputLayer : Node
             return -1;
         }
 
-        if (IsSteamInputSession)
+        if (IsPassthroughOnlySession)
         {
             return playerIndex;
         }
@@ -419,6 +425,7 @@ public partial class InputLayer : Node
         SetProcess(false);
         IsSessionActive = false;
         IsSteamInputSession = false;
+        IsPassthroughOnlySession = false;
 
         virtualPadBackend.DestroyPads();
         deviceHider.UnhideAll();
@@ -492,7 +499,7 @@ public partial class InputLayer : Node
 
     public Dictionary<string, string> BuildLaunchEnvironment(EmulatorMeta emulatorMetadata)
     {
-        if (!IsSessionActive || IsSteamInputSession || ResolveInputLayerMode(emulatorMetadata) == "none")
+        if (!IsSessionActive || IsPassthroughOnlySession || ResolveInputLayerMode(emulatorMetadata) == "none")
         {
             return new Dictionary<string, string>();
         }

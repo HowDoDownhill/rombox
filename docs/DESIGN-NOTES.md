@@ -3449,6 +3449,47 @@ per-pad prompts outside Steam too, for one look everywhere.
 An assigned order under ViGEm now loses only the pad that disconnects; the players after it move up.
 Clearing the whole order on any disconnect made a sleeping Bluetooth pad reset every player.
 
+### Linux runs the layer as passthrough only
+
+Linux has no virtual-pad backend, so the layer used to drop every pad and start no session, and no
+emulator config was ever written there. RetroArch coped through its own autoconfig profiles.
+Dolphin did not: its shipped `GCPadNew.ini` names `SDL/0/Xbox One Controller`, so any other pad,
+and every port after the first, had no controller. Reported from an Omarchy user and reproduced on
+the Arch laptop with a Switch Pro and a Series pad on 2026-10-17.
+
+On Linux a session now starts unless controller setup was set to Manual, passes every pad through,
+and numbers players by player index (`IsPassthroughOnlySession`, shared with Steam Input). A
+controller section declares where it applies with `platforms`; a section without it applies to
+Windows only, so RetroArch, PCSX2 and the rest keep their working Linux configs untouched. Dolphin's
+`[Core]` section applies to both, and a Linux `GCPad{port}` section writes
+`SDL/{sdl_name_index}/{controller_name}` from the pad's SDL name as Godot reports it. Both pads drove
+their own ports in a GameCube game on the laptop.
+
+### Dolphin on Linux ignored its portable User folder
+
+The Dolphin AppImage does not honour `portable.txt`: Dolphin looks for it beside the executable,
+which inside an AppImage is the read-only mount. It ran from `~/.config/dolphin-emu` with every port
+on `XInput2/0/Virtual core pointer`, so our shipped config, and the save folders the app syncs, were
+never used on Linux. Dolphin is now launched with `-u "{emulator_dir}/User"` on every platform,
+which on Windows names the folder `portable.txt` already selected. `{emulator_dir}` is now
+substituted in launch arguments as well as in `launch_env`.
+
+### gopher64 assigns ports through its own command line
+
+gopher64 binds a port only to a controller whose `SDL_GetJoystickPathForID` path is stored in
+`input.controller_assignment`; an empty assignment means keyboard only, and the shipped config also
+had `controller_enabled` false for every port. The path (`XInput#0` on Windows, a device node on
+Linux) is the emulator's own SDL view and cannot be derived from Godot.
+
+gopher64 can do it itself without opening a window: `--list-controllers` prints `Controller N:
+<name>` with `None` as entry 0, and `--assign-controller N --port P` stores that controller's path.
+The meta block `controller_commands` describes this. At launch the app runs the list command in the
+game's environment, matches players to listed names (in XInput-slot order, so same-named pads keep
+their order; by position under Steam Input), runs one assign per player, then sets
+`controller_enabled` for player ports and clears the rest. Measured on 2026-10-17: Windows stored
+`XInput#0` for a wired Xbox One, and the Arch laptop assigned both of its pads; each ran an N64
+game.
+
 ### Dolphin addresses pads by XInput slot
 
 `SDL/{n}/{name}` depended on Dolphin's SDL naming each pad the way the probe's borrowed `SDL3.dll`

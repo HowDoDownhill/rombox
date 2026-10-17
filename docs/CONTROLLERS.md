@@ -9,8 +9,12 @@ Change the answer at any time in **Settings > Input Settings > Controller Setup*
 | **ViGEm** | You start the app on its own | Passes Xbox controllers straight to the emulator, gives every other controller a virtual Xbox 360 pad, and points each emulator at the right pad for every player. Installs the ViGEmBus driver once. |
 | **Manual** | You want to set up each emulator yourself | Leaves every emulator's controller bindings and device settings alone. |
 
-The app recommends Steam Input when Steam started it and ViGEm otherwise. On Linux there is no
-prompt: emulators read your controllers directly, and Steam Input works as it does for any game.
+The app recommends Steam Input when Steam started it and ViGEm otherwise.
+
+On Linux there is no prompt. Emulators read your controllers directly, and for emulators that
+need to be told which pad to use (Dolphin and gopher64), the app points each player at their
+controller on every launch, in connection order or the order set with **Start > Assign
+Controllers**. Steam Input works as it does for any game.
 
 The app's own menus work with any controller under all three methods. Button prompts are the same
 for every controller: face buttons show their position (top, right, bottom, left), and Start shows

@@ -36,8 +36,8 @@
       "extract": false
     }
   },
-  "launch_args_with_game": "-b -e \"{rom_path}\"",
-  "launch_args_without_game": "",
+  "launch_args_with_game": "-u \"{emulator_dir}/User\" -b -e \"{rom_path}\"",
+  "launch_args_without_game": "-u \"{emulator_dir}/User\"",
   "settings_fields": [
     {
       "id": "fullscreen",
@@ -137,7 +137,8 @@
         "port_start": 0,
         "type_key": "SIDevice{port}",
         "type_connected": "6",
-        "type_disconnected": "0"
+        "type_disconnected": "0",
+        "platforms": ["windows", "linux"]
       },
       {
         "section_template": "GCPad{port}",
@@ -151,6 +152,43 @@
           "`Button W`": "`Button X`",
           "`Button N`": "`Button Y`"
         },
+        "device_disconnected": "DInput/0/Keyboard Mouse",
+        "mappings": {
+          "Buttons/A": "{Platform_A}",
+          "Buttons/B": "{Platform_B}",
+          "Buttons/X": "{Platform_X}",
+          "Buttons/Y": "{Platform_Y}",
+          "Buttons/Z": "{Platform_Z}",
+          "Buttons/Start": "{Platform_Start}",
+          "Main Stick/Up": "{Platform_Main Stick Up}",
+          "Main Stick/Down": "{Platform_Main Stick Down}",
+          "Main Stick/Left": "{Platform_Main Stick Left}",
+          "Main Stick/Right": "{Platform_Main Stick Right}",
+          "Main Stick/Modifier": "`Shift`",
+          "Main Stick/Calibration": "100.00 141.42 100.00 141.42 100.00 141.42 100.00 141.42",
+          "C-Stick/Up": "{Platform_C-Stick Up}",
+          "C-Stick/Down": "{Platform_C-Stick Down}",
+          "C-Stick/Left": "{Platform_C-Stick Left}",
+          "C-Stick/Right": "{Platform_C-Stick Right}",
+          "C-Stick/Modifier": "`Ctrl`",
+          "C-Stick/Calibration": "100.00 141.42 100.00 141.42 100.00 141.42 100.00 141.42",
+          "Triggers/L": "{Platform_L}",
+          "Triggers/R": "{Platform_R}",
+          "D-Pad/Up": "{Platform_Dpad Up}",
+          "D-Pad/Down": "{Platform_Dpad Down}",
+          "D-Pad/Left": "{Platform_Dpad Left}",
+          "D-Pad/Right": "{Platform_Dpad Right}",
+          "Triggers/L-Analog": "{Platform_L-Analog}",
+          "Triggers/R-Analog": "{Platform_R-Analog}"
+        }
+      },
+      {
+        "section_template": "GCPad{port}",
+        "platforms": ["linux"],
+        "port_start": 1,
+        "bindings_from_section": "GCPad1",
+        "device_key": "Device",
+        "device_template": "SDL/{sdl_name_index}/{controller_name}",
         "device_disconnected": "DInput/0/Keyboard Mouse",
         "mappings": {
           "Buttons/A": "{Platform_A}",

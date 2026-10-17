@@ -290,7 +290,7 @@ public partial class EmulatorManager
         report.AppendLine("| Section | Player | We write | Resolves to | Verdict |");
         report.AppendLine("|---|---|---|---|---|");
 
-        foreach (ControllerSection controllerSection in controllerConfig.ControllerSections)
+        foreach (ControllerSection controllerSection in controllerConfig.SectionsFor(OS.GetName().ToLower()))
         {
             if (controllerSection.OtherDevices)
             {
