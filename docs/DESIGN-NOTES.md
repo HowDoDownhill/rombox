@@ -3474,6 +3474,24 @@ never used on Linux. Dolphin is now launched with `-u "{emulator_dir}/User"` on 
 which on Windows names the folder `portable.txt` already selected. `{emulator_dir}` is now
 substituted in launch arguments as well as in `launch_env`.
 
+### Steam on a Wayland desktop needs the app on X11
+
+Launched from a Steam shortcut on the Arch laptop (GNOME on Wayland), the app saw the Switch Pro as a
+Steam virtual pad but received no input from it. Steam feeds a virtual pad only while it believes
+the game's window has focus, and it tracks focus through X11 windows, so a native Wayland window
+never counts. With the app on XWayland the Pro worked.
+
+Two things stood in the way of testing that. The Linux GPU relaunch (onto the NVIDIA card) rebuilt
+its argument list from `OS.GetCmdlineArgs()`, which leaves out engine arguments such as
+`--display-driver`, so the relaunched app went back to Wayland. And this Steam client expanded
+`%command%` to nothing for a non-Steam shortcut, so launch options had to be plain arguments.
+
+At startup the app now relaunches itself with `--display-driver x11` when `SteamAppId` is set, the
+display server is Wayland and `DISPLAY` names an XWayland server, and every relaunch passes the
+display driver on explicitly. `ROMM_DISPLAY_RELAUNCH_ATTEMPTED` stops a second relaunch. GPU and
+display relaunches happen in one step when both apply. Measured on 2026-10-17: Wayland on the Intel
+GPU, then one relaunch onto X11 and the RTX 3060, and the Pro drove the menus.
+
 ### gopher64 assigns ports through its own command line
 
 gopher64 binds a port only to a controller whose `SDL_GetJoystickPathForID` path is stored in

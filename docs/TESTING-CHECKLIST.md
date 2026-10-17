@@ -234,6 +234,9 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
       `Button A/B/X/Y`.
 - [ ] Linux: Dolphin launches with `-u .../emulators/dolphin/User`, its ports read
       `SDL/<n>/<pad name>`, and a Switch Pro plus an Xbox pad each drive their own port.
+- [ ] Linux, launched from a Steam shortcut on a Wayland desktop with Steam Input on: the log shows
+      `Relaunching on display driver x11`, the relaunched app has no Wayland warnings, and a
+      Switch Pro drives the menus. Without Steam, the app stays on Wayland.
 - [ ] gopher64 (Windows and Linux): starting from a config with no assignments, the log lists the
       pads (`gopher64 lists N controller(s)`), each player gets a port, and only player ports are
       enabled in `portable_data/config/config.json`. Each pad drives its own player in a game.

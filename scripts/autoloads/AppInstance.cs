@@ -36,8 +36,11 @@ public partial class AppInstance : Node
     {
         DiscreteGpuPreference.RegisterWindowsGpuPreference(OS.GetExecutablePath(), configManager.PreferDiscreteGpu);
 
-        if (DiscreteGpuPreference.ShouldRelaunchOnDiscreteGpu(configManager.PreferDiscreteGpu)
-            && DiscreteGpuPreference.RelaunchOnDiscreteGpu())
+        bool relaunchOnDiscreteGpu = DiscreteGpuPreference.ShouldRelaunchOnDiscreteGpu(configManager.PreferDiscreteGpu);
+        bool relaunchOnX11 = SteamDisplayDriver.ShouldRelaunchOnX11();
+
+        if ((relaunchOnDiscreteGpu || relaunchOnX11)
+            && DiscreteGpuPreference.Relaunch(relaunchOnDiscreteGpu, relaunchOnX11 ? SteamDisplayDriver.X11DriverName : DisplayServer.GetName().ToLower()))
         {
             GetTree().Quit();
         }

@@ -50,7 +50,7 @@ public static class DiscreteGpuPreference
         return IsRenderingOnIntegratedAdapter() && HasOffloadableDiscreteGpu();
     }
 
-    public static bool RelaunchOnDiscreteGpu()
+    public static bool Relaunch(bool onDiscreteGpu, string displayDriver)
     {
         try
         {
@@ -61,16 +61,23 @@ public static class DiscreteGpuPreference
                 WorkingDirectory = System.IO.Directory.GetCurrentDirectory()
             };
 
+            relaunchStartInfo.ArgumentList.Add("--display-driver");
+            relaunchStartInfo.ArgumentList.Add(displayDriver);
+
             foreach (string commandLineArgument in OS.GetCmdlineArgs())
             {
                 relaunchStartInfo.ArgumentList.Add(commandLineArgument);
             }
 
-            ApplyToProcess(relaunchStartInfo, true);
-            relaunchStartInfo.Environment[OffloadAttemptedVariable] = "1";
+            if (onDiscreteGpu)
+            {
+                ApplyToProcess(relaunchStartInfo, true);
+                relaunchStartInfo.Environment[OffloadAttemptedVariable] = "1";
+            }
 
+            relaunchStartInfo.Environment[SteamDisplayDriver.RelaunchAttemptedVariable] = "1";
             Process.Start(relaunchStartInfo);
-            GD.Print($"Relaunching on the discrete GPU (was {RenderingServer.GetVideoAdapterName()}).");
+            GD.Print($"Relaunching on display driver {displayDriver}{(onDiscreteGpu ? $" and the discrete GPU (was {RenderingServer.GetVideoAdapterName()})" : "")}.");
 
             return true;
         }
