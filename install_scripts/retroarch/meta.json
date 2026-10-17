@@ -79,6 +79,11 @@
       "extract": false
     }
   },
+  "launch_env": {
+    "linux": {
+      "XDG_CONFIG_HOME": "{emulator_dir}/RetroArch-Linux-x86_64.AppImage.home/.config"
+    }
+  },
   "launch_args_with_game": "--config retroarch.cfg {system} {settings} {netplay} \"{rom_path}\"",
   "netplay": {
     "transport": "launch_args",

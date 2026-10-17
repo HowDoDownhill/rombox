@@ -3492,6 +3492,18 @@ display driver on explicitly. `ROMM_DISPLAY_RELAUNCH_ATTEMPTED` stops a second r
 display relaunches happen in one step when both apply. Measured on 2026-10-17: Wayland on the Intel
 GPU, then one relaunch onto X11 and the RTX 3060, and the Pro drove the menus.
 
+### RetroArch on Linux pins XDG_CONFIG_HOME to its AppImage home
+
+The RetroArch AppImage keeps its assets, controller profiles and cores in
+`RetroArch-Linux-x86_64.AppImage.home/.config/retroarch`, and the AppImage runtime makes that
+folder RetroArch's `HOME`. RetroArch reads `$XDG_CONFIG_HOME/retroarch` before `$HOME/.config`,
+so on a session that exports `XDG_CONFIG_HOME` (an Omarchy user's Hyprland setup did) it used the
+user's real `~/.config/retroarch`: no menu icons, and no autoconfig profiles. Reproduced on the Arch
+laptop on 2026-10-17 by setting the variable: the Switch Pro went from "configured in port 1" to
+"not configured", and the playlists moved to `~/.config`. `launch_env` now sets
+`XDG_CONFIG_HOME` to the AppImage home's `.config` on Linux, which restored both with the session
+variable still set.
+
 ### gopher64 assigns ports through its own command line
 
 gopher64 binds a port only to a controller whose `SDL_GetJoystickPathForID` path is stored in

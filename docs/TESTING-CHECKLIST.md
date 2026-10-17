@@ -237,6 +237,8 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
 - [ ] Linux, launched from a Steam shortcut on a Wayland desktop with Steam Input on: the log shows
       `Relaunching on display driver x11`, the relaunched app has no Wayland warnings, and a
       Switch Pro drives the menus. Without Steam, the app stays on Wayland.
+- [ ] Linux, RetroArch with `XDG_CONFIG_HOME` exported by the session (Omarchy does): menu icons
+      show, and `--verbose` reports the pad as configured from the AppImage home's autoconfig.
 - [ ] gopher64 (Windows and Linux): starting from a config with no assignments, the log lists the
       pads (`gopher64 lists N controller(s)`), each player gets a port, and only player ports are
       enabled in `portable_data/config/config.json`. Each pad drives its own player in a game.

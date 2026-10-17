@@ -1,3 +1,11 @@
+RomM Frontend - Unreleased
+
+🐛 Bug Fixes
+
+    RetroArch on Omarchy and Similar Setups: RetroArch showed no menu icons and didn't recognise controllers when the desktop session sets its own config folder (XDG_CONFIG_HOME). It now always uses the files installed with it.
+
+---
+
 RomM Frontend - Version 1.2.1 Changelog
 
 🐛 Bug Fixes
