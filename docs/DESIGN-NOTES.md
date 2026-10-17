@@ -1878,6 +1878,17 @@ player may need, and for many emulators it is in the right format. Skipped saves
 `emulatorScopedServerSaveIds`, so negotiation cannot download them either. Files already downloaded
 before this change are left in place.
 
+### The pre-launch file snapshot is taken even when sync fails
+`SyncAfterExit` uploads the files whose write time moved past the snapshot `SyncBeforeLaunch` takes.
+The snapshot used to be the last step of `SyncBeforeLaunch`, so a failed device lookup returned
+before it. On 2026-10-17 the server timed out during that lookup, and after the game closed every
+file in RetroArch's shared `saves/` folder was queued as Pokémon Emerald's save, Super Mario
+All-Stars' `.srm` included. The server was also refusing uploads, so nothing reached it.
+
+The snapshot now runs in a `finally` around the negotiation. When none exists at exit (the server
+was skipped at launch, for example), a file counts as changed only if its write time is after the
+session started.
+
 ### Recursive delete must not be trusted around junctions
 On Windows, `Directory.Delete(path, recursive: true)` on a tree containing a junction throws
 `UnauthorizedAccessException` and leaves the tree in place. .NET calls `DeleteVolumeMountPoint` on
@@ -3383,13 +3394,15 @@ At launch the layer now runs `SdlEnumerationProbe`: a child PowerShell process s
 emulator's exact environment, loading the emulator's `SDL3.dll` or `SDL2.dll`. Being a child of the
 app, it is hooked by Steam the same way the emulator is. It returns the device list twice, with the
 launch filter and with the filter cleared through override-priority hints (SDL lets environment
-variables beat normal-priority hints). Each player is matched to a device by SDL player index, which
-SDL sets from the XInput slot, with VID/PID as the fallback.
+variables beat normal-priority hints). Each player is matched to a device by VID/PID first, with
+the SDL player index breaking ties between pads of the same model and standing in when no VID/PID
+matches. SDL 3 sets the player index from the XInput slot; SDL 2.0.14 (RetroArch's) numbers players
+in list order, so the index alone named the wrong pad there.
 
 | Macro | Resolves to | Used by |
 |---|---|---|
-| `{xinput_index}`, `{sdl_player_index}` | the player's XInput slot | RetroArch; PCSX2, DuckStation |
-| `{sdl_list_index}` | the player's position in the probed list | melonDS, snes9x, Azahar, Flycast |
+| `{xinput_index}`, `{sdl_player_index}` | the player's XInput slot | PCSX2, DuckStation |
+| `{sdl_list_index}` | the player's position in the probed list | RetroArch, melonDS, snes9x, Azahar, Flycast |
 | `{sdl_name_index}` + `{controller_name}` | name as the emulator's SDL reports it, and its occurrence among same-named devices | Dolphin |
 | `{controller_guid}` | the probed GUID | ares |
 
@@ -3404,7 +3417,21 @@ drove their own player in Super Smash Bros. Melee, with `SDL/0/Xbox One Controll
 `SDL/1/Xbox One Controller` telling apart two pads of the same model. The other four are unverified.
 
 The probe adds about two seconds to a launch and runs only when a config needs a probed macro.
-RetroArch, PCSX2 and DuckStation need only slots and skip it.
+PCSX2 and DuckStation need only slots and skip it.
+
+### RetroArch reads pads through its sdl2 driver
+
+RetroArch's `xinput` joypad driver numbers its ports in DirectInput enumeration order and folds
+XInput devices into that list by its own matching. With three Xbox pads and a virtual pad,
+`input_playerN_joypad_index = <XInput slot>` reached no pad at all; the Bluetooth Series pad was not
+recognised as XInput by that matching. The layer now writes `input_joypad_driver = sdl2` as a static
+value and `{sdl_list_index}` from a probe of RetroArch's own `SDL2.dll`.
+
+SDL 2.0.14 applies `SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT` while enumerating, so RetroArch sees
+the virtual pad and the passed-through pads only, and the filtered list is the one it numbers from.
+The first sdl2 attempt used the unfiltered list, which still held the Switch Pro itself: every index
+was one too high and nothing pointed at the Pro's virtual pad. Checked on 2026-10-17 with the Pro on
+a virtual pad and two Xbox pads passed through in Pokémon Emerald.
 
 Flycast's second section changed meaning with this. It used to push "the physical pads" to ports C
 and D by assuming they sat at the first indices. `other_devices: true` now assigns every probed
@@ -3431,6 +3458,11 @@ session, so it took the virtual pad for the sleeping physical one and counted it
 next session. The pre-session set now holds `id:guid` pairs. A destroyed pad also stays marked as
 ours until its disconnect arrives, since two sessions in quick succession otherwise saw the old
 virtual pad as a physical one.
+
+A physical pad that sleeps and wakes mid-session also arrives under a new `id:guid`. Two Xbox pads
+did this during a long RetroArch session and were marked as ours, so the menus ignored them until
+they disconnected again. A newly arrived device now counts as ours only when its VID/PID is the
+virtual pad's `045E/028E`.
 
 ### A new virtual pad's XInput slot can appear after the pad itself
 

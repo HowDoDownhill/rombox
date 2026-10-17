@@ -125,6 +125,8 @@ This is the section with the worst platform divergence. Do not skip it on either
 - [ ] Switching a system to a different emulator warns that saves are not converted.
 - [ ] A game with both an untagged and an emulator-tagged save on RomM downloads only the tagged
       one (`Skipping untagged save ...` in the log); a game with only untagged saves still gets them.
+- [ ] With the RomM server unreachable at launch, exiting a RetroArch game uploads only that game's
+      changed save. Other games' saves in the same folder stay out of the upload.
 - [ ] Reinstalling the emulator does not destroy saves or save states.
 - [ ] Save states land inside the install directory, not in a per-user location outside it.
 
@@ -233,6 +235,10 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
 - [ ] Launched from Steam with Steam Input on for Xbox pads, every player still reaches the emulator.
 - [ ] Dolphin ports 2 to 4 receive port 1's bindings and are switched on in `Dolphin.ini` when a
       player is assigned.
+- [ ] RetroArch with a Switch Pro and Xbox pads: `retroarch.cfg` has `input_joypad_driver = sdl2`,
+      and the Pro drives player 1 when it is player 1.
+- [ ] An Xbox pad that sleeps and wakes during a session still works in the menus afterwards (the
+      log has no `our virtual pad appeared` line for it).
 - [ ] Player order can be set by pressing a button on each pad, and the emulator follows it.
 - [ ] Two physical pads give two players with no double input (PCSX2 player 2 is the known trap).
 - [ ] A non-Xbox pad (PlayStation, 8BitDo) is normalized through the layer and maps positionally.

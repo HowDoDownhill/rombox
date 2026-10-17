@@ -2995,19 +2995,39 @@ public partial class EmulatorManager : Node
             Devices = controllerConfig.SdlEnumeration == "all" ? probe.AllDevices : probe.Devices
         };
 
-        for (int playerIndex = 0; playerIndex < inputLayer.ActivePlayerCount; playerIndex++)
+        var playerDevices = new SdlProbeDevice[inputLayer.ActivePlayerCount];
+        var claimedDevices = new HashSet<SdlProbeDevice>();
+        IEnumerable<int> playersBySlot = Enumerable.Range(0, inputLayer.ActivePlayerCount)
+            .OrderBy(playerIndex => inputLayer.ResolvePlayerXInputSlot(playerIndex) < 0 ? int.MaxValue : inputLayer.ResolvePlayerXInputSlot(playerIndex));
+
+        foreach (int playerIndex in playersBySlot)
         {
             int xinputSlot = inputLayer.ResolvePlayerXInputSlot(playerIndex);
             (ushort vendor, ushort product) = inputLayer.ResolvePlayerIdentity(playerIndex);
+            List<SdlProbeDevice> sameIdentity = deviceView.Devices
+                .Where(candidate => candidate.Vendor == vendor && candidate.Product == product && !claimedDevices.Contains(candidate))
+                .ToList();
 
             SdlProbeDevice playerDevice =
-                deviceView.Devices.FirstOrDefault(candidate => xinputSlot >= 0 && candidate.PlayerIndex == xinputSlot && !deviceView.PlayerDevices.Contains(candidate))
-                ?? deviceView.Devices.FirstOrDefault(candidate => candidate.Vendor == vendor && candidate.Product == product && !deviceView.PlayerDevices.Contains(candidate));
+                sameIdentity.FirstOrDefault(candidate => xinputSlot >= 0 && candidate.PlayerIndex == xinputSlot)
+                ?? sameIdentity.FirstOrDefault()
+                ?? deviceView.Devices.FirstOrDefault(candidate => xinputSlot >= 0 && candidate.PlayerIndex == xinputSlot && !claimedDevices.Contains(candidate));
 
+            if (playerDevice != null)
+            {
+                claimedDevices.Add(playerDevice);
+            }
+
+            playerDevices[playerIndex] = playerDevice;
+        }
+
+        for (int playerIndex = 0; playerIndex < playerDevices.Length; playerIndex++)
+        {
+            SdlProbeDevice playerDevice = playerDevices[playerIndex];
             deviceView.PlayerDevices.Add(playerDevice);
             GD.Print(playerDevice != null
                 ? $"[InputLayer] player {playerIndex + 1} is \"{playerDevice.Name}\" {playerDevice.Vendor:X4}/{playerDevice.Product:X4} at index {playerDevice.Index} of this emulator's devices."
-                : $"[InputLayer] player {playerIndex + 1} (XInput slot {xinputSlot}, {vendor:X4}/{product:X4}) is not among this emulator's devices.");
+                : $"[InputLayer] player {playerIndex + 1} (XInput slot {inputLayer.ResolvePlayerXInputSlot(playerIndex)}) is not among this emulator's devices.");
         }
 
         return deviceView;
@@ -3100,6 +3120,22 @@ public partial class EmulatorManager : Node
         var flatUpdater = new FlatConfigurationUpdater();
         int portCount = controllerConfig.MaxControllers > 0 ? controllerConfig.MaxControllers : inputLayer.ActivePlayerCount;
 
+        foreach (var staticValue in controllerSection.StaticValues ?? new Dictionary<string, string>())
+        {
+            if (writesSections)
+            {
+                string staticSectionName = controllerSection.SectionTemplate.Replace("{port}", controllerSection.PortStart.ToString());
+                iniUpdater.UpdateValue(configFilePath, staticSectionName, staticValue.Key, staticValue.Value, staticValue.Value);
+            }
+
+            else
+            {
+                flatUpdater.UpdateValue(configFilePath, staticValue.Key, staticValue.Value);
+            }
+
+            GD.Print($"[InputLayer] {staticValue.Key} = {staticValue.Value}");
+        }
+
         for (int playerIndex = 0; playerIndex < portCount; playerIndex++)
         {
             string portNumber = (controllerSection.PortStart + playerIndex).ToString();
@@ -3191,7 +3227,7 @@ public partial class EmulatorManager : Node
         string listIndex = (playerDevice?.Index ?? playerIndex).ToString();
         string nameIndex = playerDevice != null
             ? deviceView.Devices.TakeWhile(candidate => candidate != playerDevice).Count(candidate => candidate.Name == playerDevice.Name).ToString()
-            : playerIndex.ToString();
+            : Enumerable.Range(0, playerIndex).Count(earlierPlayer => ResolveFallbackDeviceName(earlierPlayer, inputLayer) == ResolveFallbackDeviceName(playerIndex, inputLayer)).ToString();
 
         return deviceTemplate
             .Replace("{sdl_index_after_hidden}", xinputSlot.ToString())

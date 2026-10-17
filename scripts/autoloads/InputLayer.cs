@@ -449,7 +449,9 @@ public partial class InputLayer : Node
             return;
         }
 
-        if (virtualPadBackend.CreatedPadCount == 0 || joypadsPresentBeforeSession.Contains(DescribeJoypadIdentity(joypadId)))
+        if (virtualPadBackend.CreatedPadCount == 0
+            || joypadsPresentBeforeSession.Contains(DescribeJoypadIdentity(joypadId))
+            || ReadVendorAndProduct(joypadId) != (ViGEmPadBackend.VirtualPadVendorId, ViGEmPadBackend.VirtualPadProductId))
         {
             ownVirtualDeviceIds.Remove(joypadId);
             return;

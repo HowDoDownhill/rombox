@@ -41,6 +41,19 @@ public partial class SaveSyncManager : Node
             }
         }
 
+        try
+        {
+            await NegotiateSavesBeforeLaunch(game, savesDirs);
+        }
+
+        finally
+        {
+            preLaunchSnapshot = SnapshotSaveFiles(savesDirs);
+        }
+    }
+
+    private async Task NegotiateSavesBeforeLaunch(Game game, string[] savesDirs)
+    {
         var clientSaves = new List<ClientSaveState>();
         var emulatorScopedServerSaveIds = new HashSet<int>();
         var serverSavesJson = await appInstance.rommApi.GetSavesAsync(game.Id);
@@ -217,21 +230,26 @@ public partial class SaveSyncManager : Node
             };
             await appInstance.rommApi.CompleteSyncAsync(preLaunchCompletePayload, response.SessionId);
         }
+    }
 
-        preLaunchSnapshot = new Dictionary<string, DateTime>();
+    private static Dictionary<string, DateTime> SnapshotSaveFiles(string[] savesDirs)
+    {
+        var snapshot = new Dictionary<string, DateTime>();
 
         foreach (var savesDir in savesDirs)
         {
-            string[] files = System.IO.Directory.GetFiles(savesDir, "*", System.IO.SearchOption.AllDirectories);
-
-            if (files != null)
+            if (!System.IO.Directory.Exists(savesDir))
             {
-                foreach (string fullPath in files)
-                {
-                    preLaunchSnapshot[fullPath] = System.IO.File.GetLastWriteTimeUtc(fullPath);
-                }
+                continue;
+            }
+
+            foreach (string fullPath in System.IO.Directory.GetFiles(savesDir, "*", System.IO.SearchOption.AllDirectories))
+            {
+                snapshot[fullPath] = System.IO.File.GetLastWriteTimeUtc(fullPath);
             }
         }
+
+        return snapshot;
     }
 
     public async Task SyncAfterExit(Game game, DateTime sessionStart, DateTime sessionEnd)
@@ -271,7 +289,7 @@ public partial class SaveSyncManager : Node
                 {
                     DateTime currentWriteTime = System.IO.File.GetLastWriteTimeUtc(fullPath);
 
-                    bool isModifiedOrNew = true;
+                    bool isModifiedOrNew = preLaunchSnapshot != null || currentWriteTime >= sessionStart;
 
                     if (preLaunchSnapshot != null && preLaunchSnapshot.TryGetValue(fullPath, out DateTime previousWriteTime))
                     {
