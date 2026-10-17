@@ -1017,6 +1017,9 @@ public class ControllerSection
 
     [JsonPropertyName("bindings_from_section")]
     public string BindingsFromSection { get; set; }
+
+    [JsonPropertyName("binding_value_replacements")]
+    public Dictionary<string, string> BindingValueReplacements { get; set; }
 }
 
 public partial class EmulatorManager : Node
@@ -3004,14 +3007,17 @@ public partial class EmulatorManager : Node
         {
             int xinputSlot = inputLayer.ResolvePlayerXInputSlot(playerIndex);
             (ushort vendor, ushort product) = inputLayer.ResolvePlayerIdentity(playerIndex);
-            List<SdlProbeDevice> sameIdentity = deviceView.Devices
-                .Where(candidate => candidate.Vendor == vendor && candidate.Product == product && !claimedDevices.Contains(candidate))
-                .ToList();
+            List<SdlProbeDevice> sameIdentity = inputLayer.IsSteamInputSession
+                ? new List<SdlProbeDevice>()
+                : deviceView.Devices
+                    .Where(candidate => candidate.Vendor == vendor && candidate.Product == product && !claimedDevices.Contains(candidate))
+                    .ToList();
 
             SdlProbeDevice playerDevice =
                 sameIdentity.FirstOrDefault(candidate => xinputSlot >= 0 && candidate.PlayerIndex == xinputSlot)
                 ?? sameIdentity.FirstOrDefault()
-                ?? deviceView.Devices.FirstOrDefault(candidate => xinputSlot >= 0 && candidate.PlayerIndex == xinputSlot && !claimedDevices.Contains(candidate));
+                ?? deviceView.Devices.FirstOrDefault(candidate => xinputSlot >= 0 && candidate.PlayerIndex == xinputSlot && !claimedDevices.Contains(candidate))
+                ?? (inputLayer.IsSteamInputSession ? deviceView.Devices.FirstOrDefault(candidate => !claimedDevices.Contains(candidate)) : null);
 
             if (playerDevice != null)
             {
@@ -3171,6 +3177,16 @@ public partial class EmulatorManager : Node
                     : controllerSection.BindingKeyPrefixTemplate.Replace("{port}", portNumber);
 
                 RewriteSectionDeviceBindings(controllerSection, controllerConfig, configFilePath, sectionName, playerIndex, inputLayer, bindingKeyPrefix, deviceView);
+            }
+
+            if (writesSections && playerIsPresent && controllerSection.BindingValueReplacements != null)
+            {
+                int replacedValueCount = IniValueReplacer.ReplaceInSection(configFilePath, sectionName, controllerSection.BindingValueReplacements);
+
+                if (replacedValueCount > 0)
+                {
+                    GD.Print($"[InputLayer] renamed {replacedValueCount} binding(s) in [{sectionName}]");
+                }
             }
 
             if (!writesDeviceBinding)

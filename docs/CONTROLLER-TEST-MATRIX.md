@@ -74,6 +74,7 @@ Record date, build, and per-emulator result as **pass**, **fail: <what>**, or **
 | S8 (2026-10-17) | | pass (SSBM) | | | | | | | | |
 | S6 (2026-10-17, xinput driver) | fail: no controller | | | | | | | | | |
 | S5 + Series (2026-10-17, sdl2 driver) | pass (Emerald, Pro as P1) | | | | | | | | | |
+| S8, Steam Input method (2026-10-17) | | pass (SSBM, 4 players); assigned order not kept, which led to Steam setting order | | | | | | | | |
 
 Unverified assumptions worth targeting first: the statically linked emulators (Flycast, melonDS,
 Azahar, snes9x) are probed through a borrowed `SDL3.dll`, and S8 has been run for Dolphin only.

@@ -3,7 +3,8 @@ RomM Frontend - Unreleased
 ✨ New Features
 
     Android (in development): A phone build with touch controls. It installs emulators from Google Play where possible, downloads games to Documents/RomM, and launches them in Flycast, Dolphin, DuckStation, melonDS, PPSSPP, Azahar or RetroArch.
-    Controller Setup Choice (Windows): First startup now asks how to set up controllers: Steam Input (when you start the app from Steam), ViGEm (when you start it on its own) or Manual (set up each emulator yourself). Change it in Settings > Input Settings. A new Controller Setup guide covers each method.
+    Controller Setup Choice (Windows): First startup now asks how to set up controllers: Steam Input (when you start the app from Steam), ViGEm (when you start it on its own) or Manual (set up each emulator yourself). Change it in Settings > Input Settings. With Steam Input, Steam sets player order. A new Controller Setup guide covers each method.
+    Universal Button Prompts: Prompts now show button positions (top, right, bottom, left) for every controller, and Start shows the Xbox, PlayStation and Nintendo symbols together, so they're right whatever pad you hold.
     Controller Report: Starting the app with --controller-report writes a file showing what every emulator will see from each controller, for diagnosing mapping problems.
 
 🐛 Bug Fixes
@@ -12,6 +13,8 @@ RomM Frontend - Unreleased
     Controllers in Dolphin Beyond Player One: Ports 2 to 4 now get working bindings and are switched on, so multiplayer GameCube games see every player.
     Mixed Controllers in PCSX2 and DuckStation: Player one could be pointed at the wrong device when a non-Xbox pad was connected alongside Xbox pads.
     RetroArch Controller Mapping: RetroArch now reads controllers through its SDL driver, so each player gets their own pad when Xbox and other controllers are mixed. Before, players could get no controller or someone else's.
+    Player Order When a Controller Drops Off: An assigned order no longer resets when one pad disconnects. The players after it move up, and the pad rejoins at the end when it reconnects.
+    Dolphin Player Order: Dolphin now finds each player's pad by its Xbox controller slot, so player order holds when several pads share a name, and Dolphin launches about two seconds sooner.
     Assign Controllers Button: The button's prompt no longer stretches the start menu while waiting for each player's button press.
     Controllers Waking Mid-Game: An Xbox controller that went to sleep and woke during a game stopped working in the app's menus afterwards.
     Save Upload When RomM Is Unreachable: If the server was down when a game launched, exiting it could upload every save in the emulator's folder as that game's save.

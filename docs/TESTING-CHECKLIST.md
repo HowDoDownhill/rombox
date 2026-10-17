@@ -135,11 +135,10 @@ This is the section with the worst platform divergence. Do not skip it on either
 - [ ] Controller is detected at startup and after hot-plug.
 - [ ] Navigation, select, back, settings, downloads page, delete, cancel all respond.
 - [ ] Controller icons render for the connected pad.
-- [ ] Button prompts match the controller in use. With a PlayStation pad they show Cross, Circle,
-      Square and Triangle; with a Switch Pro pad, Nintendo letters in swapped positions (the bottom
-      button reads B); with an Xbox pad, Xbox letters. With two different pads connected, pressing a
-      button on each switches the prompts to that pad. On Windows with Automatic Controller Mapping
-      on, the first press on a non-Xbox pad replaces the virtual pad's Xbox prompts.
+- [ ] Button prompts are positional for every controller: face buttons show the filled position
+      (Play is bottom, Back is right, Delete is left, Downloads is top), Options shows the Xbox,
+      PlayStation and Nintendo Start symbols side by side, and the bar still fits at every interface
+      size. Using the keyboard hides the prompts.
 - [ ] Emulator controller config is written only when a controller is actually detected, and an
       existing device line is never overwritten.
 - [ ] Face buttons map positionally (South/East/West/North), not by Xbox letter.
@@ -226,7 +225,13 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
       with Steam Input recommended when started from Steam and ViGEm otherwise. The answer
       persists and shows in **Settings > Input Settings > Controller Setup**. Linux never asks.
 - [ ] Steam Input: no ViGEm prompt appears, and the launch log reports `0 on virtual pads` with
-      every pad passed through.
+      every pad passed through, and **Start > Assign Controllers** is hidden.
+- [ ] Steam Input, four pads in Dolphin: each pad drives its own port. Turning one pad off between
+      launches moves the later players up.
+- [ ] ViGEm: after Assign Controllers, turning one assigned pad off keeps the others in order (the
+      log shows `player order is now [...]`).
+- [ ] Dolphin ports read `XInput/<slot>/Gamepad`, and the face buttons in each port read
+      `Button A/B/X/Y`.
 - [ ] Manual: launching a game writes no `[InputLayer]` binding lines and leaves emulator
       controller configs unchanged.
 - [ ] **Start > Assign Controllers** keeps the start menu its usual width while it shows

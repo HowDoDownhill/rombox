@@ -12,13 +12,15 @@ Change the answer at any time in **Settings > Input Settings > Controller Setup*
 The app recommends Steam Input when Steam started it and ViGEm otherwise. On Linux there is no
 prompt: emulators read your controllers directly, and Steam Input works as it does for any game.
 
-The app's own menus work with any controller under all three methods.
+The app's own menus work with any controller under all three methods. Button prompts are the same
+for every controller: face buttons show their position (top, right, bottom, left), and Start shows
+the Xbox, PlayStation and Nintendo symbols side by side.
 
 ## Steam Input
 
 Steam translates every controller you hold into a Steam virtual Xbox pad before an emulator sees
-it. RomM passes those pads through and writes each emulator's device setting so player 1 is your
-first pad, player 2 your second, and so on.
+it. RomM passes those pads through and writes each emulator's device setting so player 1 is
+Steam's first pad, player 2 its second, and so on.
 
 1. In Steam, choose **Games > Add a Non-Steam Game to My Library**, browse to the app folder, and
    add `romm-frontend.exe`.
@@ -26,11 +28,17 @@ first pad, player 2 your second, and so on.
    controllers, Steam's own setting under **Settings > Controller** decides whether Steam Input
    covers them too.
 3. Start the app from Steam. At the first-startup prompt choose **Steam Input**.
-4. To fix player order, use **Start > Assign Controllers** and press a button on each pad in
-   order.
+
+Steam decides player order. It numbers its pads separately for each program it starts, so the app
+cannot set the order for a game, and **Start > Assign Controllers** is hidden with this method.
+Players follow Steam's connection order inside each game; when a pad drops off, the players after
+it move up.
 
 Steam keeps the controllers' layout and any per-game remapping you set in Steam. Emulators started
 by the app inherit Steam's hooks, so the Steam overlay works in-game.
+
+To pick player order yourself while starting from Steam, turn Steam Input off for the RomM
+shortcut and choose ViGEm.
 
 If you later start the app outside Steam with this method still selected, Xbox controllers keep
 working. Other controllers may not reach every emulator: PCSX2 and DuckStation number pads by Xbox
@@ -50,10 +58,12 @@ On each launch:
   virtual Xbox 360 pad for the length of the game, so emulators see the layout their default
   bindings expect. Per-system remaps in the app apply to these pads.
 - Each emulator's device setting is rewritten so player 1 is your first controller. **Start >
-  Assign Controllers** sets the order; without it, players follow connection order.
+  Assign Controllers** sets the order; without it, players follow connection order. When an
+  assigned pad disconnects, the players after it move up, and a pad that reconnects joins at the
+  end.
 
 Windows has four Xbox controller slots, so four players fit in any mix of controllers. ViGEm also
-works when Steam started the app: Steam's pads are Xbox pads, so they pass straight through.
+works when Steam started the app with Steam Input off for the shortcut.
 
 If the driver is missing or fails to install, Xbox controllers still work and the others are left
 out, with a line in the log saying why.

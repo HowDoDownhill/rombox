@@ -113,8 +113,8 @@ Any controller your PC recognises works in the app. For games:
     other controllers appear as an Xbox 360 pad through a small driver.
   - **Manual**, to set up each emulator yourself.
 
-  With Steam Input or ViGEm, player 1 is always your first controller; set the order with
-  **Start > Assign Controllers**. [Controller setup](docs/CONTROLLERS.md) has a guide for each.
+  With ViGEm, set player order with **Start > Assign Controllers**; with Steam Input, Steam sets
+  it. [Controller setup](docs/CONTROLLERS.md) has a guide for each.
 - **Linux**: emulators use your controller directly. Xbox-style pads work without setup.
 - **Wii** games use real Wii Remotes over Bluetooth. Press 1+2 on the remote while the game runs.
 

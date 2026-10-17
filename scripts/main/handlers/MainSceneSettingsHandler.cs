@@ -507,22 +507,32 @@ public class MainSceneSettingsHandler
         controllerSetupBox.AddChild(controllerSetupLabel);
 
         Label controllerSetupStatus = new Label();
-        controllerSetupStatus.Text = DescribeInputLayerAvailability();
         controllerSetupStatus.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
         controllerSetupBox.AddChild(controllerSetupStatus);
 
         CarouselButton controllerSetupOptionButton = new CarouselButton();
-        ControllerSetupMethod currentSetupMethod = ControllerSetupMethod.FromConsent(appInstance.configManager.ControllerMappingConsent) ?? ControllerSetupMethod.Manual;
 
         for (int methodIndex = 0; methodIndex < ControllerSetupMethod.All.Count; methodIndex++)
         {
             controllerSetupOptionButton.AddItem(ControllerSetupMethod.All[methodIndex].Title, methodIndex);
-
-            if (ControllerSetupMethod.All[methodIndex] == currentSetupMethod)
-            {
-                controllerSetupOptionButton.Select(methodIndex);
-            }
         }
+
+        void ShowStoredSetupMethod()
+        {
+            ControllerSetupMethod storedSetupMethod = ControllerSetupMethod.FromConsent(appInstance.configManager.ControllerMappingConsent) ?? ControllerSetupMethod.Manual;
+            controllerSetupOptionButton.Select(ControllerSetupMethod.IndexOf(storedSetupMethod));
+            controllerSetupStatus.Text = DescribeInputLayerAvailability();
+        }
+
+        ShowStoredSetupMethod();
+
+        formContainer.VisibilityChanged += () =>
+        {
+            if (formContainer.Visible)
+            {
+                ShowStoredSetupMethod();
+            }
+        };
 
         controllerSetupOptionButton.ItemSelected += (long index) =>
         {

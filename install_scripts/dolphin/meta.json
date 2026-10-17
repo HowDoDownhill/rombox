@@ -144,7 +144,13 @@
         "port_start": 1,
         "bindings_from_section": "GCPad1",
         "device_key": "Device",
-        "device_template": "SDL/{sdl_name_index}/{controller_name}",
+        "device_template": "XInput/{xinput_index}/Gamepad",
+        "binding_value_replacements": {
+          "`Button S`": "`Button A`",
+          "`Button E`": "`Button B`",
+          "`Button W`": "`Button X`",
+          "`Button N`": "`Button Y`"
+        },
         "device_disconnected": "DInput/0/Keyboard Mouse",
         "mappings": {
           "Buttons/A": "{Platform_A}",

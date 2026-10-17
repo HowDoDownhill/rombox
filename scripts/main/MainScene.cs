@@ -189,6 +189,7 @@ public partial class MainScene : Control
             if (startMenuPanel.joinNetplayButton != null) startMenuPanel.joinNetplayButton.Pressed += PopupHandler.OnJoinNetplayPressed;
             if (startMenuPanel.selectBiosButton != null) startMenuPanel.selectBiosButton.Pressed += PopupHandler.OnSelectBiosMenuPressed;
             if (startMenuPanel.assignControllersButton != null) startMenuPanel.assignControllersButton.Pressed += InputHandler.BeginControllerAssignment;
+            startMenuPanel.AboutToOpen += InputHandler.UpdateControllerAssignmentPrompt;
             if (startMenuPanel.settingsButton != null) startMenuPanel.settingsButton.Pressed += PopupHandler.OnSettingsMenuPressed;
             if (startMenuPanel.refreshAllGamesButton != null) startMenuPanel.refreshAllGamesButton.Pressed += PopupHandler.OnRefreshGamesPressed;
             if (startMenuPanel.refreshCurrentSystemButton != null) startMenuPanel.refreshCurrentSystemButton.Pressed += PopupHandler.OnRefreshCurrentSystemGamesPressed;

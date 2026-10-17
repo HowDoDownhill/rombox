@@ -3389,7 +3389,7 @@ and `declined`. The old values keep their meaning, so existing configs need no m
 
 | Method | Players | Virtual pads | Driver install |
 |---|---|---|---|
-| Steam Input | every pad passes through, XInput slot or not | never | never |
+| Steam Input | every pad passes through in Steam's order; player N is slot N-1 | never | never |
 | ViGEm | XInput pads pass through, others get a virtual pad | for non-XInput pads | offered on choosing it |
 | Manual | no session | never | never |
 
@@ -3403,6 +3403,61 @@ layer never starts a session, so the question had no effect there.
 
 The prompt is the update panel's choice mode: a focusable list of options below the text, cycled
 with up and down. Back picks Manual, as "No Thanks" did.
+
+### Under Steam Input, each process numbers the pads its own way
+
+Steam's pads reach a hooked process through its XInput hook, and Steam picks which pad sits in
+which XInput slot separately for each process. Measured on 2026-10-17 with four pads, after
+Assign Controllers recorded the presses Series, Pro, wireless Xbox One, wired Xbox One as app
+slots 2, 0, 1, 3, and Dolphin was given `XInput/2`, `XInput/0`, `XInput/1`, `XInput/3`:
+
+| XInput slot | Pad in the app | Pad in Dolphin |
+|---|---|---|
+| 0 | Pro | Series |
+| 1 | wireless Xbox One | wireless Xbox One |
+| 2 | Series | Pro |
+| 3 | wired Xbox One | wired Xbox One |
+
+Names are worse. SDL labels each Steam pad from `Steam/config/virtualgamepadinfo.txt`, choosing
+the entry by a slot field Steam returns from `XInputGetCapabilitiesEx` (offset 28). That field
+always equalled the XInput slot, while the file kept its own order, so the app called the wireless
+Xbox One "Xbox Series X Controller" and Dolphin's SDL, a different build, mislabelled a different
+pair. Matching players by name or VID/PID therefore cannot work under Steam Input, in the app or in
+an emulator, and no field exposes the physical controller behind a Steam pad.
+
+The Steam Input method follows from that. Steam sets player order: player N is slot N-1 in the
+emulator's own process (`ResolvePlayerXInputSlot` returns the player index, and probed devices are
+matched by player index alone), Assign Controllers is hidden, and the SDL allowlist is skipped since
+Steam already hides the physical pads. Users who want their own order turn Steam Input off for the
+shortcut and use ViGEm.
+
+### Button prompts are positional for every controller
+
+Per-controller prompts need to know which physical pad sent the input. Under Steam Input that is
+unknowable from the app: the names are mispaired as above, `ISteamInput` needs a real Steam app ID
+that a non-Steam shortcut lacks, and matching against the physical pads failed because Steam hides
+them. Measured on 2026-10-17, a Steam-launched app enumerated 0 HID game controllers through
+SetupAPI, where an unhooked process saw and read all four.
+
+The prompts are now the same for every controller. Face buttons use the addon's positional icons
+(`positional/south` and so on, loaded as specific paths), the d-pad uses the shared d-pad icons, and
+Start and Back show the Xbox, PlayStation and Nintendo symbols side by side in one image built at
+runtime. `ControllerGlyph` swaps a button's icon between these and the plain action glyph as the
+input type changes, so keyboard use still hides controller prompts. The user chose this over
+per-pad prompts outside Steam too, for one look everywhere.
+
+An assigned order under ViGEm now loses only the pad that disconnects; the players after it move up.
+Clearing the whole order on any disconnect made a sleeping Bluetooth pad reset every player.
+
+### Dolphin addresses pads by XInput slot
+
+`SDL/{n}/{name}` depended on Dolphin's SDL naming each pad the way the probe's borrowed `SDL3.dll`
+did, which failed under Steam Input as above. Every player the layer starts is an XInput device
+(passed through or a ViGEm pad), so Dolphin's own XInput backend reaches each one as
+`XInput/{xinput_index}/Gamepad`. Its input names match SDL's except the face buttons, so the section
+option `binding_value_replacements` renames `Button S/E/W/N` to `Button A/B/X/Y` inside each
+player's port, keeping any custom remap. Dolphin no longer needs the probe, which saves about two
+seconds per launch.
 
 ### Device references come from probing the emulator's own SDL view
 
@@ -3426,9 +3481,9 @@ in list order, so the index alone named the wrong pad there.
 
 | Macro | Resolves to | Used by |
 |---|---|---|
-| `{xinput_index}`, `{sdl_player_index}` | the player's XInput slot | PCSX2, DuckStation |
+| `{xinput_index}`, `{sdl_player_index}` | the player's XInput slot | Dolphin (`XInput/{xinput_index}/Gamepad`); PCSX2, DuckStation |
 | `{sdl_list_index}` | the player's position in the probed list | RetroArch, melonDS, snes9x, Azahar, Flycast |
-| `{sdl_name_index}` + `{controller_name}` | name as the emulator's SDL reports it, and its occurrence among same-named devices | Dolphin |
+| `{sdl_name_index}` + `{controller_name}` | name as the emulator's SDL reports it, and its occurrence among same-named devices | none since Dolphin moved to XInput slots |
 | `{controller_guid}` | the probed GUID | ares |
 
 `controller_config.sdl_enumeration: "all"` selects the unfiltered list for emulators that number

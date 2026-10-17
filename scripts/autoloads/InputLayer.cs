@@ -46,6 +46,7 @@ public partial class InputLayer : Node
     private readonly List<int> ownVirtualDeviceIdsInPlayerOrder = new List<int>();
 
     public bool IsSessionActive { get; private set; }
+    public bool IsSteamInputSession { get; private set; }
     public string LastSessionFailureReason { get; private set; } = "";
 
     public override void _Ready()
@@ -128,6 +129,11 @@ public partial class InputLayer : Node
 
     private int ResolveAssignedPlayerPosition(ConnectedController pad)
     {
+        if (ResolveConsent() == InputLayerConsent.SteamInput)
+        {
+            return pad.ConnectionOrder;
+        }
+
         int assignedPosition = playerAssignmentDeviceIds.IndexOf(pad.GodotDeviceId);
         return assignedPosition >= 0 ? assignedPosition : playerAssignmentDeviceIds.Count + pad.ConnectionOrder;
     }
@@ -212,6 +218,7 @@ public partial class InputLayer : Node
         RecordVirtualPadXInputSlots();
 
         IsSessionActive = true;
+        IsSteamInputSession = consent == InputLayerConsent.SteamInput;
         LastSessionFailureReason = "";
         SetProcess(virtualPadPlayers.Count > 0);
 
@@ -276,6 +283,11 @@ public partial class InputLayer : Node
         if (playerIndex < 0 || playerIndex >= sessionPlayers.Count)
         {
             return -1;
+        }
+
+        if (IsSteamInputSession)
+        {
+            return playerIndex;
         }
 
         SessionPlayer player = sessionPlayers[playerIndex];
@@ -406,6 +418,7 @@ public partial class InputLayer : Node
 
         SetProcess(false);
         IsSessionActive = false;
+        IsSteamInputSession = false;
 
         virtualPadBackend.DestroyPads();
         deviceHider.UnhideAll();
@@ -449,9 +462,9 @@ public partial class InputLayer : Node
         {
             ownVirtualDeviceIds.Remove(joypadId);
 
-            if (playerAssignmentDeviceIds.Contains(joypadId))
+            if (playerAssignmentDeviceIds.Remove(joypadId))
             {
-                ClearPlayerAssignment();
+                GD.Print($"[InputLayer] device {joypadId} left; player order is now [{string.Join(", ", playerAssignmentDeviceIds)}].");
             }
 
             return;
@@ -479,7 +492,7 @@ public partial class InputLayer : Node
 
     public Dictionary<string, string> BuildLaunchEnvironment(EmulatorMeta emulatorMetadata)
     {
-        if (!IsSessionActive || ResolveInputLayerMode(emulatorMetadata) == "none")
+        if (!IsSessionActive || IsSteamInputSession || ResolveInputLayerMode(emulatorMetadata) == "none")
         {
             return new Dictionary<string, string>();
         }

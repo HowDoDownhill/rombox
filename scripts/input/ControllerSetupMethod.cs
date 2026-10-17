@@ -35,6 +35,11 @@ public class ControllerSetupMethod
 
     public static ControllerSetupMethod Recommended => IsLaunchedThroughSteam ? SteamInput : VirtualPads;
 
+    public static int IndexOf(ControllerSetupMethod method)
+    {
+        return All.ToList().IndexOf(method);
+    }
+
     public static ControllerSetupMethod FromConsent(string consentValue)
     {
         return All.FirstOrDefault(method => method.ConsentValue == consentValue);

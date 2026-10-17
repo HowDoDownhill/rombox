@@ -200,13 +200,14 @@ public class MainSceneInputHandler
             ChangelogPanel.PromptSubject.ControllerLayer,
             BuildControllerSetupOfferBody(),
             choiceTexts,
-            ControllerSetupMethod.All.ToList().IndexOf(ControllerSetupMethod.Recommended));
+            ControllerSetupMethod.IndexOf(ControllerSetupMethod.Recommended));
     }
 
     public async void OnControllerSetupMethodChosen(ControllerSetupMethod method)
     {
         appInstance.configManager.SaveControllerMappingConsent(method.ConsentValue);
         GD.Print($"[InputLayer] the user chose {method.Title} for controller setup.");
+        UpdateControllerAssignmentPrompt();
 
         if (method == ControllerSetupMethod.VirtualPads)
         {
@@ -301,6 +302,8 @@ public class MainSceneInputHandler
         {
             return;
         }
+
+        mainScene.assignControllersButton.Visible = appInstance.inputLayer?.ResolveConsent() != InputLayerConsent.SteamInput;
 
         if (isListeningForControllerAssignment)
         {
