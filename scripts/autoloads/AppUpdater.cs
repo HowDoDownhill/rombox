@@ -11,7 +11,7 @@ using System.Linq;
 
 public partial class AppUpdater : Node
 {
-    public const string CurrentVersion = "v1.2.0";
+    public const string CurrentVersion = "v1.2.1";
     private const string RepoOwner = "HowDoDownhill";
     private const string RepoName = "romm-frontend";
     private const int TransferBufferSizeBytes = 1024 * 1024;

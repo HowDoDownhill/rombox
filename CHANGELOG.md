@@ -1,8 +1,9 @@
-RomM Frontend - Unreleased
+RomM Frontend - Version 1.2.1 Changelog
 
 🐛 Bug Fixes
 
     Dolphin Controllers on Linux: Dolphin ignored its settings on Linux and used keyboard and mouse for every player. It now uses the app's settings and saves folder, and the app points each player's port at their controller, so any controller works.
+    Steam Input on Linux: Controllers gave no input when the app was started from Steam on a Wayland desktop such as Omarchy or GNOME. The app now runs through X11 there, which Steam needs to send it controller input.
     gopher64 Controllers: gopher64 used the keyboard unless a controller was assigned by hand. The app now assigns each player's controller to a port on every launch, on Windows and Linux.
 
 ---
