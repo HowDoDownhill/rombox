@@ -1,4 +1,4 @@
-RomM Frontend - Unreleased
+RomM Frontend - Version 1.2.2 Changelog
 
 🐛 Bug Fixes
 
