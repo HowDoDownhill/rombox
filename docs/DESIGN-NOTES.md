@@ -1487,6 +1487,14 @@ Measured on 2026-10-07 at 1920x1080, RTX 5080, worst frame / frames over 16.7 ms
 | System switch | 275 ms / 26 | 27 ms / 19 | **17.5 ms / 1** |
 | System switch back | 163 ms / 11 | 17.5 ms / 1 | **5.5 ms / 0** |
 
+### Audio, physics and navigation run on Godot's dummy servers
+The app plays no sound and has no physics bodies or navigation. `project.godot` sets
+`audio/driver/driver`, `physics/2d|3d/physics_engine` and `navigation/2d|3d/navigation_engine` to
+`Dummy` (3D physics was Jolt). On the RTX 5080 PC, idle private memory went from ~785 MB to ~757 MB.
+Thread count stayed at ~73 and idle CPU was too noisy to compare. The audio driver matters more on
+weak CPUs: Godot's mixer thread runs continuously even when silent. If a sound is ever added, the
+audio driver goes back to the platform default. Physics stays dummy unless physics nodes arrive.
+
 ### Controller glyphs use a fixed size, not expand_icon
 The bottom-bar buttons had `expand_icon` on, and their glyphs never appeared. With `expand_icon`, a
 Button leaves the icon out of its minimum width and scales it into whatever width is left over;
