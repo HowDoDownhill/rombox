@@ -48,6 +48,25 @@ Delete (or move aside) `config.cfg`, `games.cache`, `systems.cache`, `emulators/
 - [ ] Upgrade path: with an existing `EmulatorMap.json`, newly added default platforms appear and
       existing mappings are **not** reordered (`MergeMissingDefaultMappings`).
 
+### Setup wizard
+
+`-- --setup-capture=<png> --setup-step=<Welcome|Look|Source|RomM|Local|Steam|Done>` saves one step as
+an image. `-- --setup-keys=accept,down,right,...` sends those `ui_` actions and logs what had focus.
+The editor skips the Steam step unless `ROMBOX_STEAM_ROOT` points at a Steam folder.
+
+- [ ] A clean profile opens the wizard. A profile already signed in to RomM goes to the library.
+- [ ] Controller only: every step can be finished, and down from the last control reaches Next.
+- [ ] Look: Style and Theme change the screen at once.
+- [ ] RomM: a wrong address or password shows an error and stays on the step.
+- [ ] Local: an ES-DE or EmuDeck folder is found by itself or through Browse, and the count is right.
+      Multi-disc games list once. `.bin` Genesis ROMs and `.md` files are listed.
+- [ ] Steam, with Steam running: finishing closes Steam, adds the shortcut and restarts through it.
+- [ ] Not Now: no Steam or controller prompt appears afterwards.
+- [ ] Run Setup Again: Cancel returns to the library. Switching source shows the other library, and
+      switching back loads RomM from its cache.
+- [ ] Local library: Delete, the installed filter, favorites and netplay are hidden, and a game plays
+      from its own folder. A missing folder shows a message and opens an empty library.
+
 ## 2. Library and browsing
 
 - [ ] System carousel populates; details panel populates; covers load.

@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -21,6 +22,8 @@ public partial class LoginScreen : Control
     [Export] private Vector2 panelShadowOffset = MicaShadow.DefaultOffset;
 
     private AppInstance appInstance; 
+
+    public const string SetupWizardScenePath = "res://scenes/setup/setup_wizard.tscn";
     
     public override void _Ready()
     {
@@ -28,6 +31,19 @@ public partial class LoginScreen : Control
         appInstance = GetNode<AppInstance>("/root/AppInstance");
         
         loginButton.Pressed += OnLoginButtonPressed;
+
+        // A new install sets up first. A local library has nothing to sign in to.
+        if (!appInstance.configManager.SetupComplete || OS.GetCmdlineUserArgs().Any(argument => argument.StartsWith("--setup-capture=")))
+        {
+            GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, SetupWizardScenePath);
+            return;
+        }
+
+        if (appInstance.Library.SourceId != LibrarySources.RomM)
+        {
+            GetTree().CallDeferred(SceneTree.MethodName.ChangeSceneToFile, "res://scenes/login/loading_screen.tscn");
+            return;
+        }
 
         Appearance.ApplySaved(appInstance.configManager);
 

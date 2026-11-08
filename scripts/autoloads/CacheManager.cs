@@ -98,10 +98,15 @@ public partial class CacheManager : Node
         WriteJsonToFile(gamesCacheFilePath, gameCacheBySystemId, CacheJsonContext.Default.DictionaryInt32ListGame);
     }
 
+    // A local library has no cache to delete; reloading rescans its folders. The RomM cache stays
+    // for when the source switches back.
     public void RebuildGameCache()
     {
-        File.Delete(systemsCacheFilePath);
-        File.Delete(gamesCacheFilePath);
+        if (appInstance.Library.Has(LibraryFeatures.Cache))
+        {
+            File.Delete(systemsCacheFilePath);
+            File.Delete(gamesCacheFilePath);
+        }
 
         GetTree().ChangeSceneToFile("res://scenes/login/loading_screen.tscn");
     }

@@ -2401,7 +2401,7 @@ public partial class EmulatorManager : Node
             return null;
         }
 
-        return Path.GetFullPath(Path.Combine(appInstance.configManager.RomsPath, game.System.Slug, game.Files[0].FileName));
+        return RomLocation.For(appInstance.configManager, game);
     }
 
     public static string ResolveInstalledAndroidPackage(EmulatorMeta emulatorMetadata)
@@ -2576,8 +2576,7 @@ public partial class EmulatorManager : Node
                 return;
             }
 
-            string romFileName = game.Files[0].FileName;
-            string fullRomPath = Path.GetFullPath(Path.Combine(appInstance.configManager.RomsPath, game.System.Slug, romFileName));
+            string fullRomPath = RomLocation.For(appInstance.configManager, game);
 
             string launchArguments = emulatorMetadata.LaunchArgsWithGame;
 

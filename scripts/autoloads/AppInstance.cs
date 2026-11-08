@@ -17,7 +17,25 @@ public partial class AppInstance : Node
     public NetplayDiscovery netplayDiscovery;
     public NetplayPortMapper netplayPortMapper;
     public InputLayer inputLayer;
-    
+
+    private ILibraryBackend library;
+
+    // The source the library comes from, following the saved setting.
+    public ILibraryBackend Library
+    {
+        get
+        {
+            string source = configManager?.LibrarySource ?? LibrarySources.RomM;
+
+            if (library == null || library.SourceId != source)
+            {
+                library = LibrarySources.Create(source, this);
+            }
+
+            return library;
+        }
+    }
+
     public override void _Ready()
     {
         StartupTimeline.Mark("first autoload");

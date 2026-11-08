@@ -45,7 +45,7 @@ public partial class AssetManager : Node
 
     public void RequestGameAssets(Game game)
     {
-        if (game == null)
+        if (game == null || !appInstance.Library.Has(LibraryFeatures.Artwork))
         {
             return;
         }

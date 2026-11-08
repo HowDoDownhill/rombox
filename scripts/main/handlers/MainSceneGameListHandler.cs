@@ -413,7 +413,8 @@ public partial class MainSceneGameListHandler
 
         if (games.TryGetValue(system.Id, out List<Game> cachedGames))
         {
-            if (appInstance.configManager.HideGamesWithoutBoxArt)
+            // The filter reads the server's art paths, which a source without artwork never fills in.
+            if (appInstance.configManager.HideGamesWithoutBoxArt && appInstance.Library.Has(LibraryFeatures.Artwork))
             {
                 currentlyShownGames = cachedGames.Where(g => !string.IsNullOrEmpty(g.PathCover3d) || !string.IsNullOrEmpty(g.PathCoverLarge) || !string.IsNullOrEmpty(g.CoverArtUrl)).ToList();
             }
@@ -753,9 +754,8 @@ public partial class MainSceneGameListHandler
             return false;
         }
 
-        string fileName = game.Files[0].FileName;
-        string fullPath = appInstance.configManager.RomsPath.PathJoin(game.System.Slug).PathJoin(fileName);
-        return Godot.FileAccess.FileExists(fullPath);
+        string fullPath = RomLocation.For(appInstance.configManager, game);
+        return fullPath != null && Godot.FileAccess.FileExists(fullPath);
     }
 
     public async void OnGameSelected(long index)
@@ -1381,7 +1381,9 @@ public partial class MainSceneGameListHandler
 
         if (!CheckIfGameIsDownloaded(game))
         {
-            return new GameActionState { Kind = GameActionKind.DownloadGame, Label = "Download", Disabled = false, EmulatorName = mappedEmulator };
+            return appInstance.Library.Has(LibraryFeatures.Downloads)
+                ? new GameActionState { Kind = GameActionKind.DownloadGame, Label = "Download", Disabled = false, EmulatorName = mappedEmulator }
+                : new GameActionState { Kind = GameActionKind.Unavailable, Label = "File Missing", Disabled = true, EmulatorName = mappedEmulator };
         }
 
 
@@ -1430,14 +1432,29 @@ public partial class MainSceneGameListHandler
                 : (showOnlyInstalledGames ? "Installed" : "All Games");
 
             mainScene.filterInstalledGamesBtn.Disabled = false;
+
+            // Every game in a local library is already on disk, so the filter and Delete have nothing to do.
+            SetFooterButtonVisible(mainScene.filterInstalledGamesBtn, isInLobby || appInstance.Library.Has(LibraryFeatures.Downloads));
         }
 
         if (mainScene.deleteBtn != null)
         {
+            SetFooterButtonVisible(mainScene.deleteBtn, appInstance.Library.Has(LibraryFeatures.Downloads));
             mainScene.deleteBtn.Disabled = isInLobby
                 || !isGameDownloadedLocally
                 || appInstance.emulatorManager.IsEmulatorLaunching
                 || appInstance.emulatorManager.IsEmulatorRunning;
+        }
+    }
+
+    // Footer buttons sit in margin containers, which would leave a gap behind a hidden button.
+    private static void SetFooterButtonVisible(Button button, bool visible)
+    {
+        button.Visible = visible;
+
+        if (button.GetParent() is MarginContainer container)
+        {
+            container.Visible = visible;
         }
     }
 
@@ -1531,6 +1548,12 @@ public partial class MainSceneGameListHandler
 
     public void DeleteLocalGame(Game game)
     {
+        // A local library's files are the user's own collection. Setup promises they stay untouched.
+        if (!appInstance.Library.Has(LibraryFeatures.Downloads))
+        {
+            return;
+        }
+
         List<RomFile> romFiles = game.Files;
         foreach (RomFile file in romFiles)
         {

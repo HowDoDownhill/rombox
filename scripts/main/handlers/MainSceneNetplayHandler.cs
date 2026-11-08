@@ -533,14 +533,7 @@ public class MainSceneNetplayHandler
 
     private string ResolveLocalRomPath(Game game)
     {
-        string systemSlug = game?.System?.Slug ?? game?.PlatformSlug;
-
-        if (game?.Files == null || game.Files.Count == 0 || string.IsNullOrEmpty(systemSlug))
-        {
-            return null;
-        }
-
-        return System.IO.Path.GetFullPath(System.IO.Path.Combine(appInstance.configManager.RomsPath, systemSlug, game.Files[0].FileName));
+        return RomLocation.For(appInstance.configManager, game);
     }
 
     private string verifiedRomFilePath;

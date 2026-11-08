@@ -161,8 +161,12 @@ public class MainScenePopupHandler
 
         bool isAlreadyInSession = appInstance.netplayLobby != null && appInstance.netplayLobby.IsInLobby;
 
+        // Peers match on the RomM server and its game ids, which a local library doesn't have.
+        bool sourceSupportsNetplay = appInstance.Library.Has(LibraryFeatures.Netplay);
+
         hostNetplayBtn.Text = "Host Session";
         hostNetplayBtn.Disabled = isAlreadyInSession;
+        hostNetplayBtn.Visible = sourceSupportsNetplay;
 
         Button joinNetplayBtn = mainScene.startMenuPanel?.joinNetplayButton;
 
@@ -170,6 +174,7 @@ public class MainScenePopupHandler
         {
             joinNetplayBtn.Text = "Join Session";
             joinNetplayBtn.Disabled = isAlreadyInSession;
+            joinNetplayBtn.Visible = sourceSupportsNetplay;
         }
     }
 
@@ -291,6 +296,7 @@ public class MainScenePopupHandler
         }
 
         var selectedGame = mainScene.GameListHandler.currentlySelectedGame;
+        favoriteBtn.Visible = appInstance.Library.Has(LibraryFeatures.Favorites);
 
         if (!appInstance.dataBus.HasFavoriteCollection)
         {
@@ -474,43 +480,23 @@ public class MainScenePopupHandler
         mainScene.startMenuPanel?.Close();
 
         mainScene.progressPanel?.ShowStatus("Refreshing games...");
-        List<Game> allGamesForSystem = new List<Game>();
-        int currentPage = 1;
-        const int chunkSize = 100;
-        bool hasMoreGames = true;
+        ILibraryBackend library = appInstance.Library;
 
-        while (hasMoreGames)
+        // A local scan reads the folders again, so the system's games come from a fresh scan.
+        if (!library.Has(LibraryFeatures.Cache))
         {
-            var response = await appInstance.rommApi.GetGamesAsync(currentSystem, currentPage, chunkSize);
-
-            if (response?.Games != null && response.Games.Any())
-            {
-                foreach (var game in response.Games)
-                {
-                    game.System = currentSystem;
-                }
-
-                allGamesForSystem.AddRange(response.Games);
-
-                mainScene.progressPanel?.SetStatus($"Found {allGamesForSystem.Count} games...");
-
-                if (response.Games.Count < chunkSize)
-                {
-                    hasMoreGames = false;
-                }
-                else
-                {
-                    currentPage++;
-                }
-            }
-            else
-            {
-                hasMoreGames = false;
-            }
+            await library.ConnectAsync(appInstance.configManager);
         }
 
+        List<Game> allGamesForSystem = await library.GetGamesAsync(currentSystem,
+            count => mainScene.progressPanel?.SetStatus($"Found {count} games..."));
+
         appInstance.dataBus.gameCache[currentSystem.Id] = allGamesForSystem;
-        appInstance.cacheManager?.SaveCache(appInstance.dataBus.systems, appInstance.dataBus.gameCache);
+
+        if (library.Has(LibraryFeatures.Cache))
+        {
+            appInstance.cacheManager?.SaveCache(appInstance.dataBus.systems, appInstance.dataBus.gameCache);
+        }
 
         mainScene.GameListHandler.games = appInstance.dataBus.gameCache;
         mainScene.GameListHandler.ApplyFiltersAndRefresh();

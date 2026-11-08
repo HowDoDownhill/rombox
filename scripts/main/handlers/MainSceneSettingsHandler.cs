@@ -234,6 +234,42 @@ public class MainSceneSettingsHandler
         scrollContainer.AddChild(vbox);
         mainScene.sectionOptionsContainer.AddChild(formContainer);
 
+        HBoxContainer libraryBox = new HBoxContainer();
+        libraryBox.AddThemeConstantOverride("separation", 16);
+        Label libraryLabel = new Label();
+        libraryLabel.Text = "Library";
+        libraryBox.AddChild(libraryLabel);
+
+        var config = appInstance.configManager;
+        Label libraryStatus = new Label();
+        libraryStatus.ThemeTypeVariation = "MutedLabel";
+        libraryStatus.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        libraryStatus.HorizontalAlignment = HorizontalAlignment.Right;
+        libraryStatus.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        libraryStatus.Text = LibrarySources.DisplayName(config.LibrarySource) + ": "
+            + (config.LibrarySource == LibrarySources.Local ? config.LocalLibraryPath : config.RomMHost);
+        libraryBox.AddChild(libraryStatus);
+
+        // Setup replaces this scene, which would cut off downloads and a running emulator.
+        Button runSetupButton = new Button();
+        runSetupButton.ThemeTypeVariation = "ListButton";
+        runSetupButton.Text = "Run Setup Again";
+        runSetupButton.Pressed += () =>
+        {
+            if (appInstance.downloadManager?.HasUnfinishedTransfers == true || appInstance.emulatorManager.IsEmulatorRunning)
+            {
+                libraryStatus.Text = "Finish downloads and close the emulator first.";
+                return;
+            }
+
+            mainScene.GetTree().ChangeSceneToFile(LoginScreen.SetupWizardScenePath);
+        };
+        libraryBox.AddChild(runSetupButton);
+
+        var libraryEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        libraryEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(libraryBox);
+        vbox.AddChild(libraryEntry);
+
         HBoxContainer styleFieldBox = new HBoxContainer();
         Label styleLabel = new Label();
         styleLabel.Text = "Style";
@@ -484,6 +520,7 @@ public class MainSceneSettingsHandler
 
         var entry1 = settingsListEntryScene.Instantiate<SettingsListEntry>();
         entry1.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(fieldBox);
+        entry1.Visible = appInstance.Library.Has(LibraryFeatures.Artwork);
         vbox.AddChild(entry1);
 
         HBoxContainer fieldBox2 = new HBoxContainer();

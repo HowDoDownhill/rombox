@@ -38,9 +38,28 @@ public partial class LoadingScreen : Control
         }
 
         var startupTimer = System.Diagnostics.Stopwatch.StartNew();
+        ILibraryBackend library = appInstance.Library;
+
+        // A source without a cache is read fresh at every start. Its firmware list comes from the
+        // systems it finds, so nothing is requested ahead of the scan.
+        if (!library.Has(LibraryFeatures.Cache))
+        {
+            var (isConnected, errorMessage) = await library.ConnectAsync(appInstance.configManager);
+
+            if (!isConnected)
+            {
+                appInstance.dataBus.systems = new List<GameSystem>();
+                appInstance.dataBus.gameCache.Clear();
+                await ShowMessageThenContinue(errorMessage);
+                return;
+            }
+
+            PreloadDataAsync();
+            return;
+        }
 
         Task<Dictionary<int, List<Firmware>>> firmwareRequest = GetFirmwareByPlatformAsync();
-        Task<List<Collection>> collectionsRequest = appInstance.rommApi.GetCollectionsAsync();
+        Task<List<Collection>> collectionsRequest = library.GetCollectionsAsync();
 
         var (cachedSystems, cachedGames) = await Task.Run(() => appInstance.cacheManager.LoadCache());
         long cacheMilliseconds = startupTimer.ElapsedMilliseconds;
@@ -91,25 +110,38 @@ public partial class LoadingScreen : Control
         }
     }
 
-    private async void PreloadDataAsync()
+    private async Task ShowMessageThenContinue(string message)
     {
         if (statusLabel != null)
         {
-            statusLabel.Text = "Loading systems...";
+            statusLabel.Text = message;
         }
 
-        List<GameSystem> systems = await appInstance.rommApi.GetSystemsAsync();
-        appInstance.dataBus.systems = systems;
+        GD.Print($"[Library] {message}");
+        await Task.Delay(MessageVisibleMilliseconds);
+        GetTree().ChangeSceneToFile("res://scenes/main_scene.tscn");
+    }
+
+    private const int MessageVisibleMilliseconds = 3000;
+
+    private async void PreloadDataAsync()
+    {
+        ILibraryBackend library = appInstance.Library;
+
+        if (statusLabel != null)
+        {
+            statusLabel.Text = library.Has(LibraryFeatures.Cache) ? "Loading systems..." : "Looking for games...";
+        }
+
+        List<GameSystem> systems = await library.GetSystemsAsync();
+        appInstance.dataBus.systems = systems ?? new List<GameSystem>();
 
         if (systems == null || !systems.Any())
         {
-            if (statusLabel != null)
-            {
-                statusLabel.Text = "No systems found.";
-            }
-
-            await Task.Delay(1000);
-            GetTree().ChangeSceneToFile("res://scenes/main_scene.tscn");
+            appInstance.dataBus.gameCache.Clear();
+            await ShowMessageThenContinue(library.SourceId == LibrarySources.Local
+                ? $"No games found in {appInstance.configManager.LocalLibraryPath}. RomBox looks for one folder per system, named like snes, psx or megadrive."
+                : "No systems found.");
             return;
         }
 
@@ -123,33 +155,7 @@ public partial class LoadingScreen : Control
 
         foreach (var system in systems)
         {
-            List<Game> allGamesForSystem = new List<Game>();
-            int currentPage = 1;
-            const int chunkSize = 100;
-            bool hasMoreGames = true;
-
-            while (hasMoreGames)
-            {
-                GameResponse gameResponse = await appInstance.rommApi.GetGamesAsync(system, currentPage, chunkSize);
-                
-                if (gameResponse != null && gameResponse.Games != null && gameResponse.Games.Any())
-                {
-                    foreach(var game in gameResponse.Games)
-                    {
-                        game.System = system;
-                        allGamesForSystem.Add(game);
-                    }
-                    
-                    hasMoreGames = allGamesForSystem.Count < gameResponse.Total;
-                    currentPage++;
-                }
-
-                else
-                {
-                    hasMoreGames = false;
-                }
-            }
-            
+            List<Game> allGamesForSystem = await library.GetGamesAsync(system);
             appInstance.dataBus.gameCache[system.Id] = allGamesForSystem;
             GD.Print($"Found {allGamesForSystem.Count} games for {system.Name}");
             
@@ -161,9 +167,12 @@ public partial class LoadingScreen : Control
             }
         }
         
-        GD.Print($"Saving {appInstance.dataBus.gameCache.Sum(x => x.Value.Count)} games to cache.");
-        appInstance.cacheManager.SaveCache(appInstance.dataBus.systems, appInstance.dataBus.gameCache);
-        
+        if (library.Has(LibraryFeatures.Cache))
+        {
+            GD.Print($"Saving {appInstance.dataBus.gameCache.Sum(x => x.Value.Count)} games to cache.");
+            appInstance.cacheManager.SaveCache(appInstance.dataBus.systems, appInstance.dataBus.gameCache);
+        }
+
         await SyncFirmwareAsync();
 
         await PopulateAvailableFirmwareAsync();
@@ -187,7 +196,7 @@ public partial class LoadingScreen : Control
             statusLabel.Text = "Loading collections...";
         }
 
-        var collections = await (startedRequest ?? appInstance.rommApi.GetCollectionsAsync());
+        var collections = await (startedRequest ?? appInstance.Library.GetCollectionsAsync()) ?? new List<Collection>();
         appInstance.dataBus.collectionSystems = CollectionProjection.Project(collections, appInstance.dataBus.gameCache);
 
         var favoriteCollection = collections?.FirstOrDefault(collection => collection.IsFavorite);
@@ -207,6 +216,11 @@ public partial class LoadingScreen : Control
 
     private async Task SyncFirmwareAsync()
     {
+        if (!appInstance.Library.Has(LibraryFeatures.Firmware))
+        {
+            return;
+        }
+
         if (statusLabel != null)
         {
             statusLabel.Text = "Checking for BIOS updates...";
@@ -284,7 +298,7 @@ public partial class LoadingScreen : Control
             return firmwareByPlatformId;
         }
 
-        List<Firmware> allFirmware = await appInstance.rommApi.GetFirmwareAsync() ?? new List<Firmware>();
+        List<Firmware> allFirmware = await appInstance.Library.GetFirmwareAsync() ?? new List<Firmware>();
         firmwareByPlatformId = allFirmware.GroupBy(firmware => firmware.PlatformId).ToDictionary(group => group.Key, group => group.ToList());
         return firmwareByPlatformId;
     }

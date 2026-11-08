@@ -21,7 +21,7 @@ public partial class SaveSyncManager : Node
 
     public async Task SyncBeforeLaunch(Game game)
     {
-        if (appInstance.rommApi == null)
+        if (appInstance.rommApi == null || !appInstance.Library.Has(LibraryFeatures.SaveSync))
         {
             return;
         }
@@ -254,7 +254,7 @@ public partial class SaveSyncManager : Node
 
     public async Task SyncAfterExit(Game game, DateTime sessionStart, DateTime sessionEnd)
     {
-        if (appInstance.rommApi == null)
+        if (appInstance.rommApi == null || !appInstance.Library.Has(LibraryFeatures.SaveSync))
         {
             return;
         }

@@ -7,6 +7,10 @@ and your saves sync back to RomM.
 RomBox is free and open source under the GPL-3.0. It is an independent project. It is not
 affiliated with or endorsed by the RomM project. Until version 1.2.2 it was called RomM Frontend.
 
+No RomM server? RomBox can also show games already on your computer or a mounted network share,
+using the folder layout from ES-DE, EmuDeck or RetroArch. Setup asks which one you want the first
+time you start it. A local library has no box art, save sync, collections or netplay yet.
+
 ![Carousel view](docs/images/carousel-view.jpg)
 
 | Grid view | List view |
@@ -157,7 +161,8 @@ Open **Start > Settings**.
 
 - **Game List Settings**: Carousel, Grid or List view, hiding games without cover art, and
   showing empty systems.
-- **General Settings**: style, app theme, background style, interface size (useful on a TV or a
+- **General Settings**: your library and **Run Setup Again**, which switches between RomM and local
+  folders; style, app theme, background style, interface size (useful on a TV or a
   handheld), interface sounds, and on Windows a preference for the dedicated GPU. **Glass** has
   animated backgrounds and frosted panels. **Simple** uses flat colours and redraws the screen only
   when something changes, which is easier on laptops and handhelds. The **Light** and **Dark**

@@ -1417,6 +1417,34 @@ Controller glyphs take `Appearance.IconTint` through the buttons' icon colours. 
 a light palette tint toward its background. The vignette drops from 0.7 to 0.2, which kept the
 corners from turning grey.
 
+### One library source at a time, behind ILibraryBackend
+`ILibraryBackend` covers connecting, systems, games, collections and firmware. `AppInstance.Library`
+returns the backend for the saved `Library/Source`. `LibraryFeatures` flags say what else a source
+can do, and the UI hides the rest. Downloads, save sync, netplay and artwork still call `RomMAPI`
+directly, because only `RomMBackend` declares those flags.
+
+Local library notes that are easy to break:
+
+- Game ids are an FNV-1a hash of the path relative to the library root, so they survive a rescan.
+- Artwork files are named by game id, and ids only mean something within one source. A local library
+  reads `assets/local`, so a RomM cover can never land on a local game with the same id.
+- `Game.LocalPath` holds the real file location. Every lookup goes through `RomLocation.For`. RomM
+  games leave it empty and resolve to `RomsPath/<slug>/<file>`.
+- `Hide Games Without Box Art` reads RomM's art paths, so it only applies to sources with `Artwork`.
+- `DeleteLocalGame` returns early without `Downloads`, on top of the hidden button. Setup tells the
+  user their files stay untouched.
+- `.md` is a Mega Drive ROM extension and must stay off the ignore list. A `.bin` is hidden only when
+  a `.cue`, `.gdi`, `.ccd`, `.toc` or `.m3u` points at it, since Genesis and Atari ROMs use `.bin` too.
+- The folder is scanned at every start, with no cache. That is cheap on a local disk and has not been
+  measured on a large network share.
+
+### The setup wizard
+`LoginScreen` redirects to `SetupWizard` while `Setup/Complete` is false. Installs from before the
+wizard have no such key and count as set up when they hold a RomM host or a valid login. The Steam
+step decides once, in `_Ready`, whether it appears: answering it writes the settings it reads, and a
+step list recalculated afterwards would lose the step and stall the wizard. `Back` and `Next` have
+explicit focus neighbours because Godot's geometry sends right from Back up to the wide rows.
+
 ### Interface sounds play only after a press
 `UiSounds` lives under `AppInstance` and plays four synthesised sounds from `assets/sounds/`
 (regenerate with `python tools/ui-sounds/make_ui_sounds.py`): a tick when the selection moves, rising

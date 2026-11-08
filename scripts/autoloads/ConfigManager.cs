@@ -13,7 +13,21 @@ public partial class ConfigManager : Node
     public string DownloadsPath { get; private set; }
     public string InstallScriptsPath { get; private set; }
     public string ToolsPath { get; private set; }
-    public string AssetsPath { get; private set; }
+    private string sharedAssetsPath;
+
+    // Artwork is keyed by game id, and ids only mean something within one source, so a local
+    // library keeps its artwork apart from RomM's.
+    public string AssetsPath => LibrarySource == LibrarySources.Local ? sharedAssetsPath + "/local" : sharedAssetsPath;
+
+    // Which library the app shows: LibrarySources.RomM or LibrarySources.Local.
+    public string LibrarySource { get; private set; } = LibrarySources.RomM;
+
+    // The root folder of a local library, holding one subfolder per system.
+    public string LocalLibraryPath { get; private set; } = "";
+
+    // False until the first-run setup finishes. Installs that already signed in to RomM count as set up.
+    public bool SetupComplete { get; private set; }
+
     public string RomMHost { get; private set; }
     public string RomMUsername { get; private set; }
     public string RomMPassword { get; private set; }
@@ -464,7 +478,7 @@ public partial class ConfigManager : Node
         DownloadsPath = DeriveDefaultPath("downloads");
         InstallScriptsPath = DeriveDefaultPath("install_scripts");
         ToolsPath = DeriveDefaultPath("tools");
-        AssetsPath = DeriveDefaultPath("assets");
+        sharedAssetsPath = DeriveDefaultPath("assets");
 
         RomsPath = ResolveRelocatablePath("RomsPath", "roms");
         BiosPath = ResolveRelocatablePath("BiosPath", "bios");
@@ -517,6 +531,16 @@ public partial class ConfigManager : Node
         EmulatorCloseHoldSeconds = (float)configurationFile.GetValue("Input", "EmulatorCloseHoldSeconds", DefaultEmulatorCloseHoldSeconds);
         ControllerMappingConsent = (string)configurationFile.GetValue("Input", "ControllerMappingConsent", ControllerMappingConsentUnasked);
         OfferSteamLaunch = (bool)configurationFile.GetValue("Steam", "OfferSteamLaunch", true);
+        LibrarySource = (string)configurationFile.GetValue("Library", "Source", LibrarySources.RomM);
+        LocalLibraryPath = (string)configurationFile.GetValue("Library", "LocalPath", "");
+        SetupComplete = configurationFile.HasSectionKey("Setup", "Complete")
+            ? (bool)configurationFile.GetValue("Setup", "Complete", false)
+            : !string.IsNullOrEmpty(RomMHost) || RomMValidLoginLastUsed;
+
+        if (System.Array.IndexOf(LibrarySources.All, LibrarySource) < 0)
+        {
+            LibrarySource = LibrarySources.RomM;
+        }
 
         if (ControllerMappingConsent == RetiredControllerMappingConsentVirtualPads)
         {
@@ -589,6 +613,9 @@ public partial class ConfigManager : Node
         EmulatorCloseHoldSeconds = DefaultEmulatorCloseHoldSeconds;
         ControllerMappingConsent = ControllerMappingConsentUnasked;
         OfferSteamLaunch = true;
+        LibrarySource = LibrarySources.RomM;
+        LocalLibraryPath = "";
+        SetupComplete = false;
 
         WriteAllConfigurationValues();
         configurationFile.Save(configurationFilePath);
@@ -630,6 +657,9 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("Input", "EmulatorCloseHoldSeconds", EmulatorCloseHoldSeconds);
         configurationFile.SetValue("Input", "ControllerMappingConsent", ControllerMappingConsent ?? ControllerMappingConsentUnasked);
         configurationFile.SetValue("Steam", "OfferSteamLaunch", OfferSteamLaunch);
+        configurationFile.SetValue("Library", "Source", LibrarySource);
+        configurationFile.SetValue("Library", "LocalPath", LocalLibraryPath ?? "");
+        configurationFile.SetValue("Setup", "Complete", SetupComplete);
 
         if (PreferredEmulators != null)
         {
@@ -807,6 +837,19 @@ public partial class ConfigManager : Node
     public void SaveOfferSteamLaunch(bool offer)
     {
         OfferSteamLaunch = offer;
+        SaveConfig();
+    }
+
+    public void SaveLibrarySource(string source, string localPath)
+    {
+        LibrarySource = source;
+        LocalLibraryPath = localPath ?? "";
+        SaveConfig();
+    }
+
+    public void SaveSetupComplete(bool complete)
+    {
+        SetupComplete = complete;
         SaveConfig();
     }
 

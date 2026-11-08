@@ -50,6 +50,14 @@ always does and the data lands in the store.
 | `HideGamesWithoutBoxArt` | `true` or `false` |
 | `ShowAllSystems` | `true` shows systems with no games |
 
+### `[Library]` and `[Setup]`
+
+| Key | Contents |
+| --- | --- |
+| `Library/Source` | `RomM` or `Local` |
+| `Library/LocalPath` | The root of a local library, holding one folder per system |
+| `Setup/Complete` | `false` shows the setup wizard at the next start |
+
 ### `[Input]`
 
 | Key | Meaning |

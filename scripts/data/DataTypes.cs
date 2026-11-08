@@ -153,6 +153,10 @@ public class Game
     [JsonPropertyName("fs_size_bytes")]
     public long FileSizeBytes { get; set; }
 
+    // Where a local library game sits on disk. RomM games leave it empty and download under RomsPath.
+    [JsonPropertyName("local_path")]
+    public string LocalPath { get; set; }
+
     [JsonIgnore]
     public GameSystem System { get; set; }
 }
