@@ -72,7 +72,41 @@ public partial class MainSceneGameListHandler
         if (game == currentlySelectedGame && mainScene.detailsPanelContainer != null)
         {
             UpdateDetailsTitleAndDescription(game);
+            UpdateDetailsFacts(game);
         }
+    }
+
+    private GameDetailsLayout detailsLayout;
+
+    private GameDetailsLayout DetailsLayout => detailsLayout ??= new GameDetailsLayout(mainScene, appInstance.configManager.DetailsLayout);
+
+    public void ApplyDetailsLayout(string layout)
+    {
+        DetailsLayout.Apply(layout);
+    }
+
+    private void UpdateDetailsFacts(Game game)
+    {
+        string status = null;
+
+        if (appInstance.Library.Has(LibraryFeatures.Downloads))
+        {
+            status = CheckIfGameIsDownloaded(game) ? "Installed" : "Not Installed";
+        }
+
+        // A disc index is only a few bytes, which says nothing about the game's size.
+        string extension = System.IO.Path.GetExtension(game.LocalFilename ?? "").ToLowerInvariant();
+        bool sizeIsMeaningful = game.FileSizeBytes > 0 && extension != ".cue" && extension != ".m3u" && extension != ".gdi";
+        string mappedEmulator = appInstance.emulatorManager.GetMappedEmulator(game.PlatformSlug);
+
+        DetailsLayout.SetFacts(status, status == "Installed", new[]
+        {
+            ("System", game.PlatformDisplayName ?? game.System?.Name),
+            ("Released", game.ReleaseYear),
+            ("Company", game.Company),
+            ("Size", sizeIsMeaningful ? DownloadProgressDisplay.FormatBytes(game.FileSizeBytes) : null),
+            ("Emulator", string.IsNullOrEmpty(mappedEmulator) ? null : appInstance.emulatorManager.GetEmulatorDisplayName(mappedEmulator))
+        });
     }
 
     private void OnAssetDownloaded(int gameId, string assetType)
@@ -809,10 +843,10 @@ public partial class MainSceneGameListHandler
 
     private void UpdateGameDetailsUI(Game game)
     {
+        _ = DetailsLayout;
         UpdateDetailsTitleAndDescription(game);
         UpdateDetailsMarquee(game);
         UpdateDetailsCover(game);
-        EnsureScreenshotsAutoScroller();
         BeginDetailsScreenshotsLoad(game);
         UpdateDetailsDownloadIndicator(game);
         UpdateDetailsPanelButtons(game);
@@ -886,37 +920,28 @@ public partial class MainSceneGameListHandler
             return;
         }
 
+        // A cover that arrives late may be the only image this game has.
+        featuredFallbackGameId = -1;
         string coverPath = ResolveExistingCoverPath(game.Id);
 
         if (coverPath == null)
         {
-            mainScene.gameCover.Texture = null;
+            DetailsLayout.SetCover(null);
             return;
         }
 
         if (!TryGetCachedAssetTexture(coverPath, out _))
         {
-            mainScene.gameCover.Texture = null;
+            DetailsLayout.SetCover(null);
         }
 
         RequestAssetTexture(coverPath, CoverMaximumWidth, coverTexture =>
         {
             if (currentlySelectedGame != null && currentlySelectedGame.Id == game.Id)
             {
-                mainScene.gameCover.Texture = coverTexture;
+                DetailsLayout.SetCover(coverTexture);
             }
         });
-    }
-
-    private void EnsureScreenshotsAutoScroller()
-    {
-        if (mainScene.gameScreenshotsScroll == null || mainScene.gameScreenshotsScroll.HasNode("AutoScrollHelper"))
-        {
-            return;
-        }
-
-        var autoScroller = new AutoScrollHelper { ScrollContainer = mainScene.gameScreenshotsScroll, Name = "AutoScrollHelper" };
-        mainScene.gameScreenshotsScroll.AddChild(autoScroller);
     }
 
     private void UpdateDetailsDownloadIndicator(Game game)
@@ -1030,7 +1055,8 @@ public partial class MainSceneGameListHandler
     }
 
     private const int MaximumCachedScreenshotThumbnails = 320;
-    private const float ScreenshotThumbnailWidth = 115.0f;
+    private const float ScreenshotThumbnailWidth = 200.0f;
+    private const double ScreenshotRotationSeconds = 5.0;
     private readonly Dictionary<string, ImageTexture> screenshotThumbnailsByPath = new Dictionary<string, ImageTexture>();
     private readonly LinkedList<string> screenshotThumbnailUsageOrder = new LinkedList<string>();
 
@@ -1117,6 +1143,19 @@ public partial class MainSceneGameListHandler
         return paths;
     }
 
+    private List<string> ScreenshotAssetPaths(int gameId)
+    {
+        string assetsPath = appInstance.configManager.AssetsPath;
+        var paths = new List<string> { System.IO.Path.Combine(assetsPath, "screenshots", $"{gameId}.jpg") };
+
+        for (int screenshotIndex = 0; screenshotIndex < 5; screenshotIndex++)
+        {
+            paths.Add(System.IO.Path.Combine(assetsPath, "screenshots", $"{gameId}_{screenshotIndex}.jpg"));
+        }
+
+        return paths;
+    }
+
     private List<string> DetailsPanelAssetPaths(int gameId)
     {
         string assetsPath = appInstance.configManager.AssetsPath;
@@ -1150,6 +1189,10 @@ public partial class MainSceneGameListHandler
             pendingScreenshotsGameId = game.Id;
             pendingScreenshotPaths.Clear();
             displayedScreenshotPaths.Clear();
+            featuredScreenshotPaths.Clear();
+            featuredFallbackGameId = -1;
+            DetailsLayout.ClearThumbnails();
+            screenshotRotationTimer?.Stop();
 
             if (mainScene.gameScreenshotsFlow != null)
             {
@@ -1160,11 +1203,11 @@ public partial class MainSceneGameListHandler
                 }
             }
 
-            pendingScreenshotPaths.AddRange(DetailsPanelAssetPaths(game.Id));
+            pendingScreenshotPaths.AddRange(ScreenshotAssetPaths(game.Id));
             return;
         }
 
-        foreach (string path in DetailsPanelAssetPaths(game.Id))
+        foreach (string path in ScreenshotAssetPaths(game.Id))
         {
             if (displayedScreenshotPaths.Contains(path) || pendingScreenshotPaths.Contains(path))
             {
@@ -1175,10 +1218,81 @@ public partial class MainSceneGameListHandler
         }
     }
 
+    private readonly List<string> featuredScreenshotPaths = new List<string>();
+    private int featuredScreenshotIndex;
+    private int featuredFallbackGameId = -1;
+    private Timer screenshotRotationTimer;
+
+    private void ShowFeaturedScreenshot(int index)
+    {
+        Game game = currentlySelectedGame;
+        featuredScreenshotIndex = index;
+        DetailsLayout.SelectThumbnail(index);
+        string path = featuredScreenshotPaths[index];
+
+        RequestAssetTexture(path, CoverMaximumWidth, texture =>
+        {
+            bool isStillWanted = game == currentlySelectedGame && featuredScreenshotIndex == index
+                && index < featuredScreenshotPaths.Count && featuredScreenshotPaths[index] == path;
+
+            if (isStillWanted && texture != null)
+            {
+                DetailsLayout.SetFeaturedImage(texture, true);
+            }
+        });
+    }
+
+    private void StartScreenshotRotation()
+    {
+        if (screenshotRotationTimer == null)
+        {
+            screenshotRotationTimer = new Timer { WaitTime = ScreenshotRotationSeconds };
+            screenshotRotationTimer.Timeout += () =>
+            {
+                if (featuredScreenshotPaths.Count > 1)
+                {
+                    ShowFeaturedScreenshot((featuredScreenshotIndex + 1) % featuredScreenshotPaths.Count);
+                }
+            };
+            mainScene.AddChild(screenshotRotationTimer);
+        }
+
+        screenshotRotationTimer.Start();
+    }
+
+    // With every screenshot checked and none found, the cover or a plain backdrop takes the large spot.
+    private void ResolveFeaturedFallback()
+    {
+        Game game = currentlySelectedGame;
+
+        if (game == null || detailsLayout == null || featuredScreenshotPaths.Count > 0 || featuredFallbackGameId == game.Id)
+        {
+            return;
+        }
+
+        featuredFallbackGameId = game.Id;
+        string coverPath = ResolveExistingCoverPath(game.Id);
+
+        if (coverPath == null)
+        {
+            DetailsLayout.SetFeaturedImage(null, false);
+            return;
+        }
+
+        RequestAssetTexture(coverPath, CoverMaximumWidth, coverTexture =>
+        {
+            if (game == currentlySelectedGame && featuredScreenshotPaths.Count == 0)
+            {
+                DetailsLayout.SetFeaturedImage(coverTexture, false);
+            }
+        });
+    }
+
     public void ProcessPendingScreenshotLoads()
     {
         if (pendingScreenshotPaths.Count == 0)
         {
+            ResolveFeaturedFallback();
             return;
         }
 
@@ -1219,20 +1333,25 @@ public partial class MainSceneGameListHandler
             return;
         }
 
-        float aspectRatio = (float)texture.GetWidth() / texture.GetHeight();
-        float targetWidth = ScreenshotThumbnailWidth;
-        float targetHeight = targetWidth / aspectRatio;
-
-        var textureRect = new TextureRect {
-            Texture = texture,
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.Scale,
-            CustomMinimumSize = new Vector2(targetWidth, targetHeight),
-            SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter
-        };
-
-        mainScene.gameScreenshotsFlow.AddChild(textureRect);
         displayedScreenshotPaths.Add(path);
+
+        if (featuredScreenshotPaths.Count >= GameDetailsLayout.MaximumScreenshots)
+        {
+            return;
+        }
+
+        DetailsLayout.AddThumbnail(texture);
+        featuredScreenshotPaths.Add(path);
+
+        if (featuredScreenshotPaths.Count == 1)
+        {
+            ShowFeaturedScreenshot(0);
+        }
+        else
+        {
+            DetailsLayout.SelectThumbnail(featuredScreenshotIndex);
+            StartScreenshotRotation();
+        }
     }
 
     private void OnDownloadProgressUpdated(string fileName, long currentBytes, long totalBytes, string gameId)
@@ -1412,6 +1531,7 @@ public partial class MainSceneGameListHandler
 
     public void UpdateDetailsPanelButtons(Game game)
     {
+        UpdateDetailsFacts(game);
         bool isGameDownloadedLocally = CheckIfGameIsDownloaded(game);
 
         if (mainScene.installedIcon != null)

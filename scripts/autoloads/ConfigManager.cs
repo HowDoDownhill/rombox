@@ -56,6 +56,7 @@ public partial class ConfigManager : Node
     public bool UiSoundsEnabled { get; private set; } = true;
     public string InterfaceSize { get; private set; }
     public string GameListView { get; private set; }
+    public string DetailsLayout { get; private set; } = GameDetailsLayout.Hero;
 
     public static readonly string[] GameListViews = { "Carousel", "Grid", "List" };
 
@@ -532,6 +533,7 @@ public partial class ConfigManager : Node
         UiSoundsEnabled = (bool)configurationFile.GetValue("UI", "UiSounds", true);
         InterfaceSize = (string)configurationFile.GetValue("UI", "InterfaceSize", "Auto");
         GameListView = (string)configurationFile.GetValue("UI", "GameListView", DefaultGameListView);
+        DetailsLayout = (string)configurationFile.GetValue("UI", "DetailsLayout", GameDetailsLayout.Hero);
 
         EmulatorCloseHotkeyCount = (int)configurationFile.GetValue("Input", "EmulatorCloseHotkeyCount", DefaultEmulatorCloseHotkeyCount);
         var defaultHotkeyButtons = BuildDefaultEmulatorCloseHotkeys();
@@ -617,6 +619,7 @@ public partial class ConfigManager : Node
         UiSoundsEnabled = true;
         InterfaceSize = "Auto";
         GameListView = DefaultGameListView;
+        DetailsLayout = GameDetailsLayout.Hero;
 
         EmulatorCloseHotkeyCount = DefaultEmulatorCloseHotkeyCount;
         EmulatorCloseHotkeys = BuildDefaultEmulatorCloseHotkeys();
@@ -662,6 +665,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("UI", "UiSounds", UiSoundsEnabled);
         configurationFile.SetValue("UI", "InterfaceSize", InterfaceSize);
         configurationFile.SetValue("UI", "GameListView", GameListView);
+        configurationFile.SetValue("UI", "DetailsLayout", DetailsLayout);
         configurationFile.SetValue("Android", "CoresSetUp", string.Join(",", androidCoresSetUp));
         configurationFile.SetValue("Android", "ExitHintsShown", string.Join(",", androidExitHintsShown));
         configurationFile.SetValue("Input", "EmulatorCloseHotkeyCount", EmulatorCloseHotkeyCount);
@@ -815,6 +819,12 @@ public partial class ConfigManager : Node
         {
             SaveConfig();
         }
+    }
+
+    public void SaveDetailsLayout(string detailsLayout)
+    {
+        DetailsLayout = detailsLayout;
+        SaveConfig();
     }
 
     public void SaveGameListView(string gameListView)

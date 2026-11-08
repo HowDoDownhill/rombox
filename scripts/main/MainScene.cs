@@ -338,6 +338,7 @@ public partial class MainScene : Control
     private const string LayoutCaptureThemeArgumentPrefix = "--ui-capture-theme=";
     private const string LayoutCaptureControllerArgument = "--ui-capture-controller";
     private const string LayoutCaptureGameViewArgumentPrefix = "--ui-capture-game-view=";
+    private const string LayoutCaptureDetailsArgumentPrefix = "--ui-capture-details=";
     private const string LayoutCaptureBackgroundArgumentPrefix = "--ui-capture-background=";
     private const string LayoutCaptureStyleArgumentPrefix = "--ui-capture-style=";
 
@@ -393,6 +394,13 @@ public partial class MainScene : Control
                 GameListHandler.SelectSystemByIndex(systemIndex);
                 await ToSignal(GetTree().CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
             }
+        }
+
+        string detailsLayoutName = CaptureArgument(LayoutCaptureDetailsArgumentPrefix);
+
+        if (detailsLayoutName != null)
+        {
+            GameListHandler.ApplyDetailsLayout(detailsLayoutName);
         }
 
         string gameViewName = CaptureArgument(LayoutCaptureGameViewArgumentPrefix);

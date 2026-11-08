@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Godot;
 
@@ -153,12 +154,57 @@ public class Game
     [JsonPropertyName("fs_size_bytes")]
     public long FileSizeBytes { get; set; }
 
+    [JsonPropertyName("metadatum")]
+    public RomMetadatum Metadatum { get; set; }
+
+    // Filled in for local games once they have been identified.
+    [JsonIgnore]
+    public string LocalCompany { get; set; }
+
+    [JsonIgnore]
+    public string LocalYear { get; set; }
+
+    [JsonIgnore]
+    public string Company => LocalCompany ?? Metadatum?.Companies?.FirstOrDefault();
+
+    [JsonIgnore]
+    public string ReleaseYear
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(LocalYear))
+            {
+                return LocalYear;
+            }
+
+            long stamp = Metadatum?.FirstReleaseDate ?? 0;
+
+            if (stamp <= 0)
+            {
+                return null;
+            }
+
+            // RomM stores milliseconds, and a value this small can only be seconds.
+            DateTimeOffset date = stamp > 100000000000L ? DateTimeOffset.FromUnixTimeMilliseconds(stamp) : DateTimeOffset.FromUnixTimeSeconds(stamp);
+            return date.UtcDateTime.Year.ToString();
+        }
+    }
+
     // Where a local library game sits on disk. RomM games leave it empty and download under RomsPath.
     [JsonPropertyName("local_path")]
     public string LocalPath { get; set; }
 
     [JsonIgnore]
     public GameSystem System { get; set; }
+}
+
+public class RomMetadatum
+{
+    [JsonPropertyName("companies")]
+    public List<string> Companies { get; set; }
+
+    [JsonPropertyName("first_release_date")]
+    public long? FirstReleaseDate { get; set; }
 }
 
 public class Firmware

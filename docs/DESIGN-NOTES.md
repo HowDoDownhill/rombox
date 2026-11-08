@@ -1473,6 +1473,17 @@ Hasheous's IGDB proxy would give human-written summaries, and it answers 401 wit
   containers are skipped because their hash matches no known dump.
 - Headered SNES and NES dumps will miss, since the signatures describe clean ROMs.
 
+### The game details panel has two layouts
+`GameDetailsLayout` builds a Large Image and a Box Art tree once, then moves the logo, title,
+description and screenshot strip into whichever is showing. The scene still holds those nodes so their
+export paths stay valid, and the layout pulls them out of their old containers at first use.
+
+The large image is the selected screenshot, rotating every five seconds. The cover replaces it on
+Large Image only after every screenshot path has been checked, so a cover can't flash before the first
+screenshot. The fade over that image is a static gradient texture, so Simple style stays idle between
+rotations. RomM's year and company come from `metadatum`, which older game caches lack until the
+library is refreshed.
+
 ### The setup wizard
 `LoginScreen` redirects to `SetupWizard` while `Setup/Complete` is false. Installs from before the
 wizard have no such key and count as set up when they hold a RomM host or a valid login. The Steam

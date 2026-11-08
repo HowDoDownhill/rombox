@@ -198,6 +198,8 @@ This is the section with the worst platform divergence. Do not skip it on either
 - [ ] Light theme under both styles: text, system logos, controller glyphs, switches and the
       selection highlight are readable in the game list, settings, start menu, downloads and the
       system-jump popup.
+- [ ] Game Details, Large Image and Box Art: switching applies at once and keeps the selected game.
+      Screenshots rotate every 5 seconds. A game with no art still lays out cleanly on both.
 - [ ] Interface Sounds: moving, Select, Back and changing system each make a sound; startup and a
       library reload make none; turning the setting off silences them at once.
 - [ ] Text follows the four styles: settings, descriptions, start menu and card titles are the same

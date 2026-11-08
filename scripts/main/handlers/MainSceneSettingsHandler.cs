@@ -523,6 +523,38 @@ public class MainSceneSettingsHandler
         entry1.Visible = appInstance.Library.Has(LibraryFeatures.Artwork);
         vbox.AddChild(entry1);
 
+        HBoxContainer detailsLayoutBox = new HBoxContainer();
+        Label detailsLayoutLabel = new Label();
+        detailsLayoutLabel.Text = "Game Details";
+        detailsLayoutLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        detailsLayoutBox.AddChild(detailsLayoutLabel);
+
+        CarouselButton detailsLayoutButton = new CarouselButton();
+        int selectedDetailsLayout = 0;
+
+        for (int i = 0; i < GameDetailsLayout.Options.Length; i++)
+        {
+            detailsLayoutButton.AddItem(GameDetailsLayout.Options[i].Label, i);
+
+            if (GameDetailsLayout.Options[i].Id == appInstance.configManager.DetailsLayout)
+            {
+                selectedDetailsLayout = i;
+            }
+        }
+
+        detailsLayoutButton.Select(selectedDetailsLayout);
+        detailsLayoutButton.ItemSelected += (long index) =>
+        {
+            string layout = GameDetailsLayout.Options[index].Id;
+            appInstance.configManager.SaveDetailsLayout(layout);
+            mainScene.GameListHandler.ApplyDetailsLayout(layout);
+        };
+        detailsLayoutBox.AddChild(detailsLayoutButton);
+
+        var detailsLayoutEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        detailsLayoutEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(detailsLayoutBox);
+        vbox.AddChild(detailsLayoutEntry);
+
         HBoxContainer scrapeBox = new HBoxContainer();
         Label scrapeLabel = new Label();
         scrapeLabel.Text = "Download Box Art";

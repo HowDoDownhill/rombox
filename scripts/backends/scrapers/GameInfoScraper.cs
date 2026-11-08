@@ -230,21 +230,13 @@ public sealed class GameInfoScraper
             return;
         }
 
-        string credits = string.Join(" - ", new[] { info.Publisher, info.Year }.Where(part => !string.IsNullOrWhiteSpace(part)));
-        var parts = new List<string>();
-
-        if (credits.Length > 0)
-        {
-            parts.Add(credits);
-        }
+        game.LocalCompany = info.Publisher;
+        game.LocalYear = info.Year;
 
         if (!string.IsNullOrWhiteSpace(info.Description))
         {
-            parts.Add(info.Description);
-            parts.Add(AiDescriptionNote);
+            game.Description = info.Description + "\n\n" + AiDescriptionNote;
         }
-
-        game.Description = string.Join("\n\n", parts);
     }
 
     private void LoadSavedInfo()

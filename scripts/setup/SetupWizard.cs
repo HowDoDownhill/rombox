@@ -297,6 +297,11 @@ public partial class SetupWizard : Control
         CarouselButton viewButton = AddCarouselRow("Game List", ConfigManager.GameListViews, config.GameListView);
         viewButton.ItemSelected += index => config.SaveGameListView(ConfigManager.GameListViews[index]);
 
+        string[] detailLabels = GameDetailsLayout.Options.Select(option => option.Label).ToArray();
+        string currentDetails = GameDetailsLayout.Options.First(option => option.Id == (config.DetailsLayout == GameDetailsLayout.Box ? GameDetailsLayout.Box : GameDetailsLayout.Hero)).Label;
+        CarouselButton detailsButton = AddCarouselRow("Game Details", detailLabels, currentDetails);
+        detailsButton.ItemSelected += index => config.SaveDetailsLayout(GameDetailsLayout.Options[index].Id);
+
         CheckButton soundsCheck = AddCheckRow("Interface Sounds", config.UiSoundsEnabled);
         soundsCheck.Toggled += enabled => config.SaveUiSoundsEnabled(enabled);
 
