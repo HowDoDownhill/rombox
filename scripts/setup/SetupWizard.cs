@@ -409,6 +409,9 @@ public partial class SetupWizard : Control
         scanButton.Pressed += ScanFolder;
         buttons.AddChild(scanButton);
 
+        CheckButton scrapeCheck = AddCheckRow("Download Box Art from libretro", config.ScrapeArtwork);
+        scrapeCheck.Toggled += enabled => config.SaveScrapeArtwork(enabled);
+
         scanSummary = new RichTextLabel
         {
             BbcodeEnabled = true,

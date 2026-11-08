@@ -523,6 +523,22 @@ public class MainSceneSettingsHandler
         entry1.Visible = appInstance.Library.Has(LibraryFeatures.Artwork);
         vbox.AddChild(entry1);
 
+        HBoxContainer scrapeBox = new HBoxContainer();
+        Label scrapeLabel = new Label();
+        scrapeLabel.Text = "Download Box Art";
+        scrapeLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scrapeBox.AddChild(scrapeLabel);
+
+        CheckButton scrapeCheckbox = new CheckButton();
+        scrapeCheckbox.ButtonPressed = appInstance.configManager.ScrapeArtwork;
+        scrapeCheckbox.Toggled += (bool toggledOn) => appInstance.configManager.SaveScrapeArtwork(toggledOn);
+        scrapeBox.AddChild(scrapeCheckbox);
+
+        var scrapeEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        scrapeEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(scrapeBox);
+        scrapeEntry.Visible = !appInstance.Library.Has(LibraryFeatures.Artwork);
+        vbox.AddChild(scrapeEntry);
+
         HBoxContainer fieldBox2 = new HBoxContainer();
         Label label2 = new Label();
         label2.Text = "Show All Systems";

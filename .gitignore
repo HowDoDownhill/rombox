@@ -78,3 +78,4 @@ AGENTS.md
 # Local scratch: API dumps and the script that fetches them carry server data and tokens
 fetch.ps1
 scratch_*.json
+assets/local/

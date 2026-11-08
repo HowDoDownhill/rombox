@@ -25,6 +25,9 @@ public partial class ConfigManager : Node
     // The root folder of a local library, holding one subfolder per system.
     public string LocalLibraryPath { get; private set; } = "";
 
+    // Whether a library with no artwork of its own looks up art online.
+    public bool ScrapeArtwork { get; private set; } = true;
+
     // False until the first-run setup finishes. Installs that already signed in to RomM count as set up.
     public bool SetupComplete { get; private set; }
 
@@ -257,7 +260,8 @@ public partial class ConfigManager : Node
         "assets/covers_2d",
         "assets/marquees",
         "assets/covers_fallback",
-        "assets/screenshots"
+        "assets/screenshots",
+        "assets/local"
     };
 
     private static readonly string[] subdirectoriesHoldingNonProjectFiles = new string[]
@@ -273,7 +277,8 @@ public partial class ConfigManager : Node
         "assets/covers_2d",
         "assets/marquees",
         "assets/covers_fallback",
-        "assets/screenshots"
+        "assets/screenshots",
+        "assets/local"
     };
 
     public override void _Ready()
@@ -533,6 +538,7 @@ public partial class ConfigManager : Node
         OfferSteamLaunch = (bool)configurationFile.GetValue("Steam", "OfferSteamLaunch", true);
         LibrarySource = (string)configurationFile.GetValue("Library", "Source", LibrarySources.RomM);
         LocalLibraryPath = (string)configurationFile.GetValue("Library", "LocalPath", "");
+        ScrapeArtwork = (bool)configurationFile.GetValue("Library", "ScrapeArtwork", true);
         SetupComplete = configurationFile.HasSectionKey("Setup", "Complete")
             ? (bool)configurationFile.GetValue("Setup", "Complete", false)
             : !string.IsNullOrEmpty(RomMHost) || RomMValidLoginLastUsed;
@@ -615,6 +621,7 @@ public partial class ConfigManager : Node
         OfferSteamLaunch = true;
         LibrarySource = LibrarySources.RomM;
         LocalLibraryPath = "";
+        ScrapeArtwork = true;
         SetupComplete = false;
 
         WriteAllConfigurationValues();
@@ -659,6 +666,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("Steam", "OfferSteamLaunch", OfferSteamLaunch);
         configurationFile.SetValue("Library", "Source", LibrarySource);
         configurationFile.SetValue("Library", "LocalPath", LocalLibraryPath ?? "");
+        configurationFile.SetValue("Library", "ScrapeArtwork", ScrapeArtwork);
         configurationFile.SetValue("Setup", "Complete", SetupComplete);
 
         if (PreferredEmulators != null)
@@ -844,6 +852,12 @@ public partial class ConfigManager : Node
     {
         LibrarySource = source;
         LocalLibraryPath = localPath ?? "";
+        SaveConfig();
+    }
+
+    public void SaveScrapeArtwork(bool enabled)
+    {
+        ScrapeArtwork = enabled;
         SaveConfig();
     }
 

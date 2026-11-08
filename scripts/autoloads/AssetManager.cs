@@ -16,17 +16,24 @@ public partial class AssetManager : Node
         public readonly string AssetType;
         public readonly string DownloadUrl;
         public readonly string LocalFilePath;
+        public readonly bool IsScraped;
 
-        public AssetDownloadItem(int gameId, string assetType, string downloadUrl, string localFilePath)
+        public AssetDownloadItem(int gameId, string assetType, string downloadUrl, string localFilePath, bool isScraped = false)
         {
             GameId = gameId;
             AssetType = assetType;
             DownloadUrl = downloadUrl;
             LocalFilePath = localFilePath;
+            IsScraped = isScraped;
         }
     }
 
     private AppInstance appInstance;
+
+    private readonly IArtworkScraper scraper = new LibretroThumbnails();
+
+    // Games already looked up this run, so scrolling back past a card doesn't ask again.
+    private readonly HashSet<int> scrapedGameIds = new();
 
     private readonly LinkedList<AssetDownloadItem> pendingAssetDownloadQueue = new();
     private readonly Dictionary<int, int> pendingItemCountByGameId = new();
@@ -45,8 +52,14 @@ public partial class AssetManager : Node
 
     public void RequestGameAssets(Game game)
     {
-        if (game == null || !appInstance.Library.Has(LibraryFeatures.Artwork))
+        if (game == null)
         {
+            return;
+        }
+
+        if (!appInstance.Library.Has(LibraryFeatures.Artwork))
+        {
+            RequestScrapedAssets(game);
             return;
         }
 
@@ -82,6 +95,48 @@ public partial class AssetManager : Node
         EnsureDownloadWorkersAreRunning();
     }
 
+    private async void RequestScrapedAssets(Game game)
+    {
+        if (!appInstance.configManager.ScrapeArtwork || !scrapedGameIds.Add(game.Id))
+        {
+            return;
+        }
+
+        List<ScrapedAsset> assets;
+
+        try
+        {
+            assets = await scraper.FindAsync(game, appInstance.configManager.AssetsPath);
+        }
+        catch (Exception exception)
+        {
+            GD.PrintErr($"[Scraper] looking up {game.Name} failed: {exception.Message}");
+            return;
+        }
+
+        if (assets.Count == 0)
+        {
+            return;
+        }
+
+        lock (queueLock)
+        {
+            if (pendingItemCountByGameId.ContainsKey(game.Id))
+            {
+                return;
+            }
+
+            for (int i = assets.Count - 1; i >= 0; i--)
+            {
+                pendingAssetDownloadQueue.AddFirst(new AssetDownloadItem(game.Id, assets[i].AssetType, assets[i].Url, assets[i].LocalFilePath, true));
+            }
+
+            pendingItemCountByGameId[game.Id] = assets.Count;
+        }
+
+        EnsureDownloadWorkersAreRunning();
+    }
+
     public void CancelGameAssets(int gameId)
     {
         lock (queueLock)
@@ -106,6 +161,7 @@ public partial class AssetManager : Node
             }
 
             pendingItemCountByGameId.Remove(gameId);
+            scrapedGameIds.Remove(gameId);
         }
     }
 
@@ -115,6 +171,7 @@ public partial class AssetManager : Node
         {
             pendingAssetDownloadQueue.Clear();
             pendingItemCountByGameId.Clear();
+            scrapedGameIds.Clear();
         }
     }
 
@@ -250,7 +307,9 @@ public partial class AssetManager : Node
 
                     try
                     {
-                        downloadSucceeded = await appInstance.rommApi.DownloadAssetAsync(downloadTask.DownloadUrl, downloadTask.LocalFilePath);
+                        downloadSucceeded = downloadTask.IsScraped
+                            ? await scraper.DownloadAsync(downloadTask.DownloadUrl, downloadTask.LocalFilePath)
+                            : await appInstance.rommApi.DownloadAssetAsync(downloadTask.DownloadUrl, downloadTask.LocalFilePath);
                     }
 
                     finally

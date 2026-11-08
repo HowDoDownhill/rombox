@@ -56,6 +56,7 @@ always does and the data lands in the store.
 | --- | --- |
 | `Library/Source` | `RomM` or `Local` |
 | `Library/LocalPath` | The root of a local library, holding one folder per system |
+| `Library/ScrapeArtwork` | `true` downloads art for a local library from libretro's thumbnail server |
 | `Setup/Complete` | `false` shows the setup wizard at the next start |
 
 ### `[Input]`

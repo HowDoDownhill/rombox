@@ -9,7 +9,9 @@ affiliated with or endorsed by the RomM project. Until version 1.2.2 it was call
 
 No RomM server? RomBox can also show games already on your computer or a mounted network share,
 using the folder layout from ES-DE, EmuDeck or RetroArch. Setup asks which one you want the first
-time you start it. A local library has no box art, save sync, collections or netplay yet.
+time you start it. Box art, logos and screenshots for local games come from
+[libretro's thumbnail collection](https://github.com/libretro-thumbnails/libretro-thumbnails). A
+local library has no game descriptions, save sync, collections or netplay yet.
 
 ![Carousel view](docs/images/carousel-view.jpg)
 

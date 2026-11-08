@@ -66,6 +66,9 @@ The editor skips the Steam step unless `ROMBOX_STEAM_ROOT` points at a Steam fol
       switching back loads RomM from its cache.
 - [ ] Local library: Delete, the installed filter, favorites and netplay are hidden, and a game plays
       from its own folder. A missing folder shows a message and opens an empty library.
+- [ ] Local library art: covers, logos and screenshots appear for No-Intro and Redump file names, and
+      for names with no region tag. A game with no match keeps its title card. A second start lists
+      nothing new. Settings > Game List Settings > Download Box Art off stops new requests.
 
 ## 2. Library and browsing
 

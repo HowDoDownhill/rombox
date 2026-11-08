@@ -1438,6 +1438,24 @@ Local library notes that are easy to break:
 - The folder is scanned at every start, with no cache. That is cheap on a local disk and has not been
   measured on a large network share.
 
+### Artwork for local libraries comes from libretro's thumbnail server
+`LibretroThumbnails` implements `IArtworkScraper`, and `AssetManager` calls it for any source without
+the `Artwork` flag. Files land in the paths RomM art uses, so the UI needed no changes. A title screen
+and a snapshot are saved as `_0.jpg` and `_1.jpg` although they are PNGs, which works because
+`AsyncImageLoader.Decode` reads the file's signature.
+
+- Each system's `Named_Boxarts` directory listing is fetched once and saved to
+  `assets/local/libretro/<slug>.txt` for 30 days. Matching then runs locally, so a game with no art
+  makes no request. If a refresh fails, the old listing stays in use.
+- The other art folders are requested by the box art's name, and a 404 is expected for some of them.
+- The scraper has its own `HttpClient`. `RomMAPI`'s carries the user's RomM login, which must never
+  reach another host.
+- `LibretroThumbnailMatcher` tries the exact sanitised name first, then compares titles by letters
+  and digits with tags removed and a trailing ", The" moved to the front. Shared tags score highest,
+  then USA, World, Europe and Japan. Beta, proto and demo art only matches a ROM tagged the same way.
+- Arcade romsets rarely match, since the file is a short name such as `sf2` and the thumbnails use the
+  full title. That needs a romset name table.
+
 ### The setup wizard
 `LoginScreen` redirects to `SetupWizard` while `Setup/Complete` is false. Installs from before the
 wizard have no such key and count as set up when they hold a RomM host or a valid login. The Steam
