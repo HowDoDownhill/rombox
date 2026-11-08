@@ -13,7 +13,7 @@ public partial class AppUpdater : Node
 {
     public const string CurrentVersion = "v1.2.2";
     private const string RepoOwner = "HowDoDownhill";
-    private const string RepoName = "romm-frontend";
+    private const string RepoName = "rombox";
     private const int TransferBufferSizeBytes = 1024 * 1024;
 
     private readonly System.Net.Http.HttpClient httpClient = new System.Net.Http.HttpClient(HttpHandlers.Create()) { Timeout = Timeout.InfiniteTimeSpan };
@@ -36,7 +36,7 @@ public partial class AppUpdater : Node
 
     public override void _Ready()
     {
-        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("RommFrontendUpdater", "1.0"));
+        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("RomBoxUpdater", "1.0"));
 
         appInstance = GetNode<AppInstance>("/root/AppInstance");
 
@@ -109,11 +109,10 @@ public partial class AppUpdater : Node
             var releaseInfo = JsonSerializer.Deserialize(json, RommJsonContext.Default.GithubReleaseInfo);
 
             
-            string targetZipName = OS.HasFeature("windows") ? "romm-frontend-windows.zip"
-                : OS.HasFeature("macos") ? MacOSReleaseZipName
-                : "romm-frontend-linux.zip";
-
-            var asset = releaseInfo?.Assets?.FirstOrDefault(a => a.Name.Contains(targetZipName, StringComparison.OrdinalIgnoreCase));
+            // Releases also carry the zip under its romm-frontend name for installs from 1.2.2 and
+            // earlier, which only look for that name. See LegacyNameMigration.
+            var asset = releaseInfo?.Assets?.FirstOrDefault(a => a.Name.Equals(AppIdentity.ReleaseZipName, StringComparison.OrdinalIgnoreCase))
+                ?? releaseInfo?.Assets?.FirstOrDefault(a => a.Name.Equals(AppIdentity.LegacyReleaseZipName, StringComparison.OrdinalIgnoreCase));
 
             if (asset == null && !OS.HasFeature("macos"))
             {
@@ -218,6 +217,7 @@ public partial class AppUpdater : Node
 
         string appPath = OS.GetExecutablePath();
         string appDir = System.IO.Path.GetDirectoryName(appPath);
+        string renamedAppPath = AppIdentity.ExecutablePathInDirectory(appDir);
         string toolsDir = appInstance.configManager.ToolsPath;
         
         if (OS.HasFeature("windows"))
@@ -231,7 +231,7 @@ timeout /t 3 /nobreak >nul
 echo Extracting update...
 ""{sevenZipPath}"" x ""{downloadPath}"" -o""{appDir}"" -y
 echo Restarting application...
-start """" ""{appPath}""
+if exist ""{renamedAppPath}"" (start """" ""{renamedAppPath}"") else (start """" ""{appPath}"")
 del ""{downloadPath}""
 del ""%~f0""
 ";
@@ -252,8 +252,10 @@ del ""%~f0""
 sleep 3
 chmod +x ""{sevenZipPath}""
 ""{sevenZipPath}"" x ""{downloadPath}"" -o""{appDir}"" -y
-chmod +x ""{appPath}""
-""{appPath}"" &
+app='{appPath}'
+if [ -f '{renamedAppPath}' ]; then app='{renamedAppPath}'; fi
+chmod +x ""$app""
+""$app"" &
 rm ""{downloadPath}""
 rm ""$0""
 ".Replace("\r", "");
@@ -314,8 +316,6 @@ rm -f ""$0""
 
         GetTree().Quit();
     }
-
-    public const string MacOSReleaseZipName = "romm-frontend-macos.zip";
 
     private static string ResolveRunningAppBundle(string executablePath)
     {

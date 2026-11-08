@@ -20,7 +20,7 @@ public static class UniversalInstaller
     static UniversalInstaller()
     {
         sharedHttpClient = new System.Net.Http.HttpClient(HttpHandlers.Create()) { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
-        sharedHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("RomM-Frontend/1.0");
+        sharedHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("RomBox/1.0");
     }
 
     public static async Task<bool> Install(AppInstance appInstance, string emulatorName, EmulatorMeta emulatorMetadata, string currentOperatingSystem, ReleaseOption selectedRelease = null)

@@ -281,6 +281,7 @@ public partial class ConfigManager : Node
         else if (OS.HasFeature("macos"))
         {
             ApplicationRootDirectory = OS.GetDataDir() + "/" + MacOSDataFolderName;
+            MoveLegacyMacOSDataFolder();
             DirAccess.MakeDirRecursiveAbsolute(ApplicationRootDirectory);
         }
 
@@ -295,7 +296,21 @@ public partial class ConfigManager : Node
 
     private const string BundledInstallScriptsDirectory = "res://install_scripts";
 
-    public const string MacOSDataFolderName = "RomM Frontend";
+    public const string MacOSDataFolderName = AppIdentity.DisplayName;
+
+    // Mac test builds before the rename kept their data under the old app name.
+    private void MoveLegacyMacOSDataFolder()
+    {
+        string legacyDirectory = OS.GetDataDir() + "/" + AppIdentity.LegacyDisplayName;
+
+        if (!DirAccess.DirExistsAbsolute(legacyDirectory) || DirAccess.DirExistsAbsolute(ApplicationRootDirectory))
+        {
+            return;
+        }
+
+        Error moveResult = DirAccess.RenameAbsolute(legacyDirectory, ApplicationRootDirectory);
+        GD.Print($"[macOS] moving {legacyDirectory} to {ApplicationRootDirectory}: {moveResult}");
+    }
 
     private static bool InstallScriptsShipInsideThePackage => OS.HasFeature("android") || OS.HasFeature("macos");
 

@@ -1,4 +1,4 @@
-# RomM Frontend Context
+# RomBox Context
 
 ## Overview
 This repository contains the source code for a frontend application interacting with the RomM (Rom Manager) API. It is designed to run locally, providing a user interface to browse, fetch, and download games from a RomM server, and launch them via emulators. The application features full controller and keyboard support.

@@ -624,8 +624,8 @@ public partial class RomMAPI : Node
         {
             var payload = new DevicePayload
             {
-                Name = "romm-frontend",
-                Client = "romm-frontend",
+                Name = "rombox",
+                Client = "rombox",
                 Platform = OS.GetName().ToLower(),
                 Hostname = System.Environment.MachineName,
                 SyncMode = "api",

@@ -39,7 +39,7 @@ restart it: it closes Steam, adds the shortcut, and opens Steam again. A copy of
 shortcut list is kept next to it as `shortcuts.vdf.romm-backup`.
 
 To add it by hand instead: in Steam, choose **Games > Add a Non-Steam Game to My Library**, browse
-to the app folder, and add `romm-frontend.exe` (Linux: `romm-frontend.x86_64`).
+to the app folder, and add `rombox.exe` (Linux: `rombox.x86_64`).
 
 ## Steam Input
 
@@ -48,7 +48,7 @@ it. RomM passes those pads through and writes each emulator's device setting so 
 Steam's first pad, player 2 its second, and so on.
 
 1. Add RomM to Steam (above).
-2. In Steam, open **RomM Frontend > Properties > Controller** and set it to **Enable Steam Input**.
+2. In Steam, open **RomBox > Properties > Controller** and set it to **Enable Steam Input**.
    For Xbox controllers, Steam's own setting under **Settings > Controller** decides whether Steam
    Input covers them too.
 3. Start RomM from your Steam library. On Windows, choose **Steam Input** at the first-startup
@@ -101,5 +101,5 @@ and you can uninstall it from **Settings > Apps** like any other program.
   can work right now (for example "Start the App From Steam to Use It").
 - Start the app with `--controller-report` (on the command line, or in the Steam shortcut's Launch
   Options). About a minute later it writes `controller-report-<time>.md` under
-  `%APPDATA%\Godot\app_userdata\romm-frontend\logs\`, showing which device each emulator will get
-  for every player. Attach it to an [issue](https://github.com/HowDoDownhill/romm-frontend/issues).
+  `%APPDATA%\Godot\app_userdata\RomBox\logs\`, showing which device each emulator will get
+  for every player. Attach it to an [issue](https://github.com/HowDoDownhill/rombox/issues).

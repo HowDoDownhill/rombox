@@ -18,7 +18,7 @@ if (-not $GodotBin -or -not (Test-Path $GodotBin)) {
 
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
-$work = Join-Path ([IO.Path]::GetTempPath()) "romm-frontend-demo-$([guid]::NewGuid().ToString('N'))"
+$work = Join-Path ([IO.Path]::GetTempPath()) "rombox-demo-$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Force $work | Out-Null
 
 # Godot reads movie quality from project settings; override.cfg raises it for this run only.
@@ -51,8 +51,8 @@ if (-not $started) {
 # Everything before the tour starts is the loading screen; skip it.
 $startSeconds = [int]$started.Matches[0].Groups[1].Value / 60.0
 
-$full = Join-Path $OutDir 'romm-frontend-demo.mp4'
-$small = Join-Path $OutDir 'romm-frontend-demo-small.mp4'
+$full = Join-Path $OutDir 'rombox-demo.mp4'
+$small = Join-Path $OutDir 'rombox-demo-small.mp4'
 & $FFmpeg -y -loglevel error -ss $startSeconds -i $avi -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart -an $full
 & $FFmpeg -y -loglevel error -ss $startSeconds -i $avi -c:v libx264 -preset slow -crf 30 -pix_fmt yuv420p -movflags +faststart -an $small
 

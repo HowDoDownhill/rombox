@@ -1685,6 +1685,29 @@ their query away.
 
 ## Configuration and paths
 
+### The rename to RomBox moves old installs through a bridge zip
+The app shipped as RomM Frontend up to 1.2.2, with files named `romm-frontend.exe`,
+`romm-frontend.pck` and `data_romm-frontend_*`. Those installs update by downloading the release
+asset whose name contains `romm-frontend-<platform>.zip` (falling back to any `.zip`), extracting it
+over the app folder and restarting `romm-frontend.exe` by its full path. Shipping only `rombox.*`
+files would leave that restart on the old executable and old `.pck`, which would offer the same
+update again forever.
+
+`build-release` therefore also publishes `romm-frontend-windows.zip` and `romm-frontend-linux.zip`:
+the same build with the executable, console wrapper and `.pck` renamed back with `7za rn`. The
+.NET folder keeps its new name, because Godot finds it by the assembly name stored in the `.pck`.
+On start, `LegacyNameMigration` sees the old executable name, copies the executable and `.pck` to
+`rombox.*`, starts that copy with the same arguments and quits. The `rombox` copy deletes the old
+files over the next few seconds, retrying while the old process exits. Desktop shortcuts to
+`romm-frontend.exe` stop working at that point; the Steam shortcut is rewritten by the Steam
+integration.
+
+The new updater looks for `rombox-<platform>.zip` first and the bridge name second, and its
+restart script starts `rombox.exe` when the extracted files include it. Android keeps its package
+id and `Documents/RomM` folder, since changing either orphans installed copies and downloaded games.
+The macOS build was unreleased at the rename; `ConfigManager` still moves a `RomM Frontend`
+data folder to `RomBox` for test machines.
+
 ### Autoload `_Ready` order: AppInstance runs before ConfigManager has loaded
 Autoloads become ready in `project.godot` order, and `AppInstance` is first, so in its `_Ready`
 every `ConfigManager` value is still unset: `ApplicationRootDirectory` is null and settings hold

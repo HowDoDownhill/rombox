@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dtq34b0wgwvct"
-path="res://.godot/imported/romm_logo_xbox_one_circle.png-4b34c97db502386bf896dc4dd499adfb.ctex"
+uid="uid://d3sxppfr0jnl1"
+path="res://.godot/imported/rombox.png-b0894b42a7bcb833b5b48e4915c976da.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/icons/romm_logo_xbox_one_circle.png"
-dest_files=["res://.godot/imported/romm_logo_xbox_one_circle.png-4b34c97db502386bf896dc4dd499adfb.ctex"]
+source_file="res://assets/icons/rombox.png"
+dest_files=["res://.godot/imported/rombox.png-b0894b42a7bcb833b5b48e4915c976da.ctex"]
 
 [params]
 

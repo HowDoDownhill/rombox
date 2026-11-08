@@ -28,13 +28,13 @@ echo Using Godot: %GODOT_BIN%
 
 echo Exporting app to Windows...
 if not exist build\windows mkdir build\windows
-for /d %%D in ("build\windows\data_romm-frontend_*") do rmdir /s /q "%%D"
-"%GODOT_BIN%" --headless --export-release "Windows Desktop" "build\windows\romm-frontend.exe"
+for /d %%D in ("build\windows\data_rombox_*") do rmdir /s /q "%%D"
+"%GODOT_BIN%" --headless --export-release "Windows Desktop" "build\windows\rombox.exe"
 if errorlevel 1 (
     echo Windows export failed.
     goto :fail
 )
-if not exist "build\windows\data_romm-frontend_windows_x86_64\GodotSharp.dll" (
+if not exist "build\windows\data_rombox_windows_x86_64\GodotSharp.dll" (
     echo Windows export produced no .NET assemblies.
     goto :fail
 )
@@ -46,13 +46,13 @@ xcopy "tools\7zip" "build\windows\tools\7zip" /E /I /Y /Q
 
 echo Exporting game to Linux...
 if not exist build\linux mkdir build\linux
-for /d %%D in ("build\linux\data_romm-frontend_*") do rmdir /s /q "%%D"
-"%GODOT_BIN%" --headless --export-release "Linux Desktop" "build\linux\romm-frontend.x86_64"
+for /d %%D in ("build\linux\data_rombox_*") do rmdir /s /q "%%D"
+"%GODOT_BIN%" --headless --export-release "Linux Desktop" "build\linux\rombox.x86_64"
 if errorlevel 1 (
     echo Linux export failed.
     goto :fail
 )
-if not exist "build\linux\data_romm-frontend_linuxbsd_x86_64\GodotSharp.dll" (
+if not exist "build\linux\data_rombox_linuxbsd_x86_64\GodotSharp.dll" (
     echo Linux export produced no .NET assemblies.
     goto :fail
 )
@@ -77,13 +77,13 @@ if not exist "bundled\install_scripts.zip" (
 
 echo Exporting app to macOS...
 if not exist build\macos mkdir build\macos
-if exist "build\macos\romm-frontend-macos.zip" del "build\macos\romm-frontend-macos.zip"
-"%GODOT_BIN%" --headless --export-release "macOS" "build\macos\romm-frontend-macos.zip"
+if exist "build\macos\rombox-macos.zip" del "build\macos\rombox-macos.zip"
+"%GODOT_BIN%" --headless --export-release "macOS" "build\macos\rombox-macos.zip"
 if errorlevel 1 (
     echo macOS export failed.
     goto :fail
 )
-if not exist "build\macos\romm-frontend-macos.zip" (
+if not exist "build\macos\rombox-macos.zip" (
     echo macOS export produced no zip.
     goto :fail
 )

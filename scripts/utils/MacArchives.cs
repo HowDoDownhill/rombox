@@ -120,7 +120,7 @@ public static class MacArchives
 
     private static async Task<bool> ExtractDiskImage(string diskImagePath, string destinationDirectory)
     {
-        string mountPoint = Path.Combine(Path.GetTempPath(), "romm-frontend-" + Guid.NewGuid().ToString("N"));
+        string mountPoint = Path.Combine(Path.GetTempPath(), "rombox-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(mountPoint);
 
         if (!await Run(DiskImageToolPath, "attach", diskImagePath, "-nobrowse", "-readonly", "-noautoopen", "-noverify", "-mountpoint", mountPoint))

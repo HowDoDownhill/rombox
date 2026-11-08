@@ -17,12 +17,12 @@ public class ControllerSetupMethod
     public static readonly ControllerSetupMethod SteamInput = new ControllerSetupMethod(
         ConfigManager.ControllerMappingConsentSteamInput,
         "Steam Input",
-        "Start the app from Steam with Steam Input turned on. Steam handles every controller, and RomM points each emulator at the right one for every player.");
+        "Start the app from Steam with Steam Input turned on. Steam handles every controller, and RomBox points each emulator at the right one for every player.");
 
     public static readonly ControllerSetupMethod Manual = new ControllerSetupMethod(
         ConfigManager.ControllerMappingConsentDeclined,
         "Manual",
-        "Set up controllers in each emulator yourself. RomM leaves emulator controller settings alone.");
+        "Set up controllers in each emulator yourself. RomBox leaves emulator controller settings alone.");
 
     public static IReadOnlyList<ControllerSetupMethod> All { get; } = new[] { SteamInput, Manual };
 

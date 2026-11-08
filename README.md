@@ -1,8 +1,11 @@
-# RomM Frontend
+# RomBox
 
 A couch-friendly client for [RomM](https://github.com/rommapp/romm). Browse your RomM library
 with a controller, download a game, and play it. The emulator is installed and set up for you,
 and your saves sync back to RomM.
+
+RomBox is an independent project. It is not affiliated with or endorsed by the RomM project.
+Until version 1.2.2 it was called RomM Frontend.
 
 ![Carousel view](docs/images/carousel-view.jpg)
 
@@ -28,18 +31,18 @@ and your saves sync back to RomM.
 You need a RomM server and a 64-bit PC running Windows 10/11 or Linux, or a Mac (Apple Silicon or
 Intel) running macOS 12 or later.
 
-1. Download `romm-frontend-windows.zip` or `romm-frontend-linux.zip` from
-   [Releases](https://github.com/HowDoDownhill/romm-frontend/releases/latest).
+1. Download `rombox-windows.zip` or `rombox-linux.zip` from
+   [Releases](https://github.com/HowDoDownhill/rombox/releases/latest).
 2. Extract it to any folder you can write to. The app is portable: everything it downloads
    stays in that folder.
-3. Run `romm-frontend.exe` on Windows or `romm-frontend.sh` on Linux.
+3. Run `rombox.exe` on Windows or `rombox.sh` on Linux.
 
 On a Mac:
 
-1. Download `romm-frontend-macos.zip`, open it, and move `romm-frontend.app` to Applications.
+1. Download `rombox-macos.zip`, open it, and move `RomBox.app` to Applications.
 2. Open it. The app is not notarized by Apple, so macOS blocks the first open: go to
    **System Settings > Privacy & Security** and choose **Open Anyway**.
-3. Everything it downloads goes to `~/Library/Application Support/RomM Frontend`.
+3. Everything it downloads goes to `~/Library/Application Support/RomBox`.
 
 Nothing else needs installing. Updates are offered in the app when a new release is out.
 
@@ -99,7 +102,7 @@ choose it from **Start > Select Bios For Emulator**.
 
 ## Netplay
 
-Play a game together with someone running RomM Frontend on another PC.
+Play a game together with someone running RomBox on another PC.
 
 1. The host selects a game and chooses **Start > Host Session**. A join code is copied to the
    clipboard; send it to the other players.
@@ -144,7 +147,7 @@ Open **Start > Settings**.
 ## Files
 
 Everything lives in the app folder. On a Mac it lives in
-`~/Library/Application Support/RomM Frontend`.
+`~/Library/Application Support/RomBox`.
 
 | Folder | Contents |
 |---|---|
@@ -167,8 +170,8 @@ To move games, saves, BIOS or emulators to another drive, see
   **Settings > Input Settings** matches how you started the app. See
   [Controller setup](docs/CONTROLLERS.md#when-a-controller-does-not-work).
 - **Report a problem**: open an
-  [issue](https://github.com/HowDoDownhill/romm-frontend/issues) and include
-  `romm-frontend.console.exe` output on Windows, or the terminal output of `romm-frontend.sh`
+  [issue](https://github.com/HowDoDownhill/rombox/issues) and include
+  `rombox.console.exe` output on Windows, or the terminal output of `rombox.sh`
   on Linux.
 
 ## For emulator authors and tinkerers

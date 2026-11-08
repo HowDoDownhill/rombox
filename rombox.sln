@@ -1,6 +1,6 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "romm-frontend", "romm-frontend.csproj", "{2A4B248D-E97F-42BB-B61B-DFC04FE0FDA4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rombox", "rombox.csproj", "{2A4B248D-E97F-42BB-B61B-DFC04FE0FDA4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

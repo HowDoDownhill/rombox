@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bm4x6js33wpvk"
-path="res://.godot/imported/isotipo.svg-9ffc9929a7b0a756db8025f76fec7e2c.ctex"
+uid="uid://cvunbkdb0u7wt"
+path="res://.godot/imported/rombox.svg-997133d0cadbaf396a6d8529a0bc2e8a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/icons/isotipo.svg"
-dest_files=["res://.godot/imported/isotipo.svg-9ffc9929a7b0a756db8025f76fec7e2c.ctex"]
+source_file="res://assets/icons/rombox.svg"
+dest_files=["res://.godot/imported/rombox.svg-997133d0cadbaf396a6d8529a0bc2e8a.ctex"]
 
 [params]
 

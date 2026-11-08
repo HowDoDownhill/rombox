@@ -56,7 +56,7 @@ public partial class ChangelogPanel : UiPanel
         if (notesLabel != null)
         {
             string sanitizedNotes = EscapeMarkup(releaseNotes.Replace("\r", "").Replace("\b", ""));
-            notesLabel.Text = $"[b]A new version ({version}) of Romm Frontend is available.[/b]\n\nRelease Notes:\n{sanitizedNotes}";
+            notesLabel.Text = $"[b]A new version ({version}) of RomBox is available.[/b]\n\nRelease Notes:\n{sanitizedNotes}";
         }
 
         if (acceptButton != null) acceptButton.Text = "Install";

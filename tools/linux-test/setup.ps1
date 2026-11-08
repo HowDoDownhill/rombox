@@ -30,7 +30,7 @@ if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Force $sshDir | Ou
 if (Test-Path $Config.identityFile) {
     Write-Host "Key already exists: $($Config.identityFile)"
 } else {
-    & ssh-keygen -t ed25519 -f $Config.identityFile -N '""' -C 'romm-frontend-linux-test'
+    & ssh-keygen -t ed25519 -f $Config.identityFile -N '""' -C 'rombox-linux-test'
     if ($LASTEXITCODE -ne 0) { throw "ssh-keygen failed." }
     Write-Host "Created $($Config.identityFile)"
 }

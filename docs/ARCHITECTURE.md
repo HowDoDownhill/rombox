@@ -1,4 +1,4 @@
-# RomM Frontend Architecture
+# RomBox Architecture
 
 ## Global Singletons (AutoLoads)
 The core logic of the application relies on Godot's AutoLoad (Singleton) system, making these services available globally. All singletons register themselves with `AppInstance` in their `_Ready()` method for centralized cross-referencing.

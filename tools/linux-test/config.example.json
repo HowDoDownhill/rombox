@@ -2,6 +2,6 @@
   "host": "arch-box.local",
   "user": "your-linux-username",
   "port": 22,
-  "remoteDir": "romm-frontend-test",
+  "remoteDir": "rombox-test",
   "wslDistro": "archlinux"
 }

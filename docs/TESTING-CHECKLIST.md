@@ -22,18 +22,18 @@ filesystem, a real controller, a real OS difference.
 
 - [ ] `dotnet build` succeeds with 0 warnings, 0 errors.
 - [ ] `./build.sh` (or `build.bat`) exports **both** Windows and Linux without errors.
-- [ ] `build/<platform>/` contains the binary, the `.pck`, the `data_romm-frontend_*` runtime folder,
+- [ ] `build/<platform>/` contains the binary, the `.pck`, the `data_rombox_*` runtime folder,
       `install_scripts/` and `tools/7zip/`, and nothing else under `tools/` (the developer tools hold
       private test-machine details).
 - [ ] Run `build.sh` a second time without deleting `build/` — no nested `install_scripts/install_scripts`.
 - [ ] With Godot unavailable (unset `GODOT_BIN`, not on PATH, or a wrong path), `build.bat` and
       `build.sh` stop with a message before deleting anything, and `build-release` makes no zips.
-- [ ] Both release zips contain `data_romm-frontend_*/GodotSharp.dll` (a good Windows zip is ~90 MB).
+- [ ] Both release zips contain `data_rombox_*/GodotSharp.dll` (a good Windows zip is ~90 MB).
 - [ ] `build.sh`/`build.bat` also write `bundled/install_scripts.zip` and
-      `build/macos/romm-frontend-macos.zip` (~140 MB). The zip holds one `romm-frontend.app` with
-      `Contents/Resources/data_romm-frontend_macos_arm64/` and `..._x86_64/`, and the `.pck`
+      `build/macos/rombox-macos.zip` (~140 MB). The zip holds one `RomBox.app` with
+      `Contents/Resources/data_rombox_macos_arm64/` and `..._x86_64/`, and the `.pck`
       inside it contains `bundled/install_scripts.zip`.
-- [ ] `build-release` copies `romm-frontend-macos.zip` into `releases/`.
+- [ ] `build-release` copies `rombox-macos.zip` into `releases/`.
 - [ ] Exported binary launches and reaches the login screen.
 
 ## 1. First run on a clean profile
@@ -231,7 +231,7 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
       Linux never asks.
 - [ ] A config saved with `ControllerMappingConsent="accepted"` (the retired ViGEm method) shows the
       first-launch prompt again.
-- [ ] Add to Steam with Steam closed: `shortcuts.vdf` gains a `RomM Frontend` entry pointing at the
+- [ ] Add to Steam with Steam closed: `shortcuts.vdf` gains a `RomBox` entry pointing at the
       running executable, `shortcuts.vdf.romm-backup` holds the old file, and Steam lists RomM once
       started. Pressing it again reports RomM is already in the library and adds nothing.
 - [ ] Add to Steam with Steam running: Restart Steam closes Steam, adds the entry, and opens Steam's
@@ -291,7 +291,7 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
 - [ ] No controller-mapping offer, and no Automatic Controller Mapping or Prefer Discrete GPU rows.
 - [ ] Games without cover art show a dark card with a readable title.
 - [ ] Installing an Android-ready emulator (Flycast) downloads its APK and opens the system
-      installer; the first time, Android asks to allow installs from RomM Frontend. After installing
+      installer; the first time, Android asks to allow installs from RomBox. After installing
       and returning to the app, the button changes from "Install Flycast" to "Download".
 - [ ] Downloading a Dreamcast game saves it to `Documents/RomM/roms/dc`; the button becomes Play.
       The first Play explains folder access and opens the picker; choosing `Documents/RomM` starts
@@ -322,9 +322,9 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
 
 ## 13. macOS
 
-Run on an Apple Silicon Mac and an Intel Mac. Unzip `romm-frontend-macos.zip` from the build, move
-`romm-frontend.app` to /Applications, and keep Console.app or `log stream` open for the app's
-output. The data folder is `~/Library/Application Support/RomM Frontend`.
+Run on an Apple Silicon Mac and an Intel Mac. Unzip `rombox-macos.zip` from the build, move
+`RomBox.app` to /Applications, and keep Console.app or `log stream` open for the app's
+output. The data folder is `~/Library/Application Support/RomBox`.
 
 - [ ] The first open is blocked as unverified; **Open Anyway** in System Settings > Privacy &
       Security opens it, and later opens start straight away.
@@ -361,5 +361,5 @@ output. The data folder is `~/Library/Application Support/RomM Frontend`.
 - [ ] A save made on the Mac uploads to RomM, and a save from another machine downloads into the
       emulator.
 - [ ] Netplay hosts and joins with a Windows or Linux machine.
-- [ ] The in-app update replaces `romm-frontend.app` and reopens it; with the copy made to fail
+- [ ] The in-app update replaces `RomBox.app` and reopens it; with the copy made to fail
       (for example the app folder made read-only), the old app stays and still opens.

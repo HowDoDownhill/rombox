@@ -26,8 +26,8 @@ Hosts: Windows desktop, Linux laptop.
 2. Start the build under test with `--controller-report`: on the command line, or in a Steam
    shortcut's Launch Options for the Steam rows.
 3. Leave it for about a minute. No emulator window opens.
-4. Read `%APPDATA%\Godot\app_userdata\romm-frontend\logs\controller-report-<time>.md` (Linux:
-   `~/.local/share/godot/app_userdata/romm-frontend/logs/`).
+4. Read `%APPDATA%\Godot\app_userdata\RomBox\logs\controller-report-<time>.md` (Linux:
+   `~/.local/share/godot/app_userdata/RomBox/logs/`).
 
 Every row in the report's checks table should read **OK**. **MISSING** means the reference names a
 device the emulator cannot see; **WRONG DEVICE** means it names someone else's pad; **UNCHECKED**

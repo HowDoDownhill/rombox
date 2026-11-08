@@ -8,7 +8,7 @@ AppDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 StateDir="$AppDir/.test-state"
 LogFile="$StateDir/run.log"
 PidFile="$StateDir/run.pid"
-Executable="$AppDir/romm-frontend.x86_64"
+Executable="$AppDir/rombox.x86_64"
 
 mkdir -p "$StateDir"
 

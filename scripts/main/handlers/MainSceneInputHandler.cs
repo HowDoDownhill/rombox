@@ -162,8 +162,8 @@ public class MainSceneInputHandler
     private static string BuildControllerSetupOfferBody()
     {
         var body = new System.Text.StringBuilder();
-        body.Append("[b]How should RomM set up your controllers?[/b]\n\n");
-        body.Append("RomM can point each emulator at the right controller for every player, so Player 1 stays Player 1. It does this through Steam Input.\n\n");
+        body.Append("[b]How should RomBox set up your controllers?[/b]\n\n");
+        body.Append("RomBox can point each emulator at the right controller for every player, so Player 1 stays Player 1. It does this through Steam Input.\n\n");
 
         foreach (ControllerSetupMethod method in ControllerSetupMethod.All)
         {
@@ -173,7 +173,7 @@ public class MainSceneInputHandler
 
         if (!ControllerSetupMethod.IsLaunchedThroughSteam)
         {
-            body.Append("\nRomM is running outside Steam right now. Choosing Steam Input adds RomM to your Steam library; start it from there.\n");
+            body.Append("\nRomBox is running outside Steam right now. Choosing Steam Input adds RomBox to your Steam library; start it from there.\n");
         }
 
         body.Append("\nYou can change this at any time in Settings > Input Settings.");
@@ -244,7 +244,7 @@ public class MainSceneInputHandler
         {
             mainScene.changelogPanel?.ShowPrompt(
                 ChangelogPanel.PromptSubject.SteamRestart,
-                "[b]Restart Steam?[/b]\n\nSteam only picks up new library entries when it starts, so RomM will close Steam, add itself, and open Steam again.",
+                "[b]Restart Steam?[/b]\n\nSteam only picks up new library entries when it starts, so RomBox will close Steam, add itself, and open Steam again.",
                 "Restart Steam",
                 "Not Now");
             return;
@@ -270,7 +270,7 @@ public class MainSceneInputHandler
 
     private async Task FinishAddingAppToSteam(bool reopenSteam)
     {
-        mainScene.progressPanel?.ShowStatus("Adding RomM to Steam...");
+        mainScene.progressPanel?.ShowStatus("Adding RomBox to Steam...");
         SteamShortcutResult result = SteamShortcuts.AddThisApp();
 
         if (reopenSteam)
@@ -286,14 +286,14 @@ public class MainSceneInputHandler
 
     private void ShowSteamShortcutOutcome(SteamShortcutResult result, string failureText = null)
     {
-        const string steamInputSteps = "In Steam, open RomM Frontend's Properties > Controller and choose Enable Steam Input, then start RomM from your Steam library.";
+        const string steamInputSteps = "In Steam, open RomBox's Properties > Controller and choose Enable Steam Input, then start RomBox from your Steam library.";
 
         string body = result switch
         {
-            SteamShortcutResult.Added => $"[b]RomM is in your Steam library.[/b]\n\n{steamInputSteps}",
-            SteamShortcutResult.AlreadyAdded => $"[b]RomM is already in your Steam library.[/b]\n\n{steamInputSteps}",
+            SteamShortcutResult.Added => $"[b]RomBox is in your Steam library.[/b]\n\n{steamInputSteps}",
+            SteamShortcutResult.AlreadyAdded => $"[b]RomBox is already in your Steam library.[/b]\n\n{steamInputSteps}",
             SteamShortcutResult.SteamNotFound => "[b]Steam wasn't found.[/b]\n\nInstall Steam and sign in, then choose Add to Steam in Settings > Input Settings. Until then, emulators keep their own controller settings.",
-            _ => $"[b]RomM couldn't add itself to Steam.[/b]\n\n{failureText ?? "Add it yourself: in Steam, choose Games > Add a Non-Steam Game to My Library and pick this app."}"
+            _ => $"[b]RomBox couldn't add itself to Steam.[/b]\n\n{failureText ?? "Add it yourself: in Steam, choose Games > Add a Non-Steam Game to My Library and pick this app."}"
         };
 
         bool appIsInSteam = result == SteamShortcutResult.Added || result == SteamShortcutResult.AlreadyAdded;

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 public partial class NetplayPortMapper : Node
 {
     private const int DiscoveryTimeoutMilliseconds = 2000;
-    private const string PortMappingDescription = "RomM Frontend Netplay";
+    private const string PortMappingDescription = "RomBox Netplay";
     private const int PortMappingDurationSeconds = 0;
 
     private AppInstance appInstance;

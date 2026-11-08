@@ -7,7 +7,7 @@ launch, and the host's quit closing everyone's emulator. Phases 2 through 4 are 
 
 ## Goal
 
-Let two or more romm-frontend users play the same game together, with the frontend handling
+Let two or more RomBox users play the same game together, with the frontend handling
 everything that normally makes emulator netplay painful: matching ROMs, matching emulator
 builds, matching settings, and connecting through NAT.
 

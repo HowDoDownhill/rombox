@@ -42,9 +42,9 @@ copy_tree() {
 # and the *.dll~RF*.TMP files Windows leaves when replacing a locked DLL, from reaching a release zip.
 echo "Exporting app to Windows..."
 mkdir -p build/windows
-rm -rf build/windows/data_romm-frontend_*
-"$GODOT_BIN" --headless --export-release "Windows Desktop" "build/windows/romm-frontend.exe"
-require_assemblies build/windows/data_romm-frontend_windows_x86_64 Windows
+rm -rf build/windows/data_rombox_*
+"$GODOT_BIN" --headless --export-release "Windows Desktop" "build/windows/rombox.exe"
+require_assemblies build/windows/data_rombox_windows_x86_64 Windows
 
 echo "Copying install_scripts and tools to Windows build..."
 copy_tree "install_scripts" "build/windows/install_scripts"
@@ -53,16 +53,16 @@ copy_tree "tools/7zip" "build/windows/tools/7zip"
 
 echo "Exporting game to Linux..."
 mkdir -p build/linux
-rm -rf build/linux/data_romm-frontend_*
-"$GODOT_BIN" --headless --export-release "Linux Desktop" "build/linux/romm-frontend.x86_64"
-require_assemblies build/linux/data_romm-frontend_linuxbsd_x86_64 Linux
+rm -rf build/linux/data_rombox_*
+"$GODOT_BIN" --headless --export-release "Linux Desktop" "build/linux/rombox.x86_64"
+require_assemblies build/linux/data_rombox_linuxbsd_x86_64 Linux
 
 echo "Copying install_scripts and tools to Linux build..."
 copy_tree "install_scripts" "build/linux/install_scripts"
 rm -rf "build/linux/tools"
 copy_tree "tools/7zip" "build/linux/tools/7zip"
 
-chmod +x "build/linux/romm-frontend.x86_64" "build/linux/tools/7zip/linux/7zz"
+chmod +x "build/linux/rombox.x86_64" "build/linux/tools/7zip/linux/7zz"
 
 # The macOS app keeps its data in Application Support, so install_scripts travels inside the
 # package as one zip. Godot skips folders holding a .gdignore, which install_scripts has.
@@ -80,9 +80,9 @@ mkdir -p bundled
 
 echo "Exporting app to macOS..."
 mkdir -p build/macos
-rm -f build/macos/romm-frontend-macos.zip
-"$GODOT_BIN" --headless --export-release "macOS" "build/macos/romm-frontend-macos.zip"
-if [ ! -f build/macos/romm-frontend-macos.zip ]; then
+rm -f build/macos/rombox-macos.zip
+"$GODOT_BIN" --headless --export-release "macOS" "build/macos/rombox-macos.zip"
+if [ ! -f build/macos/rombox-macos.zip ]; then
     echo "macOS export produced no zip."
     exit 1
 fi

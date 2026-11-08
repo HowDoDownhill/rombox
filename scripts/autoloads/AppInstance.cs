@@ -29,6 +29,14 @@ public partial class AppInstance : Node
         SelectionHighlighter.Attach(GetViewport());
         dataBus = GetNode<DataBus>("/root/DataBus");
         controllerManager = GetNode<ControllerManager>("/root/ControllerManager");
+
+        if (LegacyNameMigration.RelaunchUnderNewNameIfNeeded())
+        {
+            GetTree().Quit();
+            return;
+        }
+
+        LegacyNameMigration.RemoveLegacyFilesInBackground();
         Callable.From(ApplyDiscreteGpuPreference).CallDeferred();
     }
 

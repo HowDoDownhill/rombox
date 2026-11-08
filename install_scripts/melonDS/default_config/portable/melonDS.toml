@@ -1,4 +1,4 @@
-# melonDS default configuration for romm-frontend.
+# melonDS default configuration for RomBox.
 #
 # The presence of this "portable" directory next to the executable is what puts
 # melonDS into portable mode (see pathInit() in src/frontend/qt_sdl/main.cpp) —

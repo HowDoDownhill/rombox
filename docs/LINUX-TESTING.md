@@ -2,7 +2,7 @@
 
 Godot exports the Linux build from Windows, so the Arch machine only ever receives a finished
 build — it needs no Godot, no .NET SDK and no checkout of this repo. The .NET runtime ships
-inside `data_romm-frontend_linuxbsd_x86_64/`, so a bare Arch install with a desktop session is
+inside `data_rombox_linuxbsd_x86_64/`, so a bare Arch install with a desktop session is
 enough.
 
 This complements the WSL path (see `DESIGN-NOTES.md`), which is a "does it run" gate on emulated
@@ -117,8 +117,8 @@ already is on the desktop.
 
 ## What gets synced
 
-Only the files a release ships: `romm-frontend.x86_64`, `romm-frontend.sh`, `romm-frontend.pck`,
-`data_romm-frontend_*`, `install_scripts` and `tools` — the same list as `build-release.bat`.
+Only the files a release ships: `rombox.x86_64`, `rombox.sh`, `rombox.pck`,
+`data_rombox_*`, `install_scripts` and `tools` — the same list as `build-release.bat`.
 The build folder accumulates runtime data (a `config.cfg` holding live credentials, plus roms,
 saves, bios and caches) whenever the app is run in place, and a wholesale sync would ship all of
 it.
@@ -181,7 +181,7 @@ drops its default.
 **The join must name the public address explicitly:**
 
 ```bash
-~/romm-frontend-test/remote-run.sh run --gpu discrete -- -- --netplay-join=<host-public-ip>
+~/rombox-test/remote-run.sh run --gpu discrete -- -- --netplay-join=<host-public-ip>
 ```
 
 Using the in-app Join button here **silently tests nothing**. `OnJoinNetplayPressed` prefers a
@@ -223,7 +223,7 @@ the recovery to `Ready` only happens because `HandleExtractionFinished` reports 
 ## Where the remote log actually is
 
 `-Action logs` reads `.test-state/run.log`, which is the app's stdout. Godot *also* keeps its own
-`~/.local/share/godot/app_userdata/romm-frontend/logs/godot.log`, and on startup it renames the previous
+`~/.local/share/godot/app_userdata/RomBox/logs/godot.log`, and on startup it renames the previous
 session's file to `godot<timestamp>.log` using the **new** session's timestamp. A rotated file therefore
 carries a name that looks like the run you just started while holding the run before it, which reads as
 a launch that produced impossible output. Prefer `run.log`; if you open the userdata logs, `godot.log`

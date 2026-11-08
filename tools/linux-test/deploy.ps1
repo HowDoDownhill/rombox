@@ -33,7 +33,7 @@ if (-not $ConfigPath) { $ConfigPath = Join-Path $ScriptDir 'config.json' }
 
 # build/ is gitignored, so this marker does not survive a fresh checkout and has to be
 # recreated. Without it Godot scans the build output as project resources - screenshots
-# pulled back from the test machine get imported and packed into romm-frontend.pck.
+# pulled back from the test machine get imported and packed into rombox.pck.
 function Set-BuildDirectoryIgnored {
     New-Item -ItemType Directory -Force (Join-Path $ProjectRoot 'build') | Out-Null
     $ignoreMarker = Join-Path $ProjectRoot 'build\.gdignore'
@@ -49,7 +49,7 @@ function Read-DeployConfig {
         if (-not $config.$required) { throw "config.json is missing '$required'." }
     }
     if (-not $config.port) { $config | Add-Member port 22 -Force }
-    if (-not $config.remoteDir) { $config | Add-Member remoteDir 'romm-frontend-test' -Force }
+    if (-not $config.remoteDir) { $config | Add-Member remoteDir 'rombox-test' -Force }
     if (-not $config.identityFile) {
         $config | Add-Member identityFile (Join-Path $env:USERPROFILE '.ssh\romm-linux-test') -Force
     }
@@ -122,7 +122,7 @@ function Export-LinuxBuild {
         '--headless',
         '--path', "`"$ProjectRoot`"",
         '--export-release', '"Linux Desktop"',
-        "`"$(Join-Path $LinuxBuildDir 'romm-frontend.x86_64')`""
+        "`"$(Join-Path $LinuxBuildDir 'rombox.x86_64')`""
     )
     $godotProcess = Start-Process -FilePath $godot -ArgumentList $godotArguments -NoNewWindow -Wait -PassThru
 
@@ -147,11 +147,11 @@ function Copy-RuntimeDataIntoBuild {
 # with live credentials, roms, saves, caches) whenever the app is run in place.
 function Get-ShippedPaths {
     $shipped = @()
-    foreach ($name in 'romm-frontend.x86_64', 'romm-frontend.sh', 'romm-frontend.pck', 'install_scripts', 'tools') {
+    foreach ($name in 'rombox.x86_64', 'rombox.sh', 'rombox.pck', 'install_scripts', 'tools') {
         $path = Join-Path $LinuxBuildDir $name
         if (Test-Path $path) { $shipped += $path }
     }
-    $shipped += (Get-ChildItem $LinuxBuildDir -Filter 'data_romm-frontend_*' | ForEach-Object { $_.FullName })
+    $shipped += (Get-ChildItem $LinuxBuildDir -Filter 'data_rombox_*' | ForEach-Object { $_.FullName })
     return $shipped
 }
 
@@ -211,7 +211,7 @@ function Sync-WithScp {
     param([string[]]$Sources)
 
     Write-Host "rsync missing on one end - falling back to a full tarball copy." -ForegroundColor Yellow
-    $tarball = Join-Path $env:TEMP 'romm-frontend-linux.tar'
+    $tarball = Join-Path $env:TEMP 'rombox-linux.tar'
     if (Test-Path $tarball) { Remove-Item $tarball -Force }
 
     $names = $Sources | ForEach-Object { Split-Path $_ -Leaf }
@@ -227,7 +227,7 @@ function Push-Build {
     Copy-RuntimeDataIntoBuild
 
     $sources = Get-ShippedPaths
-    if (-not ($sources | Where-Object { $_ -like '*romm-frontend.x86_64' })) {
+    if (-not ($sources | Where-Object { $_ -like '*rombox.x86_64' })) {
         throw "No Linux build found in $LinuxBuildDir. Run without -SkipBuild first."
     }
 
@@ -237,7 +237,7 @@ function Push-Build {
     if (Test-RsyncAvailable) { Sync-WithRsync $sources } else { Sync-WithScp $sources }
 
     Invoke-Scp (Join-Path $ScriptDir 'remote-run.sh') "${Target}:$RemoteScript"
-    Invoke-RemoteCommand "sed -i 's/\r`$//' '$RemoteScript' && chmod +x '$RemoteScript' '$($Config.remoteDir)/romm-frontend.x86_64'"
+    Invoke-RemoteCommand "sed -i 's/\r`$//' '$RemoteScript' && chmod +x '$RemoteScript' '$($Config.remoteDir)/rombox.x86_64'"
 }
 
 # Only the RomM credentials travel. DeviceId is deliberately left behind: RomMAPI

@@ -27,20 +27,31 @@ chmod +x "$SEVEN_ZIP" 2>/dev/null || true
 
 echo
 echo "Zipping Windows Release..."
-rm -f releases/romm-frontend-windows.zip
-(cd build/windows && "$SEVEN_ZIP" a -tzip "$SCRIPT_DIR/releases/romm-frontend-windows.zip" \
-    romm-frontend.exe romm-frontend.console.exe romm-frontend.pck data_romm-frontend_* install_scripts tools)
+rm -f releases/rombox-windows.zip
+(cd build/windows && "$SEVEN_ZIP" a -tzip "$SCRIPT_DIR/releases/rombox-windows.zip" \
+    rombox.exe rombox.console.exe rombox.pck data_rombox_* install_scripts tools)
 
 echo
 echo "Zipping Linux Release..."
-rm -f releases/romm-frontend-linux.zip
-(cd build/linux && "$SEVEN_ZIP" a -tzip "$SCRIPT_DIR/releases/romm-frontend-linux.zip" \
-    romm-frontend.x86_64 romm-frontend.sh romm-frontend.pck data_romm-frontend_* install_scripts tools)
+rm -f releases/rombox-linux.zip
+(cd build/linux && "$SEVEN_ZIP" a -tzip "$SCRIPT_DIR/releases/rombox-linux.zip" \
+    rombox.x86_64 rombox.sh rombox.pck data_rombox_* install_scripts tools)
+
+# Installs from 1.2.2 and earlier only download a zip named romm-frontend-<platform>.zip and
+# restart romm-frontend.exe after extracting it. These bridge zips carry the same build with the
+# executable and .pck under the old names; the app moves itself to the new names on first start.
+echo
+echo "Making bridge zips for installs from 1.2.2 and earlier..."
+cp -f releases/rombox-windows.zip releases/romm-frontend-windows.zip
+"$SEVEN_ZIP" rn releases/romm-frontend-windows.zip rombox.exe romm-frontend.exe rombox.console.exe romm-frontend.console.exe rombox.pck romm-frontend.pck
+cp -f releases/rombox-linux.zip releases/romm-frontend-linux.zip
+"$SEVEN_ZIP" rn releases/romm-frontend-linux.zip rombox.x86_64 romm-frontend.x86_64 rombox.pck romm-frontend.pck
 
 echo
 echo "Copying macOS Release..."
-cp -f build/macos/romm-frontend-macos.zip releases/romm-frontend-macos.zip
+cp -f build/macos/rombox-macos.zip releases/rombox-macos.zip
 
 echo
 echo "Release packages created successfully in the 'releases' folder!"
-echo "You can now upload 'romm-frontend-windows.zip', 'romm-frontend-linux.zip' and 'romm-frontend-macos.zip' to GitHub Releases."
+echo "You can now upload 'rombox-windows.zip', 'rombox-linux.zip', 'rombox-macos.zip',"
+echo "'romm-frontend-windows.zip' and 'romm-frontend-linux.zip' to GitHub Releases."

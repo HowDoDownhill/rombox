@@ -12,7 +12,7 @@ here can be left alone in normal use.
 
 ## config.cfg
 
-Created in the app folder on first run (on a Mac, `~/Library/Application Support/RomM Frontend`).
+Created in the app folder on first run (on a Mac, `~/Library/Application Support/RomBox`).
 Close the app before editing it.
 
 ### `[Paths]`
@@ -150,7 +150,7 @@ running OS and processor is not offered. Every type accepts `extract` and an opt
 On macOS, `executable_name` is the path to the binary inside the bundle, such as
 `Dolphin.app/Contents/MacOS/Dolphin`, and `executable_regex` matches that whole path. Zips, disk
 images (`.dmg`) and tarballs all unpack. The app's data folder on a Mac is
-`~/Library/Application Support/RomM Frontend`, so keep the emulator's data inside its install with
+`~/Library/Application Support/RomBox`, so keep the emulator's data inside its install with
 a launch argument, a portable marker in `default_config/`, or `launch_env` setting `HOME` to
 `{emulator_dir}/home`. A `default_config/macos/` folder is copied over the shared one on a Mac, as
 `default_config/linux/` is on Linux.

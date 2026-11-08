@@ -18,7 +18,7 @@ public enum SteamShortcutResult
 
 public static class SteamShortcuts
 {
-    public const string ShortcutName = "RomM Frontend";
+    public const string ShortcutName = AppIdentity.DisplayName;
 
     private const long SteamId64Base = 76561197960265728;
     private const int SteamExitTimeoutMilliseconds = 30000;
@@ -170,7 +170,7 @@ public static class SteamShortcuts
 
             if (File.Exists(shortcutsPath))
             {
-                File.Copy(shortcutsPath, shortcutsPath + ".romm-backup", true);
+                File.Copy(shortcutsPath, shortcutsPath + ".rombox-backup", true);
             }
 
             File.WriteAllBytes(shortcutsPath, BinaryVdf.Write(root));

@@ -2469,7 +2469,7 @@ public partial class EmulatorManager : Node
         return string.IsNullOrEmpty(emulatorMetadata.AndroidExitHint) ? DefaultAndroidExitHint : emulatorMetadata.AndroidExitHint;
     }
 
-    private const string DefaultAndroidExitHint = "Use the emulator's own menu to leave the game, then switch back to RomM from Recents.";
+    private const string DefaultAndroidExitHint = "Use the emulator's own menu to leave the game, then switch back to RomBox from Recents.";
 
     public bool OpenEmulatorAppForSystem(string systemSlug)
     {
