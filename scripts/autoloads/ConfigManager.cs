@@ -202,7 +202,7 @@ public partial class ConfigManager : Node
     }
 
     public const string ControllerMappingConsentUnasked = "unasked";
-    public const string ControllerMappingConsentAccepted = "accepted";
+    private const string RetiredControllerMappingConsentVirtualPads = "accepted";
     public const string ControllerMappingConsentDeclined = "declined";
     public const string ControllerMappingConsentSteamInput = "steam_input";
 
@@ -278,6 +278,12 @@ public partial class ConfigManager : Node
             ApplicationRootDirectory = OS.GetUserDataDir();
         }
 
+        else if (OS.HasFeature("macos"))
+        {
+            ApplicationRootDirectory = OS.GetDataDir() + "/" + MacOSDataFolderName;
+            DirAccess.MakeDirRecursiveAbsolute(ApplicationRootDirectory);
+        }
+
         else
         {
             ApplicationRootDirectory = OS.GetExecutablePath().GetBaseDir();
@@ -289,15 +295,69 @@ public partial class ConfigManager : Node
 
     private const string BundledInstallScriptsDirectory = "res://install_scripts";
 
+    public const string MacOSDataFolderName = "RomM Frontend";
+
+    private static bool InstallScriptsShipInsideThePackage => OS.HasFeature("android") || OS.HasFeature("macos");
+
     private void CopyBundledInstallScripts()
     {
-        if (!OS.HasFeature("android") || !DirAccess.DirExistsAbsolute(BundledInstallScriptsDirectory))
+        if (OS.HasFeature("editor") || !InstallScriptsShipInsideThePackage)
         {
             return;
         }
 
-        int copiedFileCount = CopyBundledDirectory(BundledInstallScriptsDirectory, ApplicationRootDirectory + "/install_scripts");
-        GD.Print($"[Android] copied {copiedFileCount} bundled install script files");
+        string destinationDirectory = ApplicationRootDirectory + "/install_scripts";
+        int copiedFileCount;
+
+        if (FileAccess.FileExists(BundledInstallScriptsArchive))
+        {
+            copiedFileCount = ExtractBundledArchive(BundledInstallScriptsArchive, destinationDirectory);
+        }
+
+        else if (DirAccess.DirExistsAbsolute(BundledInstallScriptsDirectory))
+        {
+            copiedFileCount = CopyBundledDirectory(BundledInstallScriptsDirectory, destinationDirectory);
+        }
+
+        else
+        {
+            GD.PrintErr($"[{OS.GetName()}] this build carries no install scripts.");
+            return;
+        }
+
+        GD.Print($"[{OS.GetName()}] copied {copiedFileCount} bundled install script files");
+    }
+
+    private const string BundledInstallScriptsArchive = "res://bundled/install_scripts.zip";
+
+    private static int ExtractBundledArchive(string archivePath, string destinationDirectory)
+    {
+        byte[] archiveBytes = FileAccess.GetFileAsBytes(archivePath);
+        string destinationRoot = System.IO.Path.GetFullPath(destinationDirectory);
+        int extractedFileCount = 0;
+
+        using var archive = new System.IO.Compression.ZipArchive(new System.IO.MemoryStream(archiveBytes), System.IO.Compression.ZipArchiveMode.Read);
+
+        foreach (var entry in archive.Entries)
+        {
+            if (string.IsNullOrEmpty(entry.Name))
+            {
+                continue;
+            }
+
+            string destinationPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(destinationRoot, entry.FullName.Replace('\\', '/')));
+
+            if (!destinationPath.StartsWith(destinationRoot + System.IO.Path.DirectorySeparatorChar, System.StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destinationPath));
+            System.IO.Compression.ZipFileExtensions.ExtractToFile(entry, destinationPath, true);
+            extractedFileCount++;
+        }
+
+        return extractedFileCount;
     }
 
     private static int CopyBundledDirectory(string sourceDirectory, string destinationDirectory)
@@ -429,7 +489,13 @@ public partial class ConfigManager : Node
         EmulatorCloseHotkeys = (Godot.Collections.Array)configurationFile.GetValue("Input", "EmulatorCloseHotkeys", defaultHotkeyButtons);
         EmulatorCloseHoldSeconds = (float)configurationFile.GetValue("Input", "EmulatorCloseHoldSeconds", DefaultEmulatorCloseHoldSeconds);
         ControllerMappingConsent = (string)configurationFile.GetValue("Input", "ControllerMappingConsent", ControllerMappingConsentUnasked);
+
+        if (ControllerMappingConsent == RetiredControllerMappingConsentVirtualPads)
+        {
+            ControllerMappingConsent = ControllerMappingConsentUnasked;
+        }
         androidCoresSetUp = new System.Collections.Generic.HashSet<string>(((string)configurationFile.GetValue("Android", "CoresSetUp", "")).Split(',', System.StringSplitOptions.RemoveEmptyEntries));
+        androidExitHintsShown = new System.Collections.Generic.HashSet<string>(((string)configurationFile.GetValue("Android", "ExitHintsShown", "")).Split(',', System.StringSplitOptions.RemoveEmptyEntries));
 
         if (configurationFile.HasSection("PreferredEmulators"))
         {
@@ -525,6 +591,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("UI", "InterfaceSize", InterfaceSize);
         configurationFile.SetValue("UI", "GameListView", GameListView);
         configurationFile.SetValue("Android", "CoresSetUp", string.Join(",", androidCoresSetUp));
+        configurationFile.SetValue("Android", "ExitHintsShown", string.Join(",", androidExitHintsShown));
         configurationFile.SetValue("Input", "EmulatorCloseHotkeyCount", EmulatorCloseHotkeyCount);
         configurationFile.SetValue("Input", "EmulatorCloseHotkeys", EmulatorCloseHotkeys);
         configurationFile.SetValue("Input", "EmulatorCloseHoldSeconds", EmulatorCloseHoldSeconds);
@@ -632,6 +699,29 @@ public partial class ConfigManager : Node
     public void SaveAndroidCoreSetUp(string coreName)
     {
         if (androidCoresSetUp.Add(coreName))
+        {
+            SaveConfig();
+        }
+    }
+
+    public void ForgetAndroidCoreSetUp(string coreName)
+    {
+        if (androidCoresSetUp.Remove(coreName))
+        {
+            SaveConfig();
+        }
+    }
+
+    private System.Collections.Generic.HashSet<string> androidExitHintsShown = new System.Collections.Generic.HashSet<string>();
+
+    public bool HasShownAndroidExitHint(string emulatorName)
+    {
+        return androidExitHintsShown.Contains(emulatorName);
+    }
+
+    public void SaveAndroidExitHintShown(string emulatorName)
+    {
+        if (androidExitHintsShown.Add(emulatorName))
         {
             SaveConfig();
         }

@@ -64,4 +64,27 @@ copy_tree "tools/7zip" "build/linux/tools/7zip"
 
 chmod +x "build/linux/romm-frontend.x86_64" "build/linux/tools/7zip/linux/7zz"
 
+# The macOS app keeps its data in Application Support, so install_scripts travels inside the
+# package as one zip. Godot skips folders holding a .gdignore, which install_scripts has.
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) SEVEN_ZIP="$PWD/tools/7zip/windows/7za.exe" ;;
+    Darwin*)              SEVEN_ZIP="$PWD/tools/7zip/macOS/7zz" ;;
+    *)                    SEVEN_ZIP="$PWD/tools/7zip/linux/7zz" ;;
+esac
+chmod +x "$SEVEN_ZIP" 2>/dev/null || true
+
+echo "Packing install_scripts for macOS..."
+rm -rf bundled
+mkdir -p bundled
+(cd install_scripts && "$SEVEN_ZIP" a -tzip "../bundled/install_scripts.zip" '*' '-xr!.gdignore' >/dev/null)
+
+echo "Exporting app to macOS..."
+mkdir -p build/macos
+rm -f build/macos/romm-frontend-macos.zip
+"$GODOT_BIN" --headless --export-release "macOS" "build/macos/romm-frontend-macos.zip"
+if [ ! -f build/macos/romm-frontend-macos.zip ]; then
+    echo "macOS export produced no zip."
+    exit 1
+fi
+
 echo "Build complete!"

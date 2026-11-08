@@ -8,7 +8,7 @@
   },
   "executable_name": {
     "windows": "melonDS.exe",
-    "macos": "melonDS"
+    "macos": "melonDS.app/Contents/MacOS/melonDS"
   },
   "executable_regex": {
     "linux": "melonDS-.*-anylinux-x86_64\\.AppImage$"
@@ -42,6 +42,12 @@
       "repo": "rafaelvcaetano/melonDS-android",
       "asset_regex": ".*\\.apk$",
       "extract": false
+    },
+    "macos": {
+      "type": "github_release",
+      "repo": "melonDS-emu/melonDS",
+      "asset_regex": "(melonDS-.*-)?macOS-universal\\.zip$",
+      "extract": true
     }
   },
   "settings_fields": [

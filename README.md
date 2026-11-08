@@ -25,13 +25,21 @@ and your saves sync back to RomM.
 
 ## Install
 
-You need a RomM server and a 64-bit PC running Windows 10/11 or Linux.
+You need a RomM server and a 64-bit PC running Windows 10/11 or Linux, or a Mac (Apple Silicon or
+Intel) running macOS 12 or later.
 
 1. Download `romm-frontend-windows.zip` or `romm-frontend-linux.zip` from
    [Releases](https://github.com/HowDoDownhill/romm-frontend/releases/latest).
 2. Extract it to any folder you can write to. The app is portable: everything it downloads
    stays in that folder.
 3. Run `romm-frontend.exe` on Windows or `romm-frontend.sh` on Linux.
+
+On a Mac:
+
+1. Download `romm-frontend-macos.zip`, open it, and move `romm-frontend.app` to Applications.
+2. Open it. The app is not notarized by Apple, so macOS blocks the first open: go to
+   **System Settings > Privacy & Security** and choose **Open Anyway**.
+3. Everything it downloads goes to `~/Library/Application Support/RomM Frontend`.
 
 Nothing else needs installing. Updates are offered in the app when a new release is out.
 
@@ -107,16 +115,17 @@ host's router needs UPnP turned on.
 
 Any controller your PC recognises works in the app. For games:
 
-- **Windows**: at first startup the app asks how to set up controllers for your emulators:
-  - **Steam Input**, if you start the app from Steam with Steam Input on.
-  - **ViGEm**, if you start the app on its own. Xbox controllers go straight to the emulator and
-    other controllers appear as an Xbox 360 pad through a small driver.
+- **Windows**: start the app from Steam with Steam Input on, and the app points each emulator at
+  every player's controller. At first startup the app asks how to set up controllers:
+  - **Steam Input** (recommended). Outside Steam, this choice adds RomM to your Steam library.
   - **Manual**, to set up each emulator yourself.
 
-  With ViGEm, set player order with **Start > Assign Controllers**; with Steam Input, Steam sets
-  it. [Controller setup](docs/CONTROLLERS.md) has a guide for each.
+  **Settings > Input Settings > Add to Steam** adds RomM to Steam at any time. Steam sets player
+  order. [Controller setup](docs/CONTROLLERS.md) has a guide for each method.
 - **Linux**: emulators use your controller directly, and the app points Dolphin and gopher64 at
   each player's controller when a game starts.
+- **Mac**: emulators use your controller directly. Set up each one from its own menu
+  (**Start > Launch Current Emulator**); [Controller setup](docs/CONTROLLERS.md#manual) lists where.
 - **Wii** games use real Wii Remotes over Bluetooth. Press 1+2 on the remote while the game runs.
 
 ## Settings
@@ -134,7 +143,8 @@ Open **Start > Settings**.
 
 ## Files
 
-Everything lives in the app folder.
+Everything lives in the app folder. On a Mac it lives in
+`~/Library/Application Support/RomM Frontend`.
 
 | Folder | Contents |
 |---|---|

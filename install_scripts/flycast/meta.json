@@ -1,8 +1,9 @@
 {
   "name": "Flycast",
+  "android_exit_hint": "Press Back to open Flycast's menu and choose Close Game, then press Back again to return to RomM.",
   "executable_name": {
     "windows": "flycast.exe",
-    "macos": "flycast"
+    "macos": "Flycast.app/Contents/MacOS/Flycast"
   },
   "executable_regex": {
     "linux": "flycast-x86_64\\.AppImage$"
@@ -22,10 +23,13 @@
   "emulator_bios_path": {
     "windows": "data",
     "linux": "data/flycast",
-    "macos": "data"
+    "macos": "home/Library/Application Support/Flycast/data"
   },
   "relative_save_path": {
-    "dc": "data"
+    "dc": {
+      "default": "data",
+      "macos": "home/Library/Application Support/Flycast/data"
+    }
   },
   "sync_include": [
     "*vmu_save*.bin",
@@ -35,6 +39,9 @@
     "linux": {
       "XDG_CONFIG_HOME": "{emulator_dir}/config",
       "XDG_DATA_HOME": "{emulator_dir}/data"
+    },
+    "macos": {
+      "HOME": "{emulator_dir}/home"
     }
   },
   "launch_args_with_game": "-config config:PerGameVmu=yes {netplay} \"{rom_path}\"",
@@ -65,6 +72,12 @@
       "repo": "flyinghead/flycast",
       "asset_regex": "flycast-.*\\.apk$",
       "extract": false
+    },
+    "macos": {
+      "type": "github_release",
+      "repo": "flyinghead/flycast",
+      "asset_regex": "flycast-macOS-.*\\.zip$",
+      "extract": true
     }
   },
   "settings_fields": [
@@ -117,7 +130,10 @@
   ],
   "controller_config": {
     "max_controllers": 2,
-    "config_file_relative_path": "emu.cfg",
+    "config_file_relative_path": {
+      "default": "emu.cfg",
+      "macos": "home/Library/Application Support/Flycast/emu.cfg"
+    },
     "format": "ini",
     "sdl_enumeration": "all",
     "controller_sections": [

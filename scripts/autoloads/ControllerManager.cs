@@ -87,7 +87,7 @@ public partial class ControllerManager : Node
 
     public int GetEnumerationIndex(ConnectedController controller)
     {
-        return GetAllControllersIncludingVirtual().IndexOf(controller);
+        return GetConnectedControllers().IndexOf(controller);
     }
 
     private void RemoveController(int deviceId)
@@ -103,25 +103,11 @@ public partial class ControllerManager : Node
 
     public List<ConnectedController> GetConnectedControllers()
     {
-        return connectedControllers
-            .Where(c => !IsFrontendVirtualPad(c.GodotDeviceId))
-            .OrderBy(c => c.ConnectionOrder)
-            .ToList();
-    }
-
-    public List<ConnectedController> GetAllControllersIncludingVirtual()
-    {
         return connectedControllers.OrderBy(c => c.ConnectionOrder).ToList();
     }
 
     public int GetControllerCount()
     {
         return GetConnectedControllers().Count;
-    }
-
-    private bool IsFrontendVirtualPad(int godotDeviceId)
-    {
-        InputLayer inputLayer = GetNodeOrNull<InputLayer>("/root/InputLayer");
-        return inputLayer != null && inputLayer.IsOwnVirtualDevice(godotDeviceId);
     }
 }

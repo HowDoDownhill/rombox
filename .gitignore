@@ -37,6 +37,7 @@ releases/*
 /releases/*
 
 /build/
+/bundled/
 /bios/
 /roms/
 /emulators/

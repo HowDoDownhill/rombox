@@ -2,7 +2,7 @@
   "name": "mGBA",
   "executable_name": {
     "windows": "mGBA.exe",
-    "macos": "mGBA"
+    "macos": "mGBA.app/Contents/MacOS/mGBA"
   },
   "executable_regex": {
     "linux": "mGBA-.*-appimage-x64\\.appimage$"
@@ -27,6 +27,12 @@
       "repo": "mgba-emu/mgba",
       "asset_regex": ".*appimage-x64\\.appimage$",
       "extract": false
+    },
+    "macos": {
+      "type": "github_release",
+      "repo": "mgba-emu/mgba",
+      "asset_regex": "mGBA-.*-macos\\.dmg$",
+      "extract": true
     }
   },
   "relative_save_path": {

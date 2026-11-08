@@ -105,6 +105,34 @@ public abstract partial class GameListView : Control
         pointerPressPosition = press.Position;
         dragTravel = 0.0f;
         dragVelocity = 0.0f;
+        OnPointerPressed();
+    }
+
+    protected virtual void OnPointerPressed()
+    {
+    }
+
+    protected virtual void OnDragMoved(float scrollDelta, float scrollVelocity)
+    {
+        dragTravel += scrollDelta;
+        float step = Mathf.Max(1.0f, DragStepPixels);
+
+        while (Mathf.Abs(dragTravel) >= step)
+        {
+            int direction = Math.Sign(dragTravel);
+            MoveSelection(direction * DragStepItems, false);
+            dragTravel -= direction * step;
+        }
+    }
+
+    protected virtual void OnDragReleased(float scrollVelocity)
+    {
+        int flingSteps = Math.Clamp((int)(scrollVelocity * FlingSeconds / Mathf.Max(1.0f, DragStepPixels)), -MaximumFlingSteps, MaximumFlingSteps);
+
+        if (flingSteps != 0)
+        {
+            MoveSelection(flingSteps * DragStepItems, false);
+        }
     }
 
     private void TrackDrag(InputEventMouseMotion motion)
@@ -115,16 +143,8 @@ public abstract partial class GameListView : Control
         }
 
         dragging = true;
-        dragTravel -= motion.Relative.Y;
         dragVelocity = -motion.Velocity.Y;
-        float step = Mathf.Max(1.0f, DragStepPixels);
-
-        while (Mathf.Abs(dragTravel) >= step)
-        {
-            int direction = Math.Sign(dragTravel);
-            MoveSelection(direction * DragStepItems, false);
-            dragTravel -= direction * step;
-        }
+        OnDragMoved(-motion.Relative.Y, dragVelocity);
     }
 
     private void EndPointer()
@@ -138,13 +158,7 @@ public abstract partial class GameListView : Control
 
         if (dragging)
         {
-            int flingSteps = Math.Clamp((int)(dragVelocity * FlingSeconds / Mathf.Max(1.0f, DragStepPixels)), -MaximumFlingSteps, MaximumFlingSteps);
-
-            if (flingSteps != 0)
-            {
-                MoveSelection(flingSteps * DragStepItems, false);
-            }
-
+            OnDragReleased(dragVelocity);
             return;
         }
 
@@ -226,7 +240,12 @@ public abstract partial class GameListView : Control
         }
 
         SelectedIndex = Math.Clamp(index, 0, ItemCount - 1);
+        OnSelectionDriven();
         UpdateLayout(animated);
+    }
+
+    protected virtual void OnSelectionDriven()
+    {
     }
 
     public void ReloadItems(int itemCount, int selectedIndex)
@@ -235,6 +254,7 @@ public abstract partial class GameListView : Control
         ItemCount = Math.Max(0, itemCount);
         SelectedIndex = ItemCount == 0 ? 0 : Math.Clamp(selectedIndex, 0, ItemCount - 1);
         ResetCoverAspectSamples();
+        OnSelectionDriven();
         OnItemsReloaded();
         UpdateLayout(false);
     }

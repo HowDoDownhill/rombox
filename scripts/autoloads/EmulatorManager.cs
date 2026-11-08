@@ -468,8 +468,17 @@ public class AndroidLaunchSpec
 
 public class EmulatorMeta
 {
+    private string desktopName;
+
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public string Name
+    {
+        get => AndroidApps.IsAvailable && !string.IsNullOrEmpty(AndroidName) ? AndroidName : desktopName;
+        set => desktopName = value;
+    }
+
+    [JsonPropertyName("android_name")]
+    public string AndroidName { get; set; }
 
     [JsonPropertyName("executable_name")]
     public Dictionary<string, string> ExecutableName { get; set; }
@@ -486,8 +495,9 @@ public class EmulatorMeta
     [JsonPropertyName("android_alternate_packages")]
     public List<string> AndroidAlternatePackages { get; set; }
 
-    [JsonPropertyName("android_fallback")]
-    public bool AndroidFallback { get; set; }
+
+    [JsonPropertyName("android_exit_hint")]
+    public string AndroidExitHint { get; set; }
 
     [JsonPropertyName("android_needs_direct_build")]
     public bool AndroidNeedsDirectBuild { get; set; }
@@ -521,36 +531,59 @@ public class EmulatorMeta
 
     public List<string> GetSyncSavePatterns(string systemSlug)
     {
-        var syncSavePatterns = new List<string>();
+        return ReadPathsForSystem(SyncSavePath, systemSlug);
+    }
 
-        if (SyncSavePath == null)
+    public List<string> GetSaveRelativePathsForSystem(string systemSlug)
+    {
+        return ReadPathsForSystem(RelativeSavePath, systemSlug);
+    }
+
+    private static List<string> ReadPathsForSystem(Dictionary<string, JsonElement> pathsBySystem, string systemSlug)
+    {
+        if (pathsBySystem == null
+            || (!pathsBySystem.TryGetValue(systemSlug ?? "", out JsonElement pathElement) && !pathsBySystem.TryGetValue("default", out pathElement)))
         {
-            return syncSavePatterns;
+            return new List<string>();
         }
 
-        if (!SyncSavePath.TryGetValue(systemSlug ?? "", out JsonElement syncSavePathElement)
-            && !SyncSavePath.TryGetValue("default", out syncSavePathElement))
+        return ReadPathList(pathElement);
+    }
+
+    private static List<string> ReadPathList(JsonElement pathElement)
+    {
+        var paths = new List<string>();
+        pathElement = ScopeToCurrentOperatingSystem(pathElement);
+
+        if (pathElement.ValueKind == JsonValueKind.String)
         {
-            return syncSavePatterns;
+            paths.Add(pathElement.GetString());
         }
 
-        if (syncSavePathElement.ValueKind == JsonValueKind.String)
+        else if (pathElement.ValueKind == JsonValueKind.Array)
         {
-            syncSavePatterns.Add(syncSavePathElement.GetString());
-        }
-
-        else if (syncSavePathElement.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var syncSavePathArrayElement in syncSavePathElement.EnumerateArray())
+            foreach (var pathArrayElement in pathElement.EnumerateArray())
             {
-                if (syncSavePathArrayElement.ValueKind == JsonValueKind.String)
+                if (pathArrayElement.ValueKind == JsonValueKind.String)
                 {
-                    syncSavePatterns.Add(syncSavePathArrayElement.GetString());
+                    paths.Add(pathArrayElement.GetString());
                 }
             }
         }
 
-        return syncSavePatterns;
+        return paths;
+    }
+
+    private static JsonElement ScopeToCurrentOperatingSystem(JsonElement pathElement)
+    {
+        if (pathElement.ValueKind == JsonValueKind.Object
+            && (pathElement.TryGetProperty(HostPlatform.OperatingSystemKey, out JsonElement operatingSystemValue)
+                || pathElement.TryGetProperty("default", out operatingSystemValue)))
+        {
+            return operatingSystemValue;
+        }
+
+        return pathElement;
     }
 
 
@@ -562,9 +595,6 @@ public class EmulatorMeta
 
     [JsonPropertyName("launch_env")]
     public Dictionary<string, Dictionary<string, string>> LaunchEnv { get; set; }
-
-    [JsonPropertyName("input_layer")]
-    public string InputLayer { get; set; }
 
     [JsonPropertyName("system_flags")]
     public Dictionary<string, JsonElement> SystemFlags { get; set; }
@@ -586,35 +616,19 @@ public class EmulatorMeta
 
     public string ResolveSaveDirectoryForSystem(string systemSlug)
     {
-        if (RelativeSavePath == null)
-        {
-            return null;
-        }
-
-        if (!RelativeSavePath.TryGetValue(systemSlug ?? "", out JsonElement savePathElement)
-            && !RelativeSavePath.TryGetValue("default", out savePathElement))
-        {
-            return null;
-        }
-
-        if (savePathElement.ValueKind == JsonValueKind.String)
-        {
-            return savePathElement.GetString();
-        }
-
-        foreach (var savePathArrayElement in savePathElement.EnumerateArray())
-        {
-            if (savePathArrayElement.ValueKind == JsonValueKind.String)
-            {
-                return savePathArrayElement.GetString();
-            }
-        }
-
-        return null;
+        return GetSaveRelativePathsForSystem(systemSlug).FirstOrDefault();
     }
+
+    [JsonPropertyName("android_system_cores")]
+    public Dictionary<string, List<string>> AndroidSystemCores { get; set; }
 
     public List<string> GetSelectableCores(string systemSlug)
     {
+        if (AndroidApps.IsAvailable && AndroidSystemCores != null && !string.IsNullOrEmpty(systemSlug) && AndroidSystemCores.TryGetValue(systemSlug, out var androidCores))
+        {
+            return androidCores;
+        }
+
         if (SystemCores != null && !string.IsNullOrEmpty(systemSlug) && SystemCores.TryGetValue(systemSlug, out var selectableCores))
         {
             return selectableCores;
@@ -647,7 +661,7 @@ public class EmulatorMeta
             return null;
         }
 
-        return coreDownloadUrlTemplate.Replace("{core}", coreName);
+        return HostPlatform.ApplyArchitecture(coreDownloadUrlTemplate.Replace("{core}", coreName));
     }
 
     public string ResolveCoreLaunchArgument(string coreName, string operatingSystem)
@@ -690,21 +704,7 @@ public class EmulatorMeta
 
         foreach (var savePathEntry in RelativeSavePath.Values)
         {
-            if (savePathEntry.ValueKind == JsonValueKind.String)
-            {
-                savePaths.Add(savePathEntry.GetString());
-            }
-
-            else if (savePathEntry.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var savePathElement in savePathEntry.EnumerateArray())
-                {
-                    if (savePathElement.ValueKind == JsonValueKind.String)
-                    {
-                        savePaths.Add(savePathElement.GetString());
-                    }
-                }
-            }
+            savePaths.AddRange(ReadPathList(savePathEntry));
         }
 
         return savePaths;
@@ -803,7 +803,9 @@ public class EmulatorSettingField
     [JsonPropertyName("operating_systems")]
     public List<string> OperatingSystems { get; set; }
 
-    public bool AppliesTo(string operatingSystem) => OperatingSystems == null || OperatingSystems.Count == 0 || OperatingSystems.Contains(operatingSystem);
+    public bool AppliesTo(string operatingSystem) => OperatingSystems == null || OperatingSystems.Count == 0
+        ? operatingSystem != "android"
+        : OperatingSystems.Contains(operatingSystem);
 
     public string ResolveConfigFileRelativePath(string operatingSystem) => ResolveOsScopedValue(ConfigFileRelativePath, operatingSystem);
 
@@ -819,7 +821,7 @@ public class EmulatorSettingField
         }
 
         if (fieldValue.ValueKind == JsonValueKind.Object
-            && fieldValue.TryGetProperty(operatingSystem, out JsonElement osScopedValue)
+            && (fieldValue.TryGetProperty(operatingSystem, out JsonElement osScopedValue) || fieldValue.TryGetProperty("default", out osScopedValue))
             && osScopedValue.ValueKind == JsonValueKind.String)
         {
             return osScopedValue.GetString();
@@ -1388,7 +1390,7 @@ public partial class EmulatorManager : Node
         {
             string preferred = appInstance.configManager.PreferredEmulators[systemSlug];
             if (systemToEmulatorMap.ContainsKey(systemSlug) && systemToEmulatorMap[systemSlug].Contains(preferred)
-                && (!AndroidApps.IsAvailable || HasAndroidBuild(preferred)))
+                && (AndroidApps.IsAvailable ? HasAndroidBuild(preferred) : HasDesktopBuild(preferred)))
             {
                 return preferred;
             }
@@ -1398,13 +1400,10 @@ public partial class EmulatorManager : Node
         {
             if (AndroidApps.IsAvailable)
             {
-                var androidCapable = systemToEmulatorMap[systemSlug].Where(HasAndroidBuild).ToList();
-                return androidCapable.FirstOrDefault(candidate => !LoadEmulatorMetadataFromDisk(candidate).AndroidFallback)
-                    ?? androidCapable.FirstOrDefault()
-                    ?? systemToEmulatorMap[systemSlug][0];
+                return OrderForAndroid(systemToEmulatorMap[systemSlug], systemSlug).FirstOrDefault() ?? systemToEmulatorMap[systemSlug][0];
             }
 
-            return systemToEmulatorMap[systemSlug][0];
+            return systemToEmulatorMap[systemSlug].FirstOrDefault(HasDesktopBuild) ?? systemToEmulatorMap[systemSlug][0];
         }
 
         return null;
@@ -1413,6 +1412,63 @@ public partial class EmulatorManager : Node
     private bool HasAndroidBuild(string emulatorName)
     {
         return !string.IsNullOrEmpty(LoadEmulatorMetadataFromDisk(emulatorName)?.AndroidPackage);
+    }
+
+    private const int AndroidTierApk = 0;
+    private const int AndroidTierRetroArchCore = 1;
+    private const int AndroidTierPlayStoreOnly = 2;
+    private const int AndroidTierUnavailable = -1;
+
+    private int RankForAndroid(string emulatorName, string systemSlug)
+    {
+        var emulatorMetadata = LoadEmulatorMetadataFromDisk(emulatorName);
+
+        if (string.IsNullOrEmpty(emulatorMetadata?.AndroidPackage))
+        {
+            return AndroidTierUnavailable;
+        }
+
+        if (emulatorMetadata.SystemCores != null)
+        {
+            return emulatorMetadata.GetSelectableCores(systemSlug).Count > 0 ? AndroidTierRetroArchCore : AndroidTierUnavailable;
+        }
+
+        return HostPlatform.ResolveInstallRecipe(emulatorMetadata, "android") != null ? AndroidTierApk : AndroidTierPlayStoreOnly;
+    }
+
+    private List<string> OrderForAndroid(List<string> mappedEmulators, string systemSlug)
+    {
+        return mappedEmulators
+            .Select((emulatorName, mapIndex) => (emulatorName, mapIndex, tier: RankForAndroid(emulatorName, systemSlug)))
+            .Where(candidate => candidate.tier != AndroidTierUnavailable)
+            .OrderBy(candidate => candidate.tier)
+            .ThenBy(candidate => candidate.mapIndex)
+            .Select(candidate => candidate.emulatorName)
+            .ToList();
+    }
+
+    private bool ShouldInstallFromPlayStore(EmulatorMeta emulatorMetadata)
+    {
+        if (HostPlatform.ResolveInstallRecipe(emulatorMetadata, "android") == null)
+        {
+            return true;
+        }
+
+        string installedPackage = ResolveInstalledAndroidPackage(emulatorMetadata);
+        return installedPackage != null && AndroidApps.IsFromPlayStore(installedPackage);
+    }
+
+    public bool HasDesktopBuild(string emulatorName)
+    {
+        var emulatorMetadata = LoadEmulatorMetadataFromDisk(emulatorName);
+        string currentOperatingSystem = HostPlatform.OperatingSystemKey;
+
+        if (emulatorMetadata?.EmulatorDirName == null || !emulatorMetadata.EmulatorDirName.ContainsKey(currentOperatingSystem))
+        {
+            return false;
+        }
+
+        return HostPlatform.ResolveInstallRecipe(emulatorMetadata, currentOperatingSystem) != null || IsEmulatorInstalled(emulatorName);
     }
 
     public List<string> GetSupportedEmulators(string systemSlug)
@@ -1424,7 +1480,9 @@ public partial class EmulatorManager : Node
 
         if (systemToEmulatorMap.ContainsKey(systemSlug))
         {
-            return systemToEmulatorMap[systemSlug];
+            return AndroidApps.IsAvailable
+                ? OrderForAndroid(systemToEmulatorMap[systemSlug], systemSlug)
+                : systemToEmulatorMap[systemSlug].Where(HasDesktopBuild).ToList();
         }
 
         return new List<string>();
@@ -1698,14 +1756,13 @@ public partial class EmulatorManager : Node
             }
         }
 
-        if (emulatorMetadata.ExecutableRegex != null && emulatorMetadata.ExecutableRegex.ContainsKey(currentOperatingSystem) && System.IO.Directory.Exists(emulatorInstallDirectory))
+        if (emulatorMetadata.ExecutableRegex != null && emulatorMetadata.ExecutableRegex.TryGetValue(currentOperatingSystem, out string executableRegex))
         {
-            var executablePattern = new System.Text.RegularExpressions.Regex(emulatorMetadata.ExecutableRegex[currentOperatingSystem], System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            string matchingFilePath = System.IO.Directory.GetFiles(emulatorInstallDirectory).FirstOrDefault(filePath => executablePattern.IsMatch(Path.GetFileName(filePath)));
+            string matchingFilePath = HostPlatform.FindExecutableMatching(emulatorInstallDirectory, executableRegex);
 
             if (matchingFilePath != null)
             {
-                return Path.GetFullPath(matchingFilePath);
+                return matchingFilePath;
             }
         }
 
@@ -1845,13 +1902,15 @@ public partial class EmulatorManager : Node
         var emulatorMetadata = LoadEmulatorMetadataFromDisk(emulatorName);
         string currentOperatingSystem = OS.GetName().ToLower();
 
-        if (emulatorMetadata?.InstallRecipe == null || !emulatorMetadata.InstallRecipe.ContainsKey(currentOperatingSystem))
+        InstallRecipe installRecipe = HostPlatform.ResolveInstallRecipe(emulatorMetadata, currentOperatingSystem);
+
+        if (installRecipe == null)
         {
-            GD.PrintErr($"No install recipe found for {emulatorName} on {currentOperatingSystem}.");
+            GD.PrintErr($"No install recipe found for {emulatorName} on {currentOperatingSystem} ({HostPlatform.ArchitectureKey}).");
             return new List<ReleaseOption>();
         }
 
-        return await UniversalInstaller.ListReleases(emulatorMetadata.InstallRecipe[currentOperatingSystem]);
+        return await UniversalInstaller.ListReleases(installRecipe);
     }
 
     public bool IsEmulatorInstalling(string emulatorName)
@@ -1949,7 +2008,8 @@ public partial class EmulatorManager : Node
             return;
         }
 
-        if (AndroidApps.IsAvailable && emulatorMetadata.AndroidPlayStore && AndroidApps.OpenStoreListing(emulatorMetadata.AndroidPackage))
+        if (AndroidApps.IsAvailable && emulatorMetadata.AndroidPlayStore && ShouldInstallFromPlayStore(emulatorMetadata)
+            && AndroidApps.OpenStoreListing(emulatorMetadata.AndroidPackage))
         {
             GD.Print($"[Android] opened the Play Store listing for {emulatorMetadata.Name}.");
             installingEmulators.Remove(emulatorName);
@@ -2245,24 +2305,7 @@ public partial class EmulatorManager : Node
 
         DiscreteGpuPreference.ApplyToProcess(processStartInfo, appInstance?.configManager?.PreferDiscreteGpu ?? true);
         ApplyLaunchEnvironment(processStartInfo, emulatorMetadata, workingDirectory);
-        ApplyInputLayerEnvironment(processStartInfo, emulatorMetadata);
         return processStartInfo;
-    }
-
-    private void ApplyInputLayerEnvironment(ProcessStartInfo processStartInfo, EmulatorMeta emulatorMetadata)
-    {
-        var inputLayerEnvironment = appInstance?.inputLayer?.BuildLaunchEnvironment(emulatorMetadata);
-
-        if (inputLayerEnvironment == null || inputLayerEnvironment.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var environmentVariable in inputLayerEnvironment)
-        {
-            processStartInfo.Environment[environmentVariable.Key] = environmentVariable.Value;
-            GD.Print($"[InputLayer] {environmentVariable.Key}={environmentVariable.Value}");
-        }
     }
 
     private void ApplyLaunchEnvironment(ProcessStartInfo processStartInfo, EmulatorMeta emulatorMetadata, string emulatorInstallDirectory)
@@ -2283,6 +2326,11 @@ public partial class EmulatorManager : Node
         {
             string resolvedValue = environmentVariable.Value.Replace("{emulator_dir}", emulatorInstallDirectory);
             processStartInfo.Environment[environmentVariable.Key] = resolvedValue;
+
+            if (environmentVariable.Key == "HOME" && HostPlatform.IsMacOS)
+            {
+                Directory.CreateDirectory(Path.Combine(resolvedValue, "Library", "Application Support"));
+            }
         }
     }
 
@@ -2397,6 +2445,31 @@ public partial class EmulatorManager : Node
         coreDisplayName = emulatorMetadata.CoreDisplayNames.TryGetValue(selectedCore, out string displayName) ? displayName : selectedCore;
         return selectedCore;
     }
+
+    public string FindAndroidExitHintToShow(Game game, out string emulatorName, out string emulatorDisplayName)
+    {
+        emulatorName = null;
+        emulatorDisplayName = null;
+
+        if (!AndroidApps.IsAvailable || game?.System == null)
+        {
+            return null;
+        }
+
+        string mappedEmulator = GetMappedEmulator(game.System.Slug);
+        var emulatorMetadata = LoadEmulatorMetadataFromDisk(mappedEmulator);
+
+        if (emulatorMetadata == null || appInstance.configManager.HasShownAndroidExitHint(mappedEmulator))
+        {
+            return null;
+        }
+
+        emulatorName = mappedEmulator;
+        emulatorDisplayName = emulatorMetadata.Name ?? mappedEmulator;
+        return string.IsNullOrEmpty(emulatorMetadata.AndroidExitHint) ? DefaultAndroidExitHint : emulatorMetadata.AndroidExitHint;
+    }
+
+    private const string DefaultAndroidExitHint = "Use the emulator's own menu to leave the game, then switch back to RomM from Recents.";
 
     public bool OpenEmulatorAppForSystem(string systemSlug)
     {
@@ -2558,11 +2631,6 @@ public partial class EmulatorManager : Node
             ApplyLaunchTimeSettings(mappedEmulatorName, emulatorMetadata, emulatorInstallDirectory, currentOperatingSystem);
             ApplyControllerMappings(emulatorMetadata, emulatorInstallDirectory, currentGameSystem);
             appInstance.inputLayer?.BeginSession(game.System?.Slug, emulatorMetadata);
-
-            if (appInstance.inputLayer != null)
-            {
-                await appInstance.inputLayer.WaitForVirtualPadsToEnumerate();
-            }
 
             await WriteInputLayerDeviceBindings(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
             await AssignControllersThroughEmulatorCommands(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
@@ -2775,11 +2843,6 @@ public partial class EmulatorManager : Node
             launchArguments = AppendDynamicSettingsToArguments(launchArguments, emulatorName, emulatorMetadata);
             ApplyLaunchTimeSettings(emulatorName, emulatorMetadata, emulatorInstallDirectory, currentOperatingSystem);
             appInstance.inputLayer?.BeginSession(currentGameSystem?.Slug, emulatorMetadata);
-
-            if (appInstance.inputLayer != null)
-            {
-                await appInstance.inputLayer.WaitForVirtualPadsToEnumerate();
-            }
 
             await WriteInputLayerDeviceBindings(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
             await AssignControllersThroughEmulatorCommands(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
@@ -3270,11 +3333,6 @@ public partial class EmulatorManager : Node
 
     private static string ResolveFallbackDeviceName(int playerIndex, InputLayer inputLayer)
     {
-        if (!inputLayer.IsPlayerPassthrough(playerIndex))
-        {
-            return inputLayer.VirtualPadSdlDeviceName;
-        }
-
         int physicalDeviceId = inputLayer.SessionPlayers[playerIndex].PhysicalDeviceId;
         Godot.Collections.Dictionary joypadInfo = Input.GetJoyInfo(physicalDeviceId);
         return joypadInfo.TryGetValue("raw_name", out Variant rawName) ? rawName.AsString() : Input.GetJoyName(physicalDeviceId);

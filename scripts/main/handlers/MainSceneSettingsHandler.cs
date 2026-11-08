@@ -546,6 +546,42 @@ public class MainSceneSettingsHandler
         controllerSetupEntry.Visible = OperatingSystem.IsWindows() && !OS.HasFeature("android");
         vbox.AddChild(controllerSetupEntry);
 
+        HBoxContainer steamLibraryBox = new HBoxContainer();
+        Label steamLibraryLabel = new Label();
+        steamLibraryLabel.Text = "Steam Library";
+        steamLibraryLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        steamLibraryBox.AddChild(steamLibraryLabel);
+
+        Label steamLibraryStatus = new Label();
+        steamLibraryStatus.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
+        steamLibraryBox.AddChild(steamLibraryStatus);
+
+        Button addToSteamButton = new Button();
+        addToSteamButton.ThemeTypeVariation = "ListButton";
+        addToSteamButton.Text = "Add to Steam";
+        addToSteamButton.Visible = !ControllerSetupMethod.IsLaunchedThroughSteam;
+        addToSteamButton.Pressed += mainScene.InputHandler.AddAppToSteam;
+        steamLibraryBox.AddChild(addToSteamButton);
+
+        void ShowSteamLibraryStatus()
+        {
+            steamLibraryStatus.Text = DescribeSteamLibraryStatus();
+        }
+
+        mainScene.InputHandler.SteamShortcutChanged += ShowSteamLibraryStatus;
+        formContainer.VisibilityChanged += () =>
+        {
+            if (formContainer.Visible)
+            {
+                ShowSteamLibraryStatus();
+            }
+        };
+
+        var steamLibraryEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        steamLibraryEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(steamLibraryBox);
+        steamLibraryEntry.Visible = SteamShortcuts.IsSupportedPlatform;
+        vbox.AddChild(steamLibraryEntry);
+
         HBoxContainer countBox = new HBoxContainer();
         Label countLabel = new Label();
         countLabel.Text = "Number of Emulator Close Hotkeys";
@@ -560,6 +596,7 @@ public class MainSceneSettingsHandler
 
         var entry1 = settingsListEntryScene.Instantiate<SettingsListEntry>();
         entry1.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(countBox);
+        entry1.Visible = !AndroidApps.IsAvailable;
         vbox.AddChild(entry1);
 
         HBoxContainer holdBox = new HBoxContainer();
@@ -583,6 +620,7 @@ public class MainSceneSettingsHandler
 
         var holdEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
         holdEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(holdBox);
+        holdEntry.Visible = !AndroidApps.IsAvailable;
         vbox.AddChild(holdEntry);
 
         mainScene.emulatorCloseHotkeysBtn = new Button();
@@ -599,6 +637,7 @@ public class MainSceneSettingsHandler
 
         var entry2 = settingsListEntryScene.Instantiate<SettingsListEntry>();
         entry2.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(mainScene.emulatorCloseHotkeysBtn);
+        entry2.Visible = !AndroidApps.IsAvailable;
         vbox.AddChild(entry2);
 
         countSpin.ValueChanged += (double val) =>
@@ -656,7 +695,7 @@ public class MainSceneSettingsHandler
 
         int idx = 0;
         int selectedIdx = 0;
-        string currentPref = appInstance.configManager.PreferredEmulators.ContainsKey(system.Slug) ? appInstance.configManager.PreferredEmulators[system.Slug] : null;
+        string currentPref = appInstance.emulatorManager.GetMappedEmulator(system.Slug);
 
         foreach (string emuSlug in supportedEmulators)
         {
@@ -835,9 +874,14 @@ public class MainSceneSettingsHandler
 
         coreOptionButton.Select(selectedCoreIndex);
 
+        string shownCore = selectedCore;
+        CheckButton coreInstalledCheckbox = null;
+
         coreOptionButton.ItemSelected += (long index) =>
         {
-            appInstance.configManager.SavePreferredCore(systemSlug, coreOptionButton.GetItemMetadata((int)index).AsString());
+            shownCore = coreOptionButton.GetItemMetadata((int)index).AsString();
+            appInstance.configManager.SavePreferredCore(systemSlug, shownCore);
+            coreInstalledCheckbox?.SetPressedNoSignal(appInstance.configManager.IsAndroidCoreSetUp(shownCore));
         };
 
         coreBox.AddChild(coreOptionButton);
@@ -845,6 +889,37 @@ public class MainSceneSettingsHandler
         var coreEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
         coreEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(coreBox);
         vbox.AddChild(coreEntry);
+
+        if (!AndroidApps.IsAvailable || string.IsNullOrEmpty(selectedCore))
+        {
+            return;
+        }
+
+        HBoxContainer installedBox = new HBoxContainer();
+        Label installedLabel = new Label();
+        installedLabel.Text = "Installed in RetroArch";
+        installedLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        installedBox.AddChild(installedLabel);
+
+        coreInstalledCheckbox = new CheckButton();
+        coreInstalledCheckbox.ButtonPressed = appInstance.configManager.IsAndroidCoreSetUp(shownCore);
+        coreInstalledCheckbox.Toggled += (bool isInstalled) =>
+        {
+            if (isInstalled)
+            {
+                appInstance.configManager.SaveAndroidCoreSetUp(shownCore);
+            }
+
+            else
+            {
+                appInstance.configManager.ForgetAndroidCoreSetUp(shownCore);
+            }
+        };
+        installedBox.AddChild(coreInstalledCheckbox);
+
+        var installedEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        installedEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(installedBox);
+        vbox.AddChild(installedEntry);
     }
 
     private static string BuildSectionNodeName(string sectionName)
@@ -893,25 +968,26 @@ public class MainSceneSettingsHandler
             return "Unavailable";
         }
 
-        InputLayerConsent consent = appInstance.inputLayer.ResolveConsent();
-
-        if (consent == InputLayerConsent.SteamInput)
-        {
-            return ControllerSetupMethod.IsLaunchedThroughSteam ? "Steam Handles Your Controllers" : "Not Launched Through Steam";
-        }
-
-        if (consent != InputLayerConsent.Accepted)
+        if (appInstance.inputLayer.ResolveConsent() != InputLayerConsent.SteamInput)
         {
             return "Emulators Use Their Own Controller Settings";
         }
 
-        return appInstance.inputLayer.IsVirtualPadBackendAvailable
-            ? "Non-Xbox Pads Appear as Xbox 360 Pads"
-            : CapitaliseFirstLetter(appInstance.inputLayer.VirtualPadBackendUnavailableReason);
+        return ControllerSetupMethod.IsLaunchedThroughSteam ? "Steam Handles Your Controllers" : "Start the App From Steam to Use It";
     }
 
-    private static string CapitaliseFirstLetter(string sentence)
+    private static string DescribeSteamLibraryStatus()
     {
-        return string.IsNullOrEmpty(sentence) ? sentence : char.ToUpperInvariant(sentence[0]) + sentence.Substring(1);
+        if (ControllerSetupMethod.IsLaunchedThroughSteam)
+        {
+            return "Running From Steam";
+        }
+
+        if (SteamShortcuts.FindShortcutsFile() == null)
+        {
+            return "Steam Not Found";
+        }
+
+        return SteamShortcuts.ContainsThisApp() ? "In Your Steam Library" : "Not in Your Steam Library";
     }
 }

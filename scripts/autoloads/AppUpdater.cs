@@ -109,13 +109,15 @@ public partial class AppUpdater : Node
             var releaseInfo = JsonSerializer.Deserialize(json, RommJsonContext.Default.GithubReleaseInfo);
 
             
-            string targetZipName = OS.HasFeature("windows") ? "romm-frontend-windows.zip" : "romm-frontend-linux.zip";
-            
+            string targetZipName = OS.HasFeature("windows") ? "romm-frontend-windows.zip"
+                : OS.HasFeature("macos") ? MacOSReleaseZipName
+                : "romm-frontend-linux.zip";
+
             var asset = releaseInfo?.Assets?.FirstOrDefault(a => a.Name.Contains(targetZipName, StringComparison.OrdinalIgnoreCase));
 
-            if (asset == null)
+            if (asset == null && !OS.HasFeature("macos"))
             {
-                
+
                 asset = releaseInfo?.Assets?.FirstOrDefault(a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
             }
 
@@ -264,7 +266,63 @@ rm ""$0""
                 UseShellExecute = false
             });
         }
-        
+        else if (OS.HasFeature("macos"))
+        {
+            string bundlePath = ResolveRunningAppBundle(appPath);
+
+            if (bundlePath == null)
+            {
+                GD.PrintErr($"[Updater] {appPath} is not inside an app bundle, so the update was not applied.");
+                return;
+            }
+
+            string stagingPath = System.IO.Path.Combine(downloadsPath, "update-staging");
+            string shPath = System.IO.Path.Combine(downloadsPath, "update.sh");
+            string shContent = $@"#!/bin/bash
+sleep 3
+staging='{stagingPath}'
+bundle='{bundlePath}'
+rm -rf ""$staging""
+mkdir -p ""$staging""
+if /usr/bin/ditto -x -k '{downloadPath}' ""$staging""; then
+    new_bundle=$(find ""$staging"" -maxdepth 1 -name '*.app' -print -quit)
+    if [ -n ""$new_bundle"" ]; then
+        rm -rf ""$bundle.previous""
+        mv ""$bundle"" ""$bundle.previous""
+        if /usr/bin/ditto ""$new_bundle"" ""$bundle""; then
+            rm -rf ""$bundle.previous""
+        else
+            rm -rf ""$bundle""
+            mv ""$bundle.previous"" ""$bundle""
+        fi
+    fi
+fi
+rm -rf ""$staging""
+rm -f '{downloadPath}'
+/usr/bin/open ""$bundle""
+rm -f ""$0""
+".Replace("\r", "");
+            File.WriteAllText(shPath, shContent);
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"-c \"chmod +x '{shPath}' && '{shPath}' &\"",
+                UseShellExecute = false
+            });
+        }
+
         GetTree().Quit();
+    }
+
+    public const string MacOSReleaseZipName = "romm-frontend-macos.zip";
+
+    private static string ResolveRunningAppBundle(string executablePath)
+    {
+        string executableDirectory = System.IO.Path.GetDirectoryName(executablePath);
+        string contentsDirectory = System.IO.Path.GetDirectoryName(executableDirectory);
+        string bundlePath = System.IO.Path.GetDirectoryName(contentsDirectory);
+
+        return bundlePath != null && bundlePath.EndsWith(".app", StringComparison.OrdinalIgnoreCase) ? bundlePath : null;
     }
 }

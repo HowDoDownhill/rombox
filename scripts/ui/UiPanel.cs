@@ -32,6 +32,12 @@ public partial class UiPanel : Control
     [Export] public Color ShadowColor = MicaShadow.DefaultColor;
     [Export] public Vector2 ShadowOffset = MicaShadow.DefaultOffset;
     [Export] public Control ContentRoot;
+    [Export] public bool CloseOnOutsidePress;
+
+    public bool IsOutsideContent(Vector2 canvasPosition)
+    {
+        return ContentRoot != null && !ContentRoot.GetGlobalRect().HasPoint(canvasPosition);
+    }
 
     private Tween activeTween;
 

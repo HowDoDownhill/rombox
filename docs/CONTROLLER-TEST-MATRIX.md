@@ -25,7 +25,7 @@ Hosts: Windows desktop, Linux laptop.
 1. Close every running copy of the app.
 2. Start the build under test with `--controller-report`: on the command line, or in a Steam
    shortcut's Launch Options for the Steam rows.
-3. Leave it for about a minute. Virtual pads connect and disconnect; no emulator window opens.
+3. Leave it for about a minute. No emulator window opens.
 4. Read `%APPDATA%\Godot\app_userdata\romm-frontend\logs\controller-report-<time>.md` (Linux:
    `~/.local/share/godot/app_userdata/romm-frontend/logs/`).
 
@@ -60,6 +60,11 @@ Note which physical pad drove which player. Player order is connection order unl
 | S9 | Windows | off | all four, ViGEmBus uninstalled | three Xbox players, Switch Pro left out with a log line |
 | S10 | Linux | off | Series (BT) + Switch Pro | no layer; emulators use their own configs |
 | S11 | Linux | Steam game mode | all four | Steam Input owns the pads |
+| S12 | Linux | shortcut, Steam Input **on** | Series + Switch Pro | session line ends `, Steam Input`; connection order |
+
+S1 to S7 and S9 tested the ViGEm method, which was removed on 2026-11-01. Outside Steam, Windows now
+leaves emulator controller settings alone, so those rows no longer apply; their results stay below
+as history.
 
 ## Results
 

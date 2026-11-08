@@ -3412,6 +3412,55 @@ layer never starts a session, so the question had no effect there.
 The prompt is the update panel's choice mode: a focusable list of options below the text, cycled
 with up and down. Back picks Manual, as "No Thanks" did.
 
+### ViGEm was removed; Steam Input is the one automatic method
+
+Superseded the three-method table above on 2026-11-01. Keeping ViGEm meant a kernel driver, a
+second mapping path (virtual pads fed from Godot's reading of the physical pad every frame, a
+per-player button table, an SDL allowlist so emulators skipped the physical pad behind each virtual
+one) and a test matrix twice the size. Steam Input already gives every controller an Xbox layout,
+and testing on 2026-10-17 had it driving four players in Dolphin. The owner chose to drop ViGEm and
+recommend Steam.
+
+What remains is passthrough only. A session starts on Windows when the stored method is
+`steam_input` and `SteamAppId` is set, and on Linux unless the method is `declined`. Player N's
+XInput slot is N-1, players follow Steam's connection order under Steam Input, and **Start >
+Assign Controllers** shows only where a session can start without Steam Input (Linux outside
+Steam). On Windows outside Steam the app writes nothing to emulator controller settings, whatever
+the stored method.
+
+The stored value `accepted` (ViGEm) now reads as unasked, so those users see the prompt again. The
+per-system button remap screen stays: besides feeding the virtual pads, it fills Dolphin's
+bindings through `platform_layout`. ViGEmBus is left installed on machines that have it; the app
+never loads it.
+
+### Adding RomM to Steam writes shortcuts.vdf
+
+Steam Input needs the app started from Steam, so the setup prompt and **Settings > Input Settings**
+can add it as a non-Steam game. Steam keeps those in
+`<Steam>/userdata/<account id>/config/shortcuts.vdf`, a binary KeyValues file: each entry is a type
+byte (`00` map, `01` string, `02` int32, `08` end of map), a null-terminated key, then the value.
+`BinaryVdf` reads every type it meets and writes it back unchanged; the laptop's and the desktop's
+files both came back byte-identical.
+
+The account is the `MostRecent` user in `config/loginusers.vdf` (SteamID64 minus
+76561197960265728), falling back to the newest numbered `userdata` folder. Steam's path comes from
+`HKCU\Software\Valve\Steam\SteamPath` on Windows and from `~/.steam/steam`, `~/.local/share/Steam`
+or the Flatpak home on Linux.
+
+The new entry copies the fields Steam writes for a shortcut added through its own dialog, measured
+from both machines: quoted `Exe`, unquoted `StartDir` with a trailing separator, empty `icon`, and
+`appid` as the CRC32 of the quoted exe plus the name with the top bit set. An entry whose `Exe`
+already names the running executable counts as present, so the button adds nothing twice.
+
+Steam reads `shortcuts.vdf` at startup and writes it on exit, so a write while Steam runs is lost.
+When Steam is running the app asks first, then opens `steam://exit`, waits up to 30 s for the
+`steam` process to go, writes the file (keeping `shortcuts.vdf.romm-backup`), and opens
+`steam://open/games`.
+
+Turning Steam Input on for the new shortcut is left to the user. That setting lives in Steam's
+`localconfig.vdf`, a large text file Steam rewrites while running; the outcome message gives the
+steps.
+
 ### Under Steam Input, each process numbers the pads its own way
 
 Steam's pads reach a hooked process through its XInput hook, and Steam picks which pad sits in
@@ -3466,7 +3515,7 @@ and every port after the first, had no controller. Reported from an Omarchy user
 the Arch laptop with a Switch Pro and a Series pad on 2026-10-17.
 
 On Linux a session now starts unless controller setup was set to Manual, passes every pad through,
-and numbers players by player index (`IsPassthroughOnlySession`, shared with Steam Input). A
+and numbers players by player index, as Steam Input does. A
 controller section declares where it applies with `platforms`; a section without it applies to
 Windows only, so RetroArch, PCSX2 and the rest keep their working Linux configs untouched. Dolphin's
 `[Core]` section applies to both, and a Linux `GCPad{port}` section writes
@@ -3499,6 +3548,23 @@ display server is Wayland and `DISPLAY` names an XWayland server, and every rela
 display driver on explicitly. `ROMM_DISPLAY_RELAUNCH_ATTEMPTED` stops a second relaunch. GPU and
 display relaunches happen in one step when both apply. Measured on 2026-10-17: Wayland on the Intel
 GPU, then one relaunch onto X11 and the RTX 3060, and the Pro drove the menus.
+
+### Steam Input on Linux is detected from the pads
+
+The Steam Input method's player handling (connection order, positional device matching in Dolphin
+and gopher64, no Assign Controllers button) keyed off the stored Controller Setup choice. Linux has
+no prompt and no setting for it, so a Steam launch on Linux kept the manual assignment order and
+name matching. Steam's virtual pads can share one name, which leaves name matching free to put two
+players on the same kind of pad in the wrong order.
+
+Under Steam Input on Linux the app sees only Steam's virtual pads: Steam exports
+`SDL_GAMECONTROLLER_IGNORE_DEVICES` listing the physical pads, and the laptop's log shows the Switch
+Pro as GUID `030079f6de280000ff11000001000000`, vendor `28DE`, product `11FF`. Emulators started by
+the app inherit that environment and see the same pads. So on Linux the app counts a launch as
+Steam Input when `SteamAppId` is set and at least one connected pad is `28DE/11FF`
+(`InputLayer.UsesSteamInput`). With Steam Input turned off for the shortcut the physical pads show
+through, the check fails, and the normal Linux path runs. The session log ends `, Steam Input` when
+it applies.
 
 ### RetroArch on Linux pins XDG_CONFIG_HOME to its AppImage home
 
@@ -3729,14 +3795,19 @@ build-tools 36.1.0 and platform 36, matching Godot 4.7's template. The preset ex
 - RomM serves games as zips; the bundled 7-Zip cannot run on Android, so downloads are unzipped
   with `System.IO.Compression`, taking the files under `roms/` as 7-Zip does on desktop.
 - Launching without a game opens the emulator's launcher activity.
-- Verified on a Galaxy S25 Ultra: 4 Wheel Thunder (571 MB CHD) downloaded, unzipped to
-  `Documents/RomM/roms/dc` and started in Flycast.
-- Emulators come from Google Play when `android_play_store` is set: Install and Update open the Play
-  listing (`market://details?id=`), since an app cannot install from Play itself. The APK recipe is
-  the fallback on devices without Play. Play avoids the unknown-apps prompt, Play Protect warnings
-  (RetroArch's stable APK targets SDK 28 and Play Protect blocks it; the Android recipe uses the
-  nightly, which targets 36) and gives automatic updates. A Play build and a direct APK are usually
-  signed differently, so one cannot update the other.
+- Verified on a Galaxy S25 Ultra (Android 17), launched from the app: 4 Wheel Thunder (571 MB CHD)
+  in Flycast 2.7, 4x4 Evo 2 (RVZ) in Dolphin 2609a from Play, a GBA game in RetroArch 1.22.2 with
+  mGBA, and an N64 game with Mupen64Plus-Next GLES3. Dolphin takes the document URI from the intent
+  data (`StartupHandler.getGamesFromIntent` reads ClipData, then data, then `AutoStartFile`).
+- Emulators install from their APK when the recipe has an `android` entry: the app downloads it and
+  opens the system installer. Google Play is used for an emulator with no APK recipe (DuckStation,
+  Snes9x EX+) and for updating a copy that came from Play, since a Play build and a direct APK are
+  usually signed differently and one cannot update the other (`ShouldInstallFromPlayStore`). Install
+  and Update then open the Play listing (`market://details?id=`), because an app cannot install from
+  Play itself. This was Play-first until the owner chose APKs first; Play avoided the unknown-apps
+  prompt and gave automatic updates, at the cost of a Play Store round trip for every emulator.
+  RetroArch's Android recipe uses the nightly, which targets SDK 36; Play Protect blocks the stable
+  APK, which targets 28.
 - `android_launch` describes the intent: `activity`, optional `action`, and `game` as `document`
   (the document URI is the data, Flycast, PPSSPP, Azahar), `document_extra:<name>` (the URI is also
   a string extra, Dolphin `AutoStartFile`, melonDS `uri`, DuckStation `bootPath`; the data carries
@@ -3745,10 +3816,20 @@ build-tools 36.1.0 and platform 36, matching Godot 4.7's template. The preset ex
 - `android_alternate_packages` covers emulators whose Play and direct builds differ (Azahar:
   `io.github.lime3ds.android` on Play, `org.azahar_emu.azahar` on GitHub); whichever is installed is
   used. Launch details for melonDS, PPSSPP and Azahar were checked against their APK manifests;
-  DuckStation's come from ES-DE, as it is Play-only.
-- On Android a system uses the first emulator in its list that has an Android build and is not
-  marked `android_fallback`; RetroArch is the fallback, so PS1, DS, PSP, 3DS, GameCube, Wii and
-  Dreamcast use standalone apps and older consoles use RetroArch.
+  DuckStation's come from ES-DE, as it is Play-only. Dolphin's fallback is the APK Dolphin
+  publishes beside each release (`dl.dolphin-emu.org/releases/<version>/dolphin-<version>.apk`),
+  found through the same tags as the Windows build.
+- On Android a system's emulators are ranked (`OrderForAndroid`): a standalone app with an APK
+  recipe first, then RetroArch when it has a core for the system, then a standalone app that is only
+  on Play; ties keep the map's order. So Dreamcast, N64, DS, PSP, 3DS, GameCube, Wii and PS2 use
+  Flycast, gopher64, melonDS, PPSSPP, Azahar, Dolphin and ARMSX2; PS1, SNES and the older systems
+  use RetroArch, ahead of the Play-only DuckStation and Snes9x EX+. RetroArch on Android reads BIOS
+  files only from its own folder, which the app cannot write to, so `android_system_cores` puts PCSX
+  ReARMed first for PS1: it has a built-in BIOS replacement, where SwanStation and Beetle PSX need a
+  real BIOS. The system's settings list only
+  emulators with an Android build and select the one a game would launch in
+  (`GetMappedEmulator`). They used to show the first in the map, so N64 displayed gopher64 and its
+  desktop options while games went to RetroArch, and RetroArch's core picker never appeared.
 - RetroArch cores cannot be installed for the user: RetroArch loads cores only from its private
   folder, other apps cannot write there, shared storage is mounted non-executable, and RetroArch
   has no intent for downloading a core. The first Play of each core explains which core to fetch
@@ -3768,7 +3849,137 @@ build-tools 36.1.0 and platform 36, matching Godot 4.7's template. The preset ex
 - RetroArch started with a missing core shows a black screen and stays idle instead of reporting
   it, and other apps cannot see its cores. So the core prompt records a core only when the user
   chooses I've Installed It; Open RetroArch records nothing, and the prompt returns until confirmed.
-- Not done yet: PS2 (ARMSX2, needs a BIOS), multi-file games, and save sync.
+  On the test phone `mupen64plus_next` was recorded while RetroArch had only mGBA (its Load Core
+  list), so every N64 Play opened a black screen and Android reported RetroArch as not responding.
+  The system's settings now show **Installed in RetroArch** under Core: it reflects the record for
+  the selected core, and turning it off brings the prompt back on the next Play.
+- N64, SNES and PS2 have standalone Android apps: gopher64 (`io.github.gopher64.gopher64`, on
+  Play, with the GitHub APK as fallback), Snes9x EX+ (`com.explusalpha.Snes9xPlus`, Play only; its
+  GitHub releases stopped in 2023) and ARMSX2 (`com.armsx2`, GitHub only). Each takes the document
+  URI as the intent data: gopher64's `SlintActivity` reads it in `get_launch_rom` (`android.rs`),
+  ARMSX2's `MainActivity` alias hands it to `handleExternalLaunchIntent` (which also turns a `.cue`
+  into its first track), and Snes9x EX+'s `com.imagine.BaseActivity` lists `content` VIEW
+  intents. ARMSX2 publishes one APK per Android level; the recipe takes the
+  `a11-armv8.2-sdk30` build, which runs on Android 11 and later on any ARMv8.2 phone. ARMSX2 needs
+  a PS2 BIOS chosen in its own setup. mGBA and ares have no Android apps, so GBA and the ares
+  systems stay on RetroArch. These three are not yet verified on a phone.
+- `android_name` replaces `name` on Android, so the buttons read Install ARMSX2 and Snes9x EX+
+  where the desktop says PCSX2 and Snes9x.
+- Emulator settings fields apply on Android only when `operating_systems` lists `android`. Every
+  current field writes a file inside the app's own folder or adds a launch argument, and Android
+  emulators read neither, so Android shows none of them. RetroArch's Start in Fullscreen and menu
+  combination used to appear there.
+- Not done yet: multi-file games and save sync.
+
+### macOS
+The macOS preset exports one universal app (`binary_format/architecture="universal"`): Godot runs
+`dotnet publish` once per architecture and ships both runtime folders,
+`Contents/Resources/data_romm-frontend_macos_arm64` and `..._x86_64`, beside a fat
+(`CAFEBABE`) executable. It exports from Windows. The bundle is ad-hoc signed by Godot's built-in
+codesign (`codesign/codesign=1`) with the JIT, unsigned-memory and library-validation entitlements
+.NET needs; Apple Silicon refuses unsigned code, and ad-hoc is the most a build without an Apple
+Developer account can carry. It is not notarized, so the first open needs **Open Anyway** in
+System Settings > Privacy & Security. The minimum is macOS 12, the floor for .NET 8.
+
+**Data folder.** Every path the app builds starts at `ApplicationRootDirectory`. On macOS that is
+`~/Library/Application Support/RomM Frontend` (`OS.GetDataDir()`). The layout under it is the one
+Windows and Linux have next to the executable. Writing inside the `.app` would break its code
+signature and fails when the app sits in /Applications. Windows and Linux stay portable.
+
+**Install scripts travel as one zip.** The app writes a `.gdignore` into `install_scripts/` so the
+editor leaves the folder alone, and Godot's export skips any folder holding one, include filter or
+not. `build.sh`/`build.bat` pack the folder into `bundled/install_scripts.zip` (git-ignored), the
+macOS preset includes that one file, and `ConfigManager.CopyBundledInstallScripts` unpacks it into
+the data folder on every start, the way Android copies `res://install_scripts`. Files dropped
+from a later version stay behind in the data folder; nothing reads a recipe that is not mapped.
+
+**No 7-Zip.** macOS has the tools already: `MacArchives` unpacks zips with `ditto -x -k`, disk
+images with `hdiutil attach -nobrowse -readonly` and a `ditto` of each top-level item (dot files
+and the `Applications` symlink are skipped), and everything else with `tar` (libarchive, which
+reads `.tar.xz`). The format comes from the bytes: `PK` at the start is a zip, `koly` 512 bytes
+from the end is a disk image. ROM downloads go through `ZipArchive`, as on Android. The updater
+uses `ditto` too.
+
+**Installs keep symlinks.** ares, PPSSPP and snes9x ship frameworks whose `Versions/Current` links
+`CopyDirectoryRecursively` would skip, which breaks the bundle. On macOS an install unpacks into a
+staging folder under `downloads/`, then `ditto` copies it into the emulator folder. Without an
+`extract_folder_regex` only the old `*.app` bundles are deleted first, so settings beside them
+survive; with one, the folder is cleared to `preserve_on_reinstall` as on the other platforms.
+Bundles are program files, and a bundle whose name carries the version (PCSX2's
+`PCSX2-v2.9.153.app`) would otherwise pile up next to the new one.
+
+**Executables inside bundles.** `executable_name` names the binary inside the bundle
+(`Dolphin.app/Contents/MacOS/Dolphin`). `executable_regex` matches paths relative to the emulator
+folder, and on macOS the candidates include every `*.app/Contents/MacOS/*` file, newest bundle
+first, so PCSX2 uses `^PCSX2.*\.app/Contents/MacOS/PCSX2$`. The app starts the binary directly
+with the emulator folder as the working directory, the same as elsewhere.
+
+**Keeping each emulator in its folder.** Read from each emulator's source:
+
+| Emulator | How its data stays in `emulators/<name>/` on macOS |
+|---|---|
+| Dolphin | `-u "{emulator_dir}/User"` |
+| RetroArch | `--config retroarch.cfg`; `default_config/macos/retroarch.cfg` sets saves, states, system, cores, screenshots and playlists. Assets, info files and databases stay at RetroArch's default, `~/Library/Application Support/RetroArch`, where it unpacks the `assets.zip` from its bundle on first start. |
+| ares | `--settings-file settings.bml` |
+| PCSX2 | `portable.txt` beside the bundle: on macOS its AppRoot is the folder holding the `.app` (`EmuFolders::SetAppRoot`) |
+| melonDS | A `portable` folder beside the bundle (`pathInit` steps out of `.app/Contents/MacOS`) |
+| mGBA | `portable.ini` in the working directory (`mCoreConfigPortableIniPath`) |
+| Azahar | A `user` folder in the working directory |
+| DuckStation, Flycast, PPSSPP, gopher64 | `HOME` set to `{emulator_dir}/home` |
+
+DuckStation looks for `portable.txt` beside its executable, which is inside the bundle and gets
+replaced on every update. gopher64 does the same. Flycast and PPSSPP have no portable switch on
+macOS. All four build their data folder from `getenv("HOME")`, so `launch_env` points `HOME` at a
+folder inside the install and their data lands at:
+
+- DuckStation: `home/Library/Application Support/DuckStation`
+- Flycast: `home/Library/Application Support/Flycast` (VMUs in `data/`)
+- PPSSPP: `home/.config/ppsspp` (the memory stick)
+- gopher64: `home/Library/Application Support/gopher64` (the `dirs` crate reads `HOME`)
+
+PPSSPP 1.20.4 has no `--memstick` option; a later version adds one. The app creates
+`home/Library/Application Support` before launch because Flycast makes its folder with a single
+non-recursive `mkdir`. Qt and Foundation paths (`QStandardPaths`, `NSUserDefaults`) ignore `HOME`,
+so preferences those emulators keep there stay in the real user folder.
+
+A symlink from `home/Library/Application Support/<Name>` back to the emulator folder would keep the
+Windows layout. It also makes a folder that contains itself, and recursive walks of the folder
+loop. So the paths are spelled out in `meta.json`.
+
+**Per-OS values.** `relative_save_path` and `sync_save_path` values, and every
+`config_file_relative_path`, may be an object keyed by OS with a `default` entry
+(`{"default": "settings.ini", "macos": "home/Library/Application Support/DuckStation/settings.ini"}`).
+`EmulatorMeta.ScopeToCurrentOperatingSystem` and `ResolveOsScopedValue` pick the current OS, then
+`default`. A comparison of every resolved value before and after the change for Windows, Linux and
+Android found no differences. The save store mirrors the same relative path, so on macOS
+DuckStation's cards sit at `saves/duckstation/home/Library/Application Support/DuckStation/memcards`.
+
+**Per-architecture recipes.** `HostPlatform.ResolveInstallRecipe` tries `<os>-<arch>` (`arch` is
+`arm64` or `x86_64`) before `<os>`, and `{arch}` in a recipe URL, asset regex or core URL becomes
+the running architecture. Every emulator here publishes a universal Mac build except gopher64,
+which has only `gopher64-macos-aarch64.zip`, so its recipe is `macos-arm64` and Intel Macs do not
+offer it. RetroArch's stable Mac folder holds only `RetroArch_Metal.dmg`, no cores bundle, so
+cores come one at a time at first use from `nightly/apple/osx/{arch}/latest/{core}_libretro.dylib.zip`.
+
+**Emulators without a build are hidden.** `GetSupportedEmulators` and `GetMappedEmulator` skip an
+emulator with no recipe for this OS and architecture unless it is already installed
+(`HasDesktopBuild`). Windows and Linux have a recipe for every emulator, so nothing changes there.
+snes9x has no macOS recipe: its Mac version is a separate Cocoa app that keeps its settings and
+saves through macOS's folder APIs, and RetroArch's snes9x core covers SNES.
+
+**Other platform switches.** Dolphin's video backend is a separate macOS field defaulting to Metal.
+Controller Setup and its first-run offer stay Windows-only, so emulators keep their own controller
+settings (Manual). Add to Steam, XInput slots and Prefer Discrete GPU are off;
+`DiscreteGpuPreference.ApplyToProcess` sets its NVIDIA and Mesa variables on Linux only. Emulators
+close through `kill` and `pkill`, which macOS has. The updater downloads `romm-frontend-macos.zip`
+only, moves the running bundle to `<name>.app.previous`, copies the new one into place, and puts
+the old one back if the copy fails.
+
+**Verified so far, from Windows only:** the export (fat executable, both runtime folders, the
+recipes zip inside the `.pck`), every macOS recipe resolving to a live download for both
+architectures, the archive detection against each real download, and each bundle's executable path
+and top-level folder read from the downloads with 7-Zip. Nothing has run on a Mac yet; section 13
+of the testing checklist covers that.
 
 ### Network connections
 `HttpHandlers` resolves IPv4 and IPv6 in parallel and connects with whichever family answers first,

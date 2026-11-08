@@ -35,6 +35,10 @@ pushd build\linux
 popd
 
 echo.
+echo Copying macOS Release...
+copy /y "build\macos\romm-frontend-macos.zip" "releases\romm-frontend-macos.zip" >nul
+
+echo.
 echo Release packages created successfully in the 'releases' folder!
-echo You can now upload 'romm-frontend-windows.zip' and 'romm-frontend-linux.zip' to GitHub Releases.
+echo You can now upload 'romm-frontend-windows.zip', 'romm-frontend-linux.zip' and 'romm-frontend-macos.zip' to GitHub Releases.
 pause

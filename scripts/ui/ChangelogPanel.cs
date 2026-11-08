@@ -41,7 +41,10 @@ public partial class ChangelogPanel : UiPanel
         ApplicationUpdate,
         ControllerLayer,
         GameFolderAccess,
-        AndroidCoreSetup
+        AndroidCoreSetup,
+        AndroidExitHint,
+        SteamRestart,
+        SteamShortcutOutcome
     }
 
     public PromptSubject ActiveSubject { get; private set; } = PromptSubject.ApplicationUpdate;

@@ -18,6 +18,7 @@ public partial class SystemJumpPopup : UiPanel
     public override void _Ready()
     {
         base._Ready();
+        CloseOnOutsidePress = true;
 
         ZIndex = 200;
 

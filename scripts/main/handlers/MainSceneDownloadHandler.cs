@@ -127,7 +127,7 @@ public class MainSceneDownloadHandler
     {
         try
         {
-            if (OS.HasFeature("android"))
+            if (OS.HasFeature("android") || OS.HasFeature("macos"))
             {
                 return ExtractDownloadedRomWithoutTools(globalTempZip, globalFinalDir);
             }

@@ -157,13 +157,13 @@ public class MainSceneInputHandler
         return connectedControllers != null && connectedControllers.Count > 0 ? connectedControllers[0].GodotDeviceId : -1;
     }
 
-    private const float DriverInstallResultVisibleSeconds = 3.0f;
+    private const float SteamStatusVisibleSeconds = 2.0f;
 
     private static string BuildControllerSetupOfferBody()
     {
         var body = new System.Text.StringBuilder();
         body.Append("[b]How should RomM set up your controllers?[/b]\n\n");
-        body.Append("RomM can point each emulator at the right controller for every player, so Player 1 stays Player 1.\n\n");
+        body.Append("RomM can point each emulator at the right controller for every player, so Player 1 stays Player 1. It does this through Steam Input.\n\n");
 
         foreach (ControllerSetupMethod method in ControllerSetupMethod.All)
         {
@@ -171,8 +171,21 @@ public class MainSceneInputHandler
             body.Append($"• [b]{method.Title}{recommendation}[/b]: {method.Description}\n");
         }
 
+        if (!ControllerSetupMethod.IsLaunchedThroughSteam)
+        {
+            body.Append("\nRomM is running outside Steam right now. Choosing Steam Input adds RomM to your Steam library; start it from there.\n");
+        }
+
         body.Append("\nYou can change this at any time in Settings > Input Settings.");
         return body.ToString();
+    }
+
+    private static string DescribeSetupChoice(ControllerSetupMethod method)
+    {
+        string title = method == ControllerSetupMethod.SteamInput && !ControllerSetupMethod.IsLaunchedThroughSteam && SteamShortcuts.IsSupportedPlatform
+            ? "Add to Steam and Use Steam Input"
+            : method.Title;
+        return method == ControllerSetupMethod.Recommended ? $"{title} (Recommended)" : title;
     }
 
     public void OfferControllerLayerIfNotYetAsked()
@@ -192,52 +205,99 @@ public class MainSceneInputHandler
             return;
         }
 
-        List<string> choiceTexts = ControllerSetupMethod.All
-            .Select(method => method == ControllerSetupMethod.Recommended ? $"{method.Title} (Recommended)" : method.Title)
-            .ToList();
-
         mainScene.changelogPanel.ShowChoices(
             ChangelogPanel.PromptSubject.ControllerLayer,
             BuildControllerSetupOfferBody(),
-            choiceTexts,
+            ControllerSetupMethod.All.Select(DescribeSetupChoice).ToList(),
             ControllerSetupMethod.IndexOf(ControllerSetupMethod.Recommended));
     }
 
-    public async void OnControllerSetupMethodChosen(ControllerSetupMethod method)
+    public void OnControllerSetupMethodChosen(ControllerSetupMethod method)
     {
         appInstance.configManager.SaveControllerMappingConsent(method.ConsentValue);
         GD.Print($"[InputLayer] the user chose {method.Title} for controller setup.");
         UpdateControllerAssignmentPrompt();
 
-        if (method == ControllerSetupMethod.VirtualPads)
+        if (method == ControllerSetupMethod.SteamInput && !ControllerSetupMethod.IsLaunchedThroughSteam && SteamShortcuts.IsSupportedPlatform)
         {
-            await InstallVirtualPadDriverIfMissing();
+            AddAppToSteam();
         }
     }
 
-    private async Task InstallVirtualPadDriverIfMissing()
-    {
-        InputLayer inputLayer = appInstance.inputLayer;
+    public event Action SteamShortcutChanged;
 
-        if (inputLayer == null || inputLayer.IsVirtualPadBackendAvailable || !VirtualPadDriverInstaller.IsSupportedPlatform)
+    public async void AddAppToSteam()
+    {
+        if (SteamShortcuts.FindShortcutsFile() == null)
         {
+            ShowSteamShortcutOutcome(SteamShortcutResult.SteamNotFound);
             return;
         }
 
-        mainScene.progressPanel?.ShowStatus("Preparing the controller driver...");
-
-        bool driverIsReady = await VirtualPadDriverInstaller.DownloadAndInstall(
-            appInstance,
-            () => inputLayer.IsVirtualPadBackendAvailable,
-            status => mainScene.progressPanel?.SetStatus(status));
-
-        await mainScene.ToSignal(mainScene.GetTree().CreateTimer(DriverInstallResultVisibleSeconds), "timeout");
-        mainScene.progressPanel?.Close();
-
-        if (!driverIsReady)
+        if (SteamShortcuts.ContainsThisApp())
         {
-            GD.PrintErr("[InputLayer] the virtual controller driver is unavailable; emulators will keep their own controller settings.");
+            ShowSteamShortcutOutcome(SteamShortcutResult.AlreadyAdded);
+            return;
         }
+
+        if (SteamShortcuts.IsSteamRunning())
+        {
+            mainScene.changelogPanel?.ShowPrompt(
+                ChangelogPanel.PromptSubject.SteamRestart,
+                "[b]Restart Steam?[/b]\n\nSteam only picks up new library entries when it starts, so RomM will close Steam, add itself, and open Steam again.",
+                "Restart Steam",
+                "Not Now");
+            return;
+        }
+
+        await FinishAddingAppToSteam(false);
+    }
+
+    public async void RestartSteamAndAddApp()
+    {
+        mainScene.progressPanel?.ShowStatus("Closing Steam...");
+        await SteamShortcuts.CloseSteam();
+
+        if (SteamShortcuts.IsSteamRunning())
+        {
+            mainScene.progressPanel?.Close();
+            ShowSteamShortcutOutcome(SteamShortcutResult.Failed, "Steam didn't close. Close Steam yourself, then choose Add to Steam in Settings > Input Settings.");
+            return;
+        }
+
+        await FinishAddingAppToSteam(true);
+    }
+
+    private async Task FinishAddingAppToSteam(bool reopenSteam)
+    {
+        mainScene.progressPanel?.ShowStatus("Adding RomM to Steam...");
+        SteamShortcutResult result = SteamShortcuts.AddThisApp();
+
+        if (reopenSteam)
+        {
+            SteamShortcuts.OpenSteamLibrary();
+        }
+
+        await mainScene.ToSignal(mainScene.GetTree().CreateTimer(SteamStatusVisibleSeconds), "timeout");
+        mainScene.progressPanel?.Close();
+        ShowSteamShortcutOutcome(result);
+        SteamShortcutChanged?.Invoke();
+    }
+
+    private void ShowSteamShortcutOutcome(SteamShortcutResult result, string failureText = null)
+    {
+        const string steamInputSteps = "In Steam, open RomM Frontend's Properties > Controller and choose Enable Steam Input, then start RomM from your Steam library.";
+
+        string body = result switch
+        {
+            SteamShortcutResult.Added => $"[b]RomM is in your Steam library.[/b]\n\n{steamInputSteps}",
+            SteamShortcutResult.AlreadyAdded => $"[b]RomM is already in your Steam library.[/b]\n\n{steamInputSteps}",
+            SteamShortcutResult.SteamNotFound => "[b]Steam wasn't found.[/b]\n\nInstall Steam and sign in, then choose Add to Steam in Settings > Input Settings. Until then, emulators keep their own controller settings.",
+            _ => $"[b]RomM couldn't add itself to Steam.[/b]\n\n{failureText ?? "Add it yourself: in Steam, choose Games > Add a Non-Steam Game to My Library and pick this app."}"
+        };
+
+        bool appIsInSteam = result == SteamShortcutResult.Added || result == SteamShortcutResult.AlreadyAdded;
+        mainScene.changelogPanel?.ShowPrompt(ChangelogPanel.PromptSubject.SteamShortcutOutcome, body, appIsInSteam ? "Open Steam" : "OK", "Close");
     }
 
     public void BeginControllerAssignment()
@@ -250,7 +310,7 @@ public class MainSceneInputHandler
 
     public void RecordControllerAssignment(int deviceId)
     {
-        if (assignedControllerDeviceIds.Contains(deviceId) || IsFrontendVirtualPad(deviceId))
+        if (assignedControllerDeviceIds.Contains(deviceId))
         {
             return;
         }
@@ -285,11 +345,6 @@ public class MainSceneInputHandler
         UpdateControllerAssignmentPrompt();
     }
 
-    private bool IsFrontendVirtualPad(int deviceId)
-    {
-        return appInstance.inputLayer != null && appInstance.inputLayer.IsOwnVirtualDevice(deviceId);
-    }
-
     private int CountAssignableControllers()
     {
         var connectedControllers = appInstance.controllerManager?.GetConnectedControllers();
@@ -303,7 +358,7 @@ public class MainSceneInputHandler
             return;
         }
 
-        mainScene.assignControllersButton.Visible = appInstance.inputLayer?.ResolveConsent() != InputLayerConsent.SteamInput;
+        mainScene.assignControllersButton.Visible = appInstance.inputLayer?.CanAssignPlayers == true;
 
         if (isListeningForControllerAssignment)
         {

@@ -91,7 +91,7 @@ public static class DiscreteGpuPreference
 
     public static void ApplyToProcess(ProcessStartInfo processStartInfo, bool preferDiscreteGpu)
     {
-        if (processStartInfo == null || !preferDiscreteGpu || OS.GetName().ToLower() == "windows")
+        if (processStartInfo == null || !preferDiscreteGpu || OS.GetName().ToLower() != "linux")
         {
             return;
         }

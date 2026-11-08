@@ -17,23 +17,18 @@ public class ControllerSetupMethod
     public static readonly ControllerSetupMethod SteamInput = new ControllerSetupMethod(
         ConfigManager.ControllerMappingConsentSteamInput,
         "Steam Input",
-        "Use if you launched the app through Steam with Steam Input turned on. Steam handles your controllers, and RomM points each emulator at the right one.");
-
-    public static readonly ControllerSetupMethod VirtualPads = new ControllerSetupMethod(
-        ConfigManager.ControllerMappingConsentAccepted,
-        "ViGEm",
-        "Use if you launch the app on its own. Xbox controllers go straight to the emulator, and other controllers (PlayStation, Switch Pro, 8BitDo) appear as an Xbox 360 pad through a small driver RomM installs.");
+        "Start the app from Steam with Steam Input turned on. Steam handles every controller, and RomM points each emulator at the right one for every player.");
 
     public static readonly ControllerSetupMethod Manual = new ControllerSetupMethod(
         ConfigManager.ControllerMappingConsentDeclined,
         "Manual",
         "Set up controllers in each emulator yourself. RomM leaves emulator controller settings alone.");
 
-    public static IReadOnlyList<ControllerSetupMethod> All { get; } = new[] { SteamInput, VirtualPads, Manual };
+    public static IReadOnlyList<ControllerSetupMethod> All { get; } = new[] { SteamInput, Manual };
 
     public static bool IsLaunchedThroughSteam => !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("SteamAppId"));
 
-    public static ControllerSetupMethod Recommended => IsLaunchedThroughSteam ? SteamInput : VirtualPads;
+    public static ControllerSetupMethod Recommended => SteamInput;
 
     public static int IndexOf(ControllerSetupMethod method)
     {

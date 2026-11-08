@@ -7,7 +7,8 @@
     "game": "document"
   },
   "executable_name": {
-    "windows": "PPSSPPWindows64.exe"
+    "windows": "PPSSPPWindows64.exe",
+    "macos": "PPSSPPSDL.app/Contents/MacOS/PPSSPPSDL"
   },
   "executable_regex": {
     "linux": "PPSSPP-v.*-anylinux-x86_64\\.AppImage$"
@@ -21,13 +22,19 @@
   "launch_env": {
     "linux": {
       "XDG_CONFIG_HOME": "{emulator_dir}/memstick"
+    },
+    "macos": {
+      "HOME": "{emulator_dir}/home"
     }
   },
   "relative_save_path": {
-    "psp": [
-      "memstick/PSP/SAVEDATA",
-      "memstick/ppsspp/PSP/SAVEDATA"
-    ]
+    "psp": {
+      "default": [
+        "memstick/PSP/SAVEDATA",
+        "memstick/ppsspp/PSP/SAVEDATA"
+      ],
+      "macos": "home/.config/ppsspp/PSP/SAVEDATA"
+    }
   },
   "launch_args_with_game": "--pause-menu-exit --escape-exit \"{rom_path}\"",
   "launch_args_without_game": "",
@@ -49,6 +56,12 @@
       "list_url": "https://www.ppsspp.org/download/",
       "link_regex": "/files/[0-9_]+/ppsspp\\.apk",
       "extract": false
+    },
+    "macos": {
+      "type": "github_release",
+      "repo": "hrydgard/ppsspp",
+      "asset_regex": "PPSSPPSDL-macOS-v.*\\.zip$",
+      "extract": true
     }
   },
   "settings_fields": [
@@ -68,7 +81,7 @@
       "config_file_relative_path": {
         "windows": "memstick/PSP/SYSTEM/ppsspp.ini",
         "linux": "memstick/ppsspp/PSP/SYSTEM/ppsspp.ini",
-        "macos": "memstick/PSP/SYSTEM/ppsspp.ini"
+        "macos": "home/.config/ppsspp/PSP/SYSTEM/ppsspp.ini"
       },
       "config_section": "Network",
       "config_key": "EnableWlan"
@@ -81,7 +94,7 @@
       "config_file_relative_path": {
         "windows": "memstick/PSP/SYSTEM/ppsspp.ini",
         "linux": "memstick/ppsspp/PSP/SYSTEM/ppsspp.ini",
-        "macos": "memstick/PSP/SYSTEM/ppsspp.ini"
+        "macos": "home/.config/ppsspp/PSP/SYSTEM/ppsspp.ini"
       },
       "config_section": "Network",
       "config_key": "EnableAdhocServer"

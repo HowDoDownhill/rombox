@@ -1,16 +1,20 @@
 {
   "name": "PCSX2",
+  "android_name": "ARMSX2",
+  "android_package": "com.armsx2",
+  "android_launch": {"activity": "com.armsx2.MainActivity", "game": "document"},
   "executable_name": {
-    "windows": "pcsx2-qt.exe",
-    "macos": "pcsx2"
+    "windows": "pcsx2-qt.exe"
   },
   "executable_regex": {
-    "linux": "PCSX2-.*-anylinux-x86_64\\.AppImage$"
+    "linux": "PCSX2-.*-anylinux-x86_64\\.AppImage$",
+    "macos": "^PCSX2.*\\.app/Contents/MacOS/PCSX2$"
   },
   "emulator_dir_name": {
     "windows": "pcsx2",
     "linux": "pcsx2",
-    "macos": "pcsx2"
+    "macos": "pcsx2",
+    "android": "pcsx2"
   },
   "emulator_bios_path": {
     "windows": "bios",
@@ -33,6 +37,18 @@
       "type": "github_release",
       "repo": "pkgforge-dev/PCSX2-AppImage-Enhanced",
       "asset_regex": "PCSX2-.*-anylinux-x86_64\\.AppImage$",
+      "extract": false
+    },
+    "macos": {
+      "type": "github_release",
+      "repo": "PCSX2/pcsx2",
+      "asset_regex": "pcsx2-.*-macos-Qt\\.tar\\.xz$",
+      "extract": true
+    },
+    "android": {
+      "type": "github_release",
+      "repo": "ARMSX2/ARMSX2",
+      "asset_regex": "ARMSX2-.*-a11-armv8\\.2-sdk30\\.apk$",
       "extract": false
     }
   },

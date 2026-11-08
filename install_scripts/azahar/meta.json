@@ -10,7 +10,8 @@
     "game": "document"
   },
   "executable_name": {
-    "windows": "azahar.exe"
+    "windows": "azahar.exe",
+    "macos": "Azahar.app/Contents/MacOS/azahar"
   },
   "executable_regex": {
     "linux": "Azahar-.*-anylinux-x86_64\\.AppImage$"
@@ -92,6 +93,13 @@
       "repo": "azahar-emu/azahar",
       "asset_regex": "azahar-android-vanilla-.*\\.apk$",
       "extract": false
+    },
+    "macos": {
+      "type": "github_release",
+      "repo": "azahar-emu/azahar",
+      "asset_regex": "azahar-macos-universal-.*\\.zip$",
+      "extract": true,
+      "extract_folder_regex": "azahar-macos-universal-*"
     }
   },
   "controller_config": {

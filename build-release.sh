@@ -38,5 +38,9 @@ rm -f releases/romm-frontend-linux.zip
     romm-frontend.x86_64 romm-frontend.sh romm-frontend.pck data_romm-frontend_* install_scripts tools)
 
 echo
+echo "Copying macOS Release..."
+cp -f build/macos/romm-frontend-macos.zip releases/romm-frontend-macos.zip
+
+echo
 echo "Release packages created successfully in the 'releases' folder!"
-echo "You can now upload 'romm-frontend-windows.zip' and 'romm-frontend-linux.zip' to GitHub Releases."
+echo "You can now upload 'romm-frontend-windows.zip', 'romm-frontend-linux.zip' and 'romm-frontend-macos.zip' to GitHub Releases."

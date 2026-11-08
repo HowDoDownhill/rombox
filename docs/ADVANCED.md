@@ -12,7 +12,8 @@ here can be left alone in normal use.
 
 ## config.cfg
 
-Created in the app folder on first run. Close the app before editing it.
+Created in the app folder on first run (on a Mac, `~/Library/Application Support/RomM Frontend`).
+Close the app before editing it.
 
 ### `[Paths]`
 
@@ -123,14 +124,15 @@ Each emulator is a folder under `install_scripts/` with a `meta.json`, and optio
 |---|---|
 | `name` | Name shown in the app |
 | `executable_name` | Executable per OS. Use `executable_regex` when the name contains a version. |
+| `android_name` | Name shown on Android when the Android app is called something else, such as ARMSX2 for PCSX2 |
 | `android_package` | The emulator's Android package name, such as `com.flycast.emulator`. On Android the app is installed from an APK and detected by this name; give it an `android` entry in `emulator_dir_name` and `install_recipe` too. |
-| `android_play_store` | Install and update through the emulator's Google Play listing when Play is available. |
+| `android_play_store` | The emulator is on Google Play. Play is used when the recipe has no `android` APK entry, or to update a copy that came from Play. |
 | `android_alternate_packages` | Other package names for the same emulator, such as a GitHub build that differs from the Play one. |
 | `android_launch` | How a game is opened: `activity`, optional `action`, `game` (`document`, `document_extra:<name>` or `extra:<name>`), `extras` and `restart_task`. Without it, games for this emulator cannot be launched on Android. |
-| `android_fallback` | Use this emulator on Android only when a system has no other Android emulator (RetroArch). |
+| `android_system_cores` | RetroArch only: a system's core list on Android, in place of `system_cores`, such as a core that runs without a BIOS |
 | `emulator_dir_name` | Install folder per OS, under `emulators/` |
 | `emulator_bios_path` | Where the chosen BIOS is copied inside the install |
-| `relative_save_path` | Save folder inside the install, per system slug or `default`. A string or an array; `{system_slug}` is replaced. |
+| `relative_save_path` | Save folder inside the install, per system slug or `default`. A string or an array; `{system_slug}` is replaced. Either can also be an object keyed by OS with a `default` entry, for an emulator that keeps saves somewhere else on one OS. |
 | `preserve_on_reinstall` | Files kept when the emulator is reinstalled or updated |
 | `launch_args_with_game` | Arguments with `{rom_path}`, `{bios_path}`, `{system}` and `{settings}` |
 | `launch_args_without_game` | Arguments when opened from the start menu without a game |
@@ -139,8 +141,19 @@ Each emulator is a folder under `install_scripts/` with a `meta.json`, and optio
 
 ### Install recipes
 
-`install_recipe` is keyed by OS. Every type accepts `extract` and an optional
+`install_recipe` is keyed by OS (`windows`, `linux`, `macos`, `android`). A key such as
+`macos-arm64` or `macos-x86_64` serves only that processor and wins over the plain OS key, and
+`{arch}` in a URL or `asset_regex` becomes `arm64` or `x86_64`. An emulator with no recipe for the
+running OS and processor is not offered. Every type accepts `extract` and an optional
 `extract_folder_regex` naming a folder inside the archive to take.
+
+On macOS, `executable_name` is the path to the binary inside the bundle, such as
+`Dolphin.app/Contents/MacOS/Dolphin`, and `executable_regex` matches that whole path. Zips, disk
+images (`.dmg`) and tarballs all unpack. The app's data folder on a Mac is
+`~/Library/Application Support/RomM Frontend`, so keep the emulator's data inside its install with
+a launch argument, a portable marker in `default_config/`, or `launch_env` setting `HOME` to
+`{emulator_dir}/home`. A `default_config/macos/` folder is copied over the shared one on a Mac, as
+`default_config/linux/` is on Linux.
 
 | Type | Fields | Use for |
 |---|---|---|
@@ -174,9 +187,9 @@ applied as a launch argument or written into the emulator's config file.
 | `default_value_bool`, `default_value_string` | Defaults; strings accept macros such as `{game_id}` |
 | `launch_arg_true`, `launch_arg_false` | Arguments for a boolean |
 | `launch_arg_format` | Argument for a dropdown, such as `-res {value}` |
-| `config_file_relative_path` | Config file inside the install; may be keyed by OS |
+| `config_file_relative_path` | Config file inside the install; may be keyed by OS, with a `default` entry for the rest |
 | `config_section`, `config_key` | Where to write; nest sections with `/` or `.` for JSON and BML |
-| `operating_systems` | Only show the setting on these OSes |
+| `operating_systems` | Only show the setting on these OSes. Without it a setting shows everywhere except Android, which needs `android` listed. |
 | `apply_on_launch` | Rewrite the value before every launch, in case the emulator changed it |
 
 Supported config formats: INI, CFG and TOML, JSON, and BML.
@@ -184,7 +197,7 @@ Supported config formats: INI, CFG and TOML, JSON, and BML.
 ## Controller bindings
 
 Most emulators ship a controller config in `install_scripts/<emulator>/default_config/`. With
-Controller Setup set to Steam Input or ViGEm (Windows), the app also points each emulator at every
+Controller Setup set to Steam Input and the app started from Steam (Windows), the app also points each emulator at every
 player's controller on every launch; see [Controller setup](CONTROLLERS.md). Dolphin identifies pads by name: if yours shows as disconnected,
 select it once in Dolphin's own controller settings.
 

@@ -29,6 +29,11 @@ filesystem, a real controller, a real OS difference.
 - [ ] With Godot unavailable (unset `GODOT_BIN`, not on PATH, or a wrong path), `build.bat` and
       `build.sh` stop with a message before deleting anything, and `build-release` makes no zips.
 - [ ] Both release zips contain `data_romm-frontend_*/GodotSharp.dll` (a good Windows zip is ~90 MB).
+- [ ] `build.sh`/`build.bat` also write `bundled/install_scripts.zip` and
+      `build/macos/romm-frontend-macos.zip` (~140 MB). The zip holds one `romm-frontend.app` with
+      `Contents/Resources/data_romm-frontend_macos_arm64/` and `..._x86_64/`, and the `.pck`
+      inside it contains `bundled/install_scripts.zip`.
+- [ ] `build-release` copies `romm-frontend-macos.zip` into `releases/`.
 - [ ] Exported binary launches and reaches the login screen.
 
 ## 1. First run on a clean profile
@@ -219,56 +224,60 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
 
 ## 11. Input layer
 
-- [ ] Linux: startup logs no `InputLayer` exception, and the controller settings report virtual
-      controllers as unavailable on this platform.
-- [ ] Windows first launch asks once for a Controller Setup method (Steam Input, ViGEm, Manual),
-      with Steam Input recommended when started from Steam and ViGEm otherwise. The answer
-      persists and shows in **Settings > Input Settings > Controller Setup**. Linux never asks.
-- [ ] Steam Input: no ViGEm prompt appears, and the launch log reports `0 on virtual pads` with
-      every pad passed through, and **Start > Assign Controllers** is hidden.
+- [ ] Linux: startup logs no `InputLayer` exception.
+- [ ] Windows first launch asks once for a Controller Setup method (Steam Input, Manual), with Steam
+      Input recommended. Outside Steam the Steam Input choice reads `Add to Steam and Use Steam
+      Input`. The answer persists and shows in **Settings > Input Settings > Controller Setup**.
+      Linux never asks.
+- [ ] A config saved with `ControllerMappingConsent="accepted"` (the retired ViGEm method) shows the
+      first-launch prompt again.
+- [ ] Add to Steam with Steam closed: `shortcuts.vdf` gains a `RomM Frontend` entry pointing at the
+      running executable, `shortcuts.vdf.romm-backup` holds the old file, and Steam lists RomM once
+      started. Pressing it again reports RomM is already in the library and adds nothing.
+- [ ] Add to Steam with Steam running: Restart Steam closes Steam, adds the entry, and opens Steam's
+      library with RomM in it. Not Now leaves Steam and `shortcuts.vdf` untouched.
+- [ ] With no Steam install, the Steam Library row reads `Steam Not Found` and Add to Steam explains
+      what to do.
+- [ ] Steam Input chosen, started outside Steam: the status reads `Start the App From Steam to Use
+      It`, **Start > Assign Controllers** is hidden, and a launch logs `not starting a session: the
+      app was not launched through Steam`.
+- [ ] Steam Input, started from Steam: the launch log's session line ends `, Steam Input`, and
+      **Start > Assign Controllers** is hidden.
 - [ ] Steam Input, four pads in Dolphin: each pad drives its own port. Turning one pad off between
       launches moves the later players up.
-- [ ] ViGEm: after Assign Controllers, turning one assigned pad off keeps the others in order (the
-      log shows `player order is now [...]`).
 - [ ] Dolphin ports read `XInput/<slot>/Gamepad`, and the face buttons in each port read
       `Button A/B/X/Y`.
 - [ ] Linux: Dolphin launches with `-u .../emulators/dolphin/User`, its ports read
       `SDL/<n>/<pad name>`, and a Switch Pro plus an Xbox pad each drive their own port.
+- [ ] Linux: after Assign Controllers, turning one assigned pad off keeps the others in order (the
+      log shows `player order is now [...]`).
 - [ ] Linux, launched from a Steam shortcut on a Wayland desktop with Steam Input on: the log shows
       `Relaunching on display driver x11`, the relaunched app has no Wayland warnings, and a
       Switch Pro drives the menus. Without Steam, the app stays on Wayland.
+- [ ] Linux, Steam shortcut with Steam Input on and two pads: **Start > Assign Controllers** is
+      hidden, the launch log's session line ends `, Steam Input`, and in Dolphin and gopher64 each
+      pad drives its own port in connection order. With Steam Input off for the shortcut, the button
+      shows and the session line has no `Steam Input`.
 - [ ] Linux, RetroArch with `XDG_CONFIG_HOME` exported by the session (Omarchy does): menu icons
       show, and `--verbose` reports the pad as configured from the AppImage home's autoconfig.
-- [ ] gopher64 (Windows and Linux): starting from a config with no assignments, the log lists the
-      pads (`gopher64 lists N controller(s)`), each player gets a port, and only player ports are
-      enabled in `portable_data/config/config.json`. Each pad drives its own player in a game.
+- [ ] gopher64 (Windows under Steam, and Linux): starting from a config with no assignments, the log
+      lists the pads (`gopher64 lists N controller(s)`), each player gets a port, and only player
+      ports are enabled in `portable_data/config/config.json`. Each pad drives its own player.
 - [ ] Manual: launching a game writes no `[InputLayer]` binding lines and leaves emulator
       controller configs unchanged.
 - [ ] **Start > Assign Controllers** keeps the start menu its usual width while it shows
       `Player N: Press a Button`, at every interface size.
-- [ ] Windows: accepting installs ViGEmBus with a single UAC prompt, and the layer reports working
-      afterwards. Declining UAC leaves the app usable with the layer off.
-- [ ] With the layer on, each emulator gets every player in player order, whatever is physically
-      connected. Check at least RetroArch, Dolphin, PCSX2, Flycast, ares and mGBA.
-- [ ] Xbox pads pass straight through and only non-XInput pads get a virtual pad: the launch log
-      reports `N passed through, M on virtual pads`. Three Xbox pads plus a Switch Pro give four
-      working players in Dolphin.
-- [ ] `--controller-report` writes a report whose checks all read OK, with and without Steam.
+- [ ] Under Steam Input, each emulator gets every player in player order. Check at least RetroArch,
+      Dolphin, PCSX2, Flycast, ares and mGBA.
+- [ ] `--controller-report` writes a report whose checks all read OK under Steam.
       The full grid lives in `CONTROLLER-TEST-MATRIX.md`.
-- [ ] Launched from Steam with Steam Input on for Xbox pads, every player still reaches the emulator.
 - [ ] Dolphin ports 2 to 4 receive port 1's bindings and are switched on in `Dolphin.ini` when a
       player is assigned.
-- [ ] RetroArch with a Switch Pro and Xbox pads: `retroarch.cfg` has `input_joypad_driver = sdl2`,
-      and the Pro drives player 1 when it is player 1.
-- [ ] An Xbox pad that sleeps and wakes during a session still works in the menus afterwards (the
-      log has no `our virtual pad appeared` line for it).
-- [ ] Player order can be set by pressing a button on each pad, and the emulator follows it.
-- [ ] Two physical pads give two players with no double input (PCSX2 player 2 is the known trap).
-- [ ] A non-Xbox pad (PlayStation, 8BitDo) is normalized through the layer and maps positionally.
-- [ ] The frontend UI ignores the controller while an emulator, or the layer's session, is active.
+- [ ] RetroArch under Steam Input: `retroarch.cfg` has `input_joypad_driver = sdl2`, and each pad
+      drives its own player.
+- [ ] Two pads give two players with no double input (PCSX2 player 2 is the known trap).
+- [ ] The frontend UI ignores the controller while an emulator is running.
 - [ ] Unplugging and re-plugging a pad mid-game does not reorder players.
-- [ ] Layer off: emulators fall back to the physical pads and nothing in their config still points at
-      a virtual pad.
 
 ## 12. Android
 
@@ -287,13 +296,70 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
 - [ ] Downloading a Dreamcast game saves it to `Documents/RomM/roms/dc`; the button becomes Play.
       The first Play explains folder access and opens the picker; choosing `Documents/RomM` starts
       the game in Flycast, and later games start without asking.
-- [ ] Installing an emulator on a phone with Google Play opens its Play listing; returning after the
-      install shows Download or Play.
+- [ ] Installing an emulator with an APK recipe downloads the APK and opens the system installer,
+      even with Google Play on the phone; returning after the install shows Download or Play.
+- [ ] DuckStation and Snes9x EX+ (no APK) open their Play listings, and Update on an emulator that
+      was installed from Play opens Play.
+- [ ] Defaults on a fresh install: Dreamcast Flycast, N64 gopher64, DS melonDS, PSP PPSSPP, 3DS
+      Azahar, GameCube Dolphin, PS2 ARMSX2, PS1 RetroArch with PCSX ReARMed, SNES RetroArch.
+- [ ] A PS1 game starts in RetroArch with PCSX ReARMed and no BIOS in RetroArch's system folder.
 - [ ] GameCube (Dolphin), PS1 (DuckStation), DS (melonDS), PSP (PPSSPP) and 3DS (Azahar) games
       start in their standalone apps.
+- [ ] N64 (gopher64), SNES (Snes9x EX+) and PS2 (ARMSX2, after choosing a BIOS in ARMSX2) games
+      start in their standalone apps, and the buttons name ARMSX2 and Snes9x EX+.
+- [ ] A system's settings on Android show no emulator settings fields (no Start in Fullscreen for
+      RetroArch, no gopher64 or PCSX2 options).
 - [ ] The first GBA, SNES or N64 Play explains which RetroArch core to install; Open RetroArch opens
       it and the prompt returns until I've Installed It, which starts the game with that core.
+- [ ] A system's settings show only emulators with an Android build, with the one games launch in
+      selected (N64 shows RetroArch, not gopher64).
+- [ ] For a RetroArch system, **Installed in RetroArch** under Core matches the prompt's record;
+      turning it off makes the next Play show the core prompt again, and changing the core updates it.
 - [ ] With RetroArch Plus from Google Play installed, the button reads Replace RetroArch and opens the
       system uninstaller; Install RetroArch then installs the libretro build, which asks for All files
       access on first launch.
 - [ ] Downloads from IPv6-capable hosts (the libretro buildbot) succeed on a network without IPv6.
+
+## 13. macOS
+
+Run on an Apple Silicon Mac and an Intel Mac. Unzip `romm-frontend-macos.zip` from the build, move
+`romm-frontend.app` to /Applications, and keep Console.app or `log stream` open for the app's
+output. The data folder is `~/Library/Application Support/RomM Frontend`.
+
+- [ ] The first open is blocked as unverified; **Open Anyway** in System Settings > Privacy &
+      Security opens it, and later opens start straight away.
+- [ ] Activity Monitor shows the app as Apple on Apple Silicon (no Rosetta) and Intel on Intel.
+- [ ] The data folder holds `config.cfg`, `install_scripts/` (12 emulators), `emulators/`, `roms/`,
+      `saves/`, `bios/`, `downloads/` and `assets/`. Nothing is written inside the `.app`.
+- [ ] Login, library load and the second start from the cache work as on Windows.
+- [ ] Settings shows no Controller Setup, Steam Library or Prefer Discrete GPU rows, and there is no
+      first-run controller prompt.
+- [ ] A downloaded multi-file game unpacks into `roms/<system>/`.
+- [ ] Each emulator installs, starts with a game, and closes back to the app. After closing, its
+      saves are under `saves/<emulator>/` and its settings under `emulators/<emulator>/`; check
+      that nothing new appeared in `~/Library/Application Support/<Emulator>` or `~/Documents`:
+      - [ ] RetroArch (disk image). The first SNES and N64 games download their cores into
+            `emulators/retroarch/cores/` (`.dylib`); the menu shows its icons.
+      - [ ] Dolphin (disk image). Video Backend defaults to Metal; Vulkan and OpenGL also start.
+      - [ ] mGBA (disk image). `emulators/mGBA/config.ini` is the one in use.
+      - [ ] DuckStation. Settings and memory cards are under
+            `emulators/duckstation/home/Library/Application Support/DuckStation/`, and Internal
+            Resolution in the app's settings changes the game.
+      - [ ] PCSX2 (`.tar.xz`, versioned bundle name). `inis/PCSX2.ini` and `memcards/` are in
+            `emulators/pcsx2/`.
+      - [ ] PPSSPP. The memory stick is `emulators/ppsspp/home/.config/ppsspp/`.
+      - [ ] Flycast. `emu.cfg` and VMUs are under `emulators/flycast/home/Library/Application Support/Flycast/`.
+      - [ ] melonDS. `emulators/melonDS/portable/melonDS.toml` is the one in use.
+      - [ ] Azahar. `emulators/azahar/user/` is the one in use.
+      - [ ] ares. `emulators/ares/settings.bml` is the one in use and saves land in `saves/`.
+      - [ ] gopher64 (Apple Silicon only). Config and saves are under
+            `emulators/gopher64/home/Library/Application Support/gopher64/`.
+- [ ] On Intel, N64 offers RetroArch only (no gopher64), and SNES on either Mac offers RetroArch
+      only (no snes9x).
+- [ ] Reinstalling or updating an emulator replaces its `.app` (one bundle left, PCSX2 included)
+      and keeps its settings and saves.
+- [ ] A save made on the Mac uploads to RomM, and a save from another machine downloads into the
+      emulator.
+- [ ] Netplay hosts and joins with a Windows or Linux machine.
+- [ ] The in-app update replaces `romm-frontend.app` and reopens it; with the copy made to fail
+      (for example the app folder made read-only), the old app stays and still opens.

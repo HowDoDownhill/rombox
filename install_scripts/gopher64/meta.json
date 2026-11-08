@@ -1,14 +1,18 @@
 {
   "name": "gopher64",
+  "android_package": "io.github.gopher64.gopher64",
+  "android_play_store": true,
+  "android_launch": {"activity": "io.github.gopher64.gopher64.SlintActivity", "game": "document"},
   "executable_name": {
     "windows": "gopher64.exe",
     "linux": "gopher64",
-    "macos": "gopher64"
+    "macos": "Gopher64.app/Contents/MacOS/gopher64"
   },
   "emulator_dir_name": {
     "windows": "gopher64",
     "linux": "gopher64",
-    "macos": "gopher64"
+    "macos": "gopher64",
+    "android": "gopher64"
   },
   "controller_commands": {
     "platforms": ["windows", "linux"],
@@ -20,6 +24,11 @@
     "config_file_relative_path": "portable_data/config/config.json",
     "assignment_json_path": "input.controller_assignment",
     "enabled_json_path": "input.controller_enabled"
+  },
+  "launch_env": {
+    "macos": {
+      "HOME": "{emulator_dir}/home"
+    }
   },
   "launch_args_with_game": "\"{rom_path}\"",
   "launch_args_without_game": "",
@@ -35,17 +44,32 @@
       "repo": "gopher64/gopher64",
       "asset_regex": ".*linux-x86_64$",
       "extract": false
+    },
+    "macos-arm64": {
+      "type": "github_release",
+      "repo": "gopher64/gopher64",
+      "asset_regex": "gopher64-macos-aarch64\\.zip$",
+      "extract": true
+    },
+    "android": {
+      "type": "github_release",
+      "repo": "gopher64/gopher64",
+      "asset_regex": "gopher64-android\\.apk$",
+      "extract": false
     }
   },
   "relative_save_path": {
-    "n64": "portable_data/data/saves/"
+    "n64": {
+      "default": "portable_data/data/saves/",
+      "macos": "home/Library/Application Support/gopher64/saves/"
+    }
   },
   "settings_fields": [
     {
       "id": "upscale",
       "label": "Upscale",
       "type": "dropdown",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "video",
       "config_key": "upscale",
       "default_value_string": "1",
@@ -64,7 +88,7 @@
       "id": "ssaa",
       "label": "SSAA",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "video",
       "config_key": "ssaa",
       "default_value_bool": false
@@ -73,7 +97,7 @@
       "id": "integer_scaling",
       "label": "Integer Scaling",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "video",
       "config_key": "integer_scaling",
       "default_value_bool": false
@@ -82,7 +106,7 @@
       "id": "fullscreen",
       "label": "Fullscreen",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "video",
       "config_key": "fullscreen",
       "default_value_bool": true
@@ -91,7 +115,7 @@
       "id": "widescreen",
       "label": "Widescreen",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "video",
       "config_key": "widescreen",
       "default_value_bool": false
@@ -100,7 +124,7 @@
       "id": "vsync",
       "label": "VSync",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "video",
       "config_key": "vsync",
       "default_value_bool": true
@@ -109,7 +133,7 @@
       "id": "crt",
       "label": "CRT Filter",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "video",
       "config_key": "crt",
       "default_value_bool": false
@@ -118,7 +142,7 @@
       "id": "overclock",
       "label": "Overclock",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "emulation",
       "config_key": "overclock",
       "default_value_bool": false
@@ -127,7 +151,7 @@
       "id": "disable_expansion_pak",
       "label": "Disable Expansion Pak",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "emulation",
       "config_key": "disable_expansion_pak",
       "default_value_bool": false
@@ -136,7 +160,7 @@
       "id": "usb",
       "label": "Enable USB",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "emulation",
       "config_key": "usb",
       "default_value_bool": false
@@ -145,7 +169,7 @@
       "id": "rewind",
       "label": "Enable Rewind",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "emulation",
       "config_key": "rewind",
       "default_value_bool": false
@@ -154,7 +178,7 @@
       "id": "emulate_vru",
       "label": "Emulate VRU",
       "type": "boolean",
-      "config_file_relative_path": "portable_data/config/config.json",
+      "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
       "config_section": "input",
       "config_key": "emulate_vru",
       "default_value_bool": false
@@ -162,7 +186,7 @@
   ],
   "controller_config": {
     "max_controllers": 4,
-    "config_file_relative_path": "portable_data/config/config.json",
+    "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
     "format": "json",
     "enabled_key_path": "input.controller_enabled"
   }

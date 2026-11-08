@@ -42,6 +42,7 @@ public partial class StartMenuPanel : UiPanel
     public override void _Ready()
     {
         base._Ready();
+        CloseOnOutsidePress = true;
         AboutToOpen += FitPanelToMenu;
     }
 

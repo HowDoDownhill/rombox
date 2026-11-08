@@ -48,13 +48,14 @@ public static class UniversalInstaller
 
     private static async Task<bool> RunInstall(AppInstance appInstance, string emulatorName, EmulatorMeta emulatorMetadata, string currentOperatingSystem, ReleaseOption selectedRelease, DownloadManager.ExternalTransfer installTransfer)
     {
-        if (emulatorMetadata.InstallRecipe == null || !emulatorMetadata.InstallRecipe.ContainsKey(currentOperatingSystem))
+        var installRecipe = HostPlatform.ResolveInstallRecipe(emulatorMetadata, currentOperatingSystem);
+
+        if (installRecipe == null)
         {
-            GD.PrintErr($"No install recipe found for {emulatorName} on {currentOperatingSystem}.");
+            GD.PrintErr($"No install recipe found for {emulatorName} on {currentOperatingSystem} ({HostPlatform.ArchitectureKey}).");
             return false;
         }
 
-        var installRecipe = emulatorMetadata.InstallRecipe[currentOperatingSystem];
         string emulatorTargetDirectory = Path.Combine(appInstance.configManager.EmulatorsPath, emulatorMetadata.EmulatorDirName[currentOperatingSystem]);
 
         if (selectedRelease == null)
@@ -87,7 +88,21 @@ public static class UniversalInstaller
             return HandOverToAndroidInstaller(appInstance, emulatorName, temporaryArchiveFilePath, emulatorTargetDirectory, selectedRelease.VersionLabel);
         }
 
-        if (installRecipe.Extract)
+        if (installRecipe.Extract && HostPlatform.IsMacOS)
+        {
+            ReportStage(appInstance, installTransfer, "Extracting...");
+
+            string stagingDirectory = Path.Combine(appInstance.configManager.DownloadsPath, $"{emulatorName}staging");
+
+            if (!await MacArchives.InstallArchive(temporaryArchiveFilePath, emulatorTargetDirectory, installRecipe.ExtractFolderRegex, stagingDirectory, emulatorMetadata.GetPreservePaths()))
+            {
+                return false;
+            }
+
+            File.Delete(temporaryArchiveFilePath);
+        }
+
+        else if (installRecipe.Extract)
         {
             ReportStage(appInstance, installTransfer, "Extracting...");
 
@@ -286,7 +301,7 @@ public static class UniversalInstaller
             : templateUrl.Replace("{version}", versionLabel);
     }
 
-    private static string FindExtractedFolder(string stagingDirectory, string extractFolderRegex)
+    public static string FindExtractedFolder(string stagingDirectory, string extractFolderRegex)
     {
         var extractFolderPattern = new Regex("^" + extractFolderRegex.Replace("*", ".*") + "$", RegexOptions.IgnoreCase);
 
@@ -317,6 +332,12 @@ public static class UniversalInstaller
             }
 
             string contentSourceDirectory = FindExtractedFolder(stagingDirectory, extractFolderRegex) ?? stagingDirectory;
+
+            if (HostPlatform.IsMacOS)
+            {
+                return await MacArchives.Copy(contentSourceDirectory, destinationDirectory);
+            }
+
             CopyDirectoryRecursively(contentSourceDirectory, destinationDirectory);
             return true;
         }
@@ -346,7 +367,7 @@ public static class UniversalInstaller
                 continue;
             }
 
-            string resolvedDownloadUrl = ApplyVersionPlaceholder(extraDownload.Url, versionLabel);
+            string resolvedDownloadUrl = HostPlatform.ApplyArchitecture(ApplyVersionPlaceholder(extraDownload.Url, versionLabel));
 
             string destinationDirectory = string.IsNullOrWhiteSpace(extraDownload.Destination)
                 ? emulatorTargetDirectory
@@ -402,22 +423,24 @@ public static class UniversalInstaller
         switch (installRecipe.Type)
         {
             case "github_release":
-                return await ListGithubReleases(installRecipe.Repo, installRecipe.AssetRegex);
+                return await ListGithubReleases(installRecipe.Repo, HostPlatform.ApplyArchitecture(installRecipe.AssetRegex));
 
             case "github_tags":
-                return await ListGithubTagReleases(installRecipe.Repo, installRecipe.TagRegex, installRecipe.UrlTemplate);
+                return await ListGithubTagReleases(installRecipe.Repo, installRecipe.TagRegex, HostPlatform.ApplyArchitecture(installRecipe.UrlTemplate));
 
             case "web_scrape":
                 return await ListScrapedReleases(installRecipe);
 
             case "direct_url":
+                string directUrl = HostPlatform.ApplyArchitecture(installRecipe.Url);
+
                 return new List<ReleaseOption>
                 {
                     new ReleaseOption
                     {
                         VersionLabel = "Latest",
-                        AssetName = installRecipe.Url?.Split('/').LastOrDefault(),
-                        DownloadUrl = installRecipe.Url
+                        AssetName = directUrl?.Split('/').LastOrDefault(),
+                        DownloadUrl = directUrl
                     }
                 };
 
@@ -593,7 +616,7 @@ public static class UniversalInstaller
                         continue;
                     }
 
-                    string downloadUrl = installRecipe.UrlTemplate.Replace("{version}", version);
+                    string downloadUrl = HostPlatform.ApplyArchitecture(installRecipe.UrlTemplate.Replace("{version}", version));
 
                     releaseOptions.Add(new ReleaseOption
                     {
@@ -608,7 +631,7 @@ public static class UniversalInstaller
 
             else if (!string.IsNullOrEmpty(installRecipe.LinkRegex))
             {
-                var linkPattern = new Regex(installRecipe.LinkRegex, RegexOptions.IgnoreCase);
+                var linkPattern = new Regex(HostPlatform.ApplyArchitecture(installRecipe.LinkRegex), RegexOptions.IgnoreCase);
                 var versionPattern = string.IsNullOrEmpty(installRecipe.VersionRegex) ? null : new Regex(installRecipe.VersionRegex, RegexOptions.IgnoreCase);
                 var seenUrls = new HashSet<string>();
 
@@ -710,6 +733,11 @@ public static class UniversalInstaller
 
     private static Task<bool> ExtractArchiveAsync(AppInstance appInstance, string archiveFilePath, string extractionDestinationDirectory)
     {
+        if (HostPlatform.IsMacOS)
+        {
+            return MacArchives.Extract(archiveFilePath, extractionDestinationDirectory);
+        }
+
         var extractionTaskCompletionSource = new TaskCompletionSource<bool>();
         string currentOperatingSystem = OS.GetName().ToLower();
 
@@ -925,13 +953,9 @@ public static class UniversalInstaller
         }
 
         if (emulatorMetadata.ExecutableRegex != null
-            && emulatorMetadata.ExecutableRegex.TryGetValue(currentOperatingSystem, out string executableRegex)
-            && Directory.Exists(emulatorTargetDirectory))
+            && emulatorMetadata.ExecutableRegex.TryGetValue(currentOperatingSystem, out string executableRegex))
         {
-            var executablePattern = new Regex(executableRegex, RegexOptions.IgnoreCase);
-
-            return Directory.GetFiles(emulatorTargetDirectory)
-                .FirstOrDefault(candidatePath => executablePattern.IsMatch(Path.GetFileName(candidatePath)));
+            return HostPlatform.FindExecutableMatching(emulatorTargetDirectory, executableRegex);
         }
 
         return null;

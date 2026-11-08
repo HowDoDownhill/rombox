@@ -517,29 +517,15 @@ public partial class SaveSyncManager : Node
 
             if (emulatorMetadata != null && emulatorMetadata.RelativeSavePath != null)
             {
-                if (emulatorMetadata.RelativeSavePath.TryGetValue(platformSlug, out JsonElement relativePathElement) ||
-                    emulatorMetadata.RelativeSavePath.TryGetValue("default", out relativePathElement))
+                string currentOperatingSystem = OS.GetName().ToLower();
+
+                if (emulatorMetadata.EmulatorDirName != null && emulatorMetadata.EmulatorDirName.ContainsKey(currentOperatingSystem))
                 {
-                    string currentOperatingSystem = OS.GetName().ToLower();
+                    string emulatorInstallDirectory = Path.Combine(appInstance.configManager.EmulatorsPath, emulatorMetadata.EmulatorDirName[currentOperatingSystem]);
 
-                    if (emulatorMetadata.EmulatorDirName != null && emulatorMetadata.EmulatorDirName.ContainsKey(currentOperatingSystem))
+                    foreach (string relativeSavePath in emulatorMetadata.GetSaveRelativePathsForSystem(platformSlug))
                     {
-                        string emulatorInstallDirectory = Path.Combine(appInstance.configManager.EmulatorsPath, emulatorMetadata.EmulatorDirName[currentOperatingSystem]);
-                        
-                        if (relativePathElement.ValueKind == JsonValueKind.String)
-                        {
-                            string resolvedPath = relativePathElement.GetString().Replace("{system_slug}", platformSlug);
-                            savesDirs.Add(Path.Combine(emulatorInstallDirectory, resolvedPath));
-                        }
-
-                        else if (relativePathElement.ValueKind == JsonValueKind.Array)
-                        {
-                            foreach (var pathElement in relativePathElement.EnumerateArray())
-                            {
-                                string resolvedPath = pathElement.GetString().Replace("{system_slug}", platformSlug);
-                                savesDirs.Add(Path.Combine(emulatorInstallDirectory, resolvedPath));
-                            }
-                        }
+                        savesDirs.Add(Path.Combine(emulatorInstallDirectory, relativeSavePath.Replace("{system_slug}", platformSlug)));
                     }
                 }
             }

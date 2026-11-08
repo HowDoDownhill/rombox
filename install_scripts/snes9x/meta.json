@@ -1,5 +1,9 @@
 {
   "name": "Snes9x",
+  "android_name": "Snes9x EX+",
+  "android_package": "com.explusalpha.Snes9xPlus",
+  "android_play_store": true,
+  "android_launch": {"activity": "com.imagine.BaseActivity", "game": "document"},
   "executable_name": {
     "windows": "snes9x-x64.exe",
     "macos": "snes9x"
@@ -10,7 +14,8 @@
   "emulator_dir_name": {
     "windows": "snes9x",
     "linux": "snes9x",
-    "macos": "snes9x"
+    "macos": "snes9x",
+    "android": "snes9x"
   },
   "launch_args_with_game": "\"{rom_path}\"",
   "launch_args_without_game": "",

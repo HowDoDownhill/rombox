@@ -62,6 +62,32 @@ xcopy "install_scripts" "build\linux\install_scripts" /E /I /Y /Q
 if exist "build\linux\tools" rmdir /s /q "build\linux\tools"
 xcopy "tools\7zip" "build\linux\tools\7zip" /E /I /Y /Q
 
+:: The macOS app keeps its data in Application Support, so install_scripts travels inside the
+:: package as one zip. Godot skips folders holding a .gdignore, which install_scripts has.
+echo Packing install_scripts for macOS...
+if exist bundled rmdir /s /q bundled
+mkdir bundled
+pushd install_scripts
+"%~dp0tools\7zip\windows\7za.exe" a -tzip "%~dp0bundled\install_scripts.zip" * -xr!.gdignore >nul
+popd
+if not exist "bundled\install_scripts.zip" (
+    echo Packing install_scripts for macOS failed.
+    goto :fail
+)
+
+echo Exporting app to macOS...
+if not exist build\macos mkdir build\macos
+if exist "build\macos\romm-frontend-macos.zip" del "build\macos\romm-frontend-macos.zip"
+"%GODOT_BIN%" --headless --export-release "macOS" "build\macos\romm-frontend-macos.zip"
+if errorlevel 1 (
+    echo macOS export failed.
+    goto :fail
+)
+if not exist "build\macos\romm-frontend-macos.zip" (
+    echo macOS export produced no zip.
+    goto :fail
+)
+
 echo Build complete!
 if /i not "%~1"=="nopause" pause
 exit /b 0

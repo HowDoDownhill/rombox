@@ -1,13 +1,17 @@
 {
   "name": "RetroArch",
+  "android_exit_hint": "Tap the RetroArch icon at the bottom right of the screen to open the Quick Menu, choose Close Content and confirm, then switch back to RomM from Recents.",
   "executable_name": {
     "windows": "retroarch.exe",
-    "linux": "RetroArch-Linux-x86_64.AppImage"
+    "linux": "RetroArch-Linux-x86_64.AppImage",
+    "macos": "RetroArch.app/Contents/MacOS/RetroArch"
   },
   "android_package": "com.retroarch.aarch64",
   "android_play_store": false,
   "android_needs_direct_build": true,
-  "android_fallback": true,
+  "android_system_cores": {
+    "psx": ["pcsx_rearmed", "swanstation", "mednafen_psx_hw"]
+  },
   "android_launch": {
     "activity": "com.retroarch.browser.retroactivity.RetroActivityFuture",
     "game": "extra:ROM",
@@ -77,6 +81,13 @@
       "type": "direct_url",
       "url": "https://buildbot.libretro.com/nightly/android/RetroArch_aarch64.apk",
       "extract": false
+    },
+    "macos": {
+      "type": "web_scrape",
+      "list_url": "https://buildbot.libretro.com/stable/",
+      "version_regex": "(\\d+\\.\\d+\\.\\d+)/",
+      "url_template": "https://buildbot.libretro.com/stable/{version}/apple/osx/universal/RetroArch_Metal.dmg",
+      "extract": true
     }
   },
   "launch_env": {
@@ -312,6 +323,7 @@
     "mednafen_pce_fast": "NEC - PC Engine / CD (Beetle PCE FAST)",
     "mednafen_pcfx": "NEC - PC-FX (Beetle PC-FX)",
     "mednafen_psx_hw": "Sony - PlayStation (Beetle PSX HW)",
+    "pcsx_rearmed": "Sony - PlayStation (PCSX ReARMed)",
     "mednafen_saturn": "Sega - Saturn (Beetle Saturn)",
     "mednafen_vb": "Nintendo - Virtual Boy (Beetle VB)",
     "mednafen_wswan": "Bandai - WonderSwan/Color (Beetle Wonderswan)",
@@ -340,12 +352,14 @@
   },
   "core_directory": {
     "windows": "cores",
-    "linux": "RetroArch-Linux-x86_64.AppImage.home/.config/retroarch/cores"
+    "linux": "RetroArch-Linux-x86_64.AppImage.home/.config/retroarch/cores",
+    "macos": "cores"
   },
   "core_file_name": {
     "windows": "{core}_libretro.dll",
     "linux": "{core}_libretro.so",
-    "android": "{core}_libretro_android.so"
+    "android": "{core}_libretro_android.so",
+    "macos": "{core}_libretro.dylib"
   },
   "controller_config": {
     "max_controllers": 4,
@@ -361,5 +375,8 @@
         }
       }
     ]
+  },
+  "core_download_url": {
+    "macos": "https://buildbot.libretro.com/nightly/apple/osx/{arch}/latest/{core}_libretro.dylib.zip"
   }
 }

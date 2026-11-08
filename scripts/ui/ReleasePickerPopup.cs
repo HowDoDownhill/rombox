@@ -23,6 +23,7 @@ public partial class ReleasePickerPopup : UiPanel
     public override void _Ready()
     {
         base._Ready();
+        CloseOnOutsidePress = true;
 
         ZIndex = 200;
 

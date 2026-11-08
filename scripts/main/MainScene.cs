@@ -114,7 +114,7 @@ public partial class MainScene : Control
         SectionHandler = new MainSceneSectionHandler(this);
         PopupHandler = new MainScenePopupHandler(this, appInstance);
 
-        fuzzySearchPopup = new UiPanel();
+        fuzzySearchPopup = new UiPanel { CloseOnOutsidePress = true };
         AddChild(fuzzySearchPopup);
 
         var margin = new MarginContainer();
@@ -408,6 +408,20 @@ public partial class MainScene : Control
         GD.Print($"[Layout] card sizes {cardSizes}");
         GD.Print($"[Layout] captured {capturedFrame.GetWidth()}x{capturedFrame.GetHeight()} (canvas {GetViewportRect().Size}, carousel {gameList?.Size}, details {detailsPanel?.Size}, open panel {openPanel}, section {SectionHandler?.CurrentSection}) to {capturePath}: {saveResult}");
         GetTree().Quit();
+    }
+
+    private bool ClosesTopPanelFromOutside(Vector2 canvasPosition)
+    {
+        UiPanel topPanel = panelStack.TopPanel;
+
+        if (topPanel == null || !topPanel.CloseOnOutsidePress || topPanel.State != UiPanel.PanelState.Open || !topPanel.IsOutsideContent(canvasPosition))
+        {
+            return false;
+        }
+
+        topPanel.Close();
+        gameList?.GrabFocus();
+        return true;
     }
 
     private static void SimulateAction(string action)
@@ -909,6 +923,8 @@ public partial class MainScene : Control
     private Game gameWaitingForFolderAccess;
     private Game gameWaitingForCoreSetup;
     private string coreWaitingForSetup;
+    private Game gameWaitingForExitHint;
+    private string emulatorWaitingForExitHint;
 
     private void LaunchSelectedGame()
     {
@@ -931,7 +947,47 @@ public partial class MainScene : Control
             return;
         }
 
-        appInstance.emulatorManager.LaunchEmulatorWithGame(selectedGame);
+        LaunchAfterExitHint(selectedGame);
+    }
+
+    private void LaunchAfterExitHint(Game game)
+    {
+        string exitHint = appInstance.emulatorManager.FindAndroidExitHintToShow(game, out string emulatorName, out string emulatorDisplayName);
+
+        if (exitHint != null)
+        {
+            gameWaitingForExitHint = game;
+            emulatorWaitingForExitHint = emulatorName;
+            changelogPanel?.ShowPrompt(ChangelogPanel.PromptSubject.AndroidExitHint, BuildExitHintBody(emulatorDisplayName, exitHint), "Play", "Not Now");
+            return;
+        }
+
+        appInstance.emulatorManager.LaunchEmulatorWithGame(game);
+    }
+
+    private static string BuildExitHintBody(string emulatorDisplayName, string exitHint)
+    {
+        return $"[b]Leaving a game in {emulatorDisplayName}[/b]\n\n" +
+            $"{exitHint}\n\n" +
+            "Holding View to close a game works on Windows and Linux only.";
+    }
+
+    private void ConfirmExitHintAndPlay()
+    {
+        Game waitingGame = gameWaitingForExitHint;
+
+        if (emulatorWaitingForExitHint != null)
+        {
+            appInstance.configManager.SaveAndroidExitHintShown(emulatorWaitingForExitHint);
+        }
+
+        gameWaitingForExitHint = null;
+        emulatorWaitingForExitHint = null;
+
+        if (waitingGame != null)
+        {
+            appInstance.emulatorManager.LaunchEmulatorWithGame(waitingGame);
+        }
     }
 
     private static string BuildCoreSetupBody(string coreDisplayName)
@@ -940,7 +996,8 @@ public partial class MainScene : Control
             "RetroArch downloads its own cores, and Android does not let other apps add them for it.\n\n" +
             $"In RetroArch, open Main Menu, then Online Updater, then Core Downloader, and choose {coreDisplayName}. " +
             "The first time RetroArch opens it asks for All files access; allow it so it can read your games.\n\n" +
-            "Then come back and choose I've Installed It. RetroArch shows a black screen if it is asked to start a game whose core is missing.";
+            "Then come back and choose I've Installed It. RetroArch shows a black screen if it is asked to start a game whose core is missing; " +
+            "if that happens, turn off Installed in RetroArch for this core in the system's settings and this message comes back.";
     }
 
     private void ConfirmCoreSetupAndPlay()
@@ -957,7 +1014,7 @@ public partial class MainScene : Control
 
         if (waitingGame != null)
         {
-            appInstance.emulatorManager.LaunchEmulatorWithGame(waitingGame);
+            LaunchAfterExitHint(waitingGame);
         }
     }
 
@@ -981,7 +1038,7 @@ public partial class MainScene : Control
         {
             if (granted && waitingGame != null)
             {
-                appInstance.emulatorManager.LaunchEmulatorWithGame(waitingGame);
+                LaunchAfterExitHint(waitingGame);
             }
         });
     }
@@ -999,6 +1056,32 @@ public partial class MainScene : Control
         {
             changelogPanel.Close();
             ConfirmCoreSetupAndPlay();
+            return;
+        }
+
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.AndroidExitHint)
+        {
+            changelogPanel.Close();
+            ConfirmExitHintAndPlay();
+            return;
+        }
+
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamRestart)
+        {
+            changelogPanel.Close();
+            InputHandler.RestartSteamAndAddApp();
+            return;
+        }
+
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamShortcutOutcome)
+        {
+            changelogPanel.Close();
+
+            if (SteamShortcuts.ContainsThisApp())
+            {
+                SteamShortcuts.OpenSteamLibrary();
+            }
+
             return;
         }
 
@@ -1030,10 +1113,25 @@ public partial class MainScene : Control
             return;
         }
 
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.AndroidExitHint)
+        {
+            changelogPanel.Close();
+            gameWaitingForExitHint = null;
+            emulatorWaitingForExitHint = null;
+            return;
+        }
+
         if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.ControllerLayer)
         {
             changelogPanel.Close();
             InputHandler.OnControllerSetupMethodChosen(ControllerSetupMethod.Manual);
+            return;
+        }
+
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamRestart
+            || changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamShortcutOutcome)
+        {
+            changelogPanel.Close();
             return;
         }
 
@@ -1161,6 +1259,12 @@ public partial class MainScene : Control
 
         if (panelStack.HasOpenPanel)
         {
+            if (@event is InputEventMouseButton { Pressed: true } outsidePress && ClosesTopPanelFromOutside(outsidePress.Position))
+            {
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+
             if (@event is InputEventMouse) return;
             panelStack.HandleInput(@event);
             GetViewport().SetInputAsHandled();

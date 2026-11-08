@@ -32,10 +32,10 @@ public partial class EmulatorManager
         report.AppendLine($"- Written: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         report.AppendLine($"- App: {AppUpdater.CurrentVersion} on {OS.GetName()} {OS.GetVersion()}");
         report.AppendLine($"- Steam: {DescribeSteamLaunch()}");
-        report.AppendLine($"- Automatic controller mapping: {inputLayer?.ResolveConsent().ToString() ?? "unavailable"}; virtual pads {(inputLayer?.IsVirtualPadBackendAvailable == true ? "available" : "unavailable: " + inputLayer?.VirtualPadBackendUnavailableReason)}");
+        report.AppendLine($"- Automatic controller mapping: {inputLayer?.ResolveConsent().ToString() ?? "unavailable"}; {(inputLayer?.IsMappingEnabled == true ? "on" : "off")}{(inputLayer?.UsesSteamInput == true ? ", Steam Input" : "")}");
         report.AppendLine();
 
-        AppendGodotPads(report, controllerManager, inputLayer);
+        AppendGodotPads(report, controllerManager);
         AppendXInputSlots(report, "XInput slots seen by the app", XInputSlots.ReadSlotIdentities().Select(slot => (slot.Slot, (int)slot.Vendor, (int)slot.Product)));
 
         foreach ((string emulatorName, string systemSlug) in ResolveInstalledEmulatorsForReport())
@@ -66,17 +66,17 @@ public partial class EmulatorManager
         return $"launched by Steam (app {steamAppId}), overlay {(hooked ? "loaded" : "not loaded")}, virtual gamepads {(string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD")) ? "not offered" : "offered")}";
     }
 
-    private static void AppendGodotPads(StringBuilder report, ControllerManager controllerManager, InputLayer inputLayer)
+    private static void AppendGodotPads(StringBuilder report, ControllerManager controllerManager)
     {
         report.AppendLine("## Pads seen by the app");
         report.AppendLine();
         report.AppendLine("| Device | Name | Bus | VID/PID | Backend | XInput slot | Role |");
         report.AppendLine("|---|---|---|---|---|---|---|");
 
-        foreach (ConnectedController controller in controllerManager.GetAllControllersIncludingVirtual())
+        foreach (ConnectedController controller in controllerManager.GetConnectedControllers())
         {
             (string bus, int vendor, int product, string backend) = DecodeSdlGuid(controller.Guid);
-            string role = inputLayer != null && inputLayer.IsOwnVirtualDevice(controller.GodotDeviceId) ? "our virtual pad" : DescribePhysicalIdentity(vendor, product);
+            string role = DescribePhysicalIdentity(vendor, product);
             int xinputSlot = InputLayer.ReadXInputSlot(controller.GodotDeviceId);
             report.AppendLine($"| {controller.GodotDeviceId} | {controller.ControllerName} | {bus} | {vendor:X4}/{product:X4} | {backend} | {(xinputSlot >= 0 ? xinputSlot.ToString() : "none")} | {role} |");
         }
@@ -86,17 +86,7 @@ public partial class EmulatorManager
 
     private static string DescribePhysicalIdentity(int vendor, int product)
     {
-        if (vendor == SteamVirtualPadVendorId && product == SteamVirtualPadProductId)
-        {
-            return "Steam Input virtual pad";
-        }
-
-        if (vendor == ViGEmPadBackend.VirtualPadVendorId && product == ViGEmPadBackend.VirtualPadProductId)
-        {
-            return "physical, but shares our virtual pad's identity";
-        }
-
-        return "physical";
+        return vendor == SteamVirtualPadVendorId && product == SteamVirtualPadProductId ? "Steam Input virtual pad" : "physical";
     }
 
     private static (string Bus, int Vendor, int Product, string Backend) DecodeSdlGuid(string guid)
@@ -161,7 +151,6 @@ public partial class EmulatorManager
         {
             if (sessionStarted)
             {
-                await inputLayer.WaitForVirtualPadsToEnumerate();
                 AppendSessionPlayers(report, inputLayer);
             }
 
@@ -202,15 +191,15 @@ public partial class EmulatorManager
 
     private static void AppendSessionPlayers(StringBuilder report, InputLayer inputLayer)
     {
-        report.AppendLine("| Player | Device | Name | VID/PID | Route | XInput slot |");
-        report.AppendLine("|---|---|---|---|---|---|");
+        report.AppendLine("| Player | Device | Name | VID/PID | XInput slot |");
+        report.AppendLine("|---|---|---|---|---|");
 
         for (int playerIndex = 0; playerIndex < inputLayer.ActivePlayerCount; playerIndex++)
         {
             SessionPlayer player = inputLayer.SessionPlayers[playerIndex];
             (ushort vendor, ushort product) = inputLayer.ResolvePlayerIdentity(playerIndex);
             int xinputSlot = inputLayer.ResolvePlayerXInputSlot(playerIndex);
-            report.AppendLine($"| {playerIndex + 1} | {player.PhysicalDeviceId} | {Input.GetJoyName(player.PhysicalDeviceId)} | {vendor:X4}/{product:X4} | {(player.IsPassthrough ? "passthrough" : "virtual pad")} | {(xinputSlot >= 0 ? xinputSlot.ToString() : "none")} |");
+            report.AppendLine($"| {playerIndex + 1} | {player.PhysicalDeviceId} | {Input.GetJoyName(player.PhysicalDeviceId)} | {vendor:X4}/{product:X4} | {(xinputSlot >= 0 ? xinputSlot.ToString() : "none")} |");
         }
 
         report.AppendLine();

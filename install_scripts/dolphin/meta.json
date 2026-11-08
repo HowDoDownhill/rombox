@@ -1,5 +1,6 @@
 {
   "name": "Dolphin",
+  "android_exit_hint": "Press Back to open Dolphin's menu and choose Exit Emulation; Dolphin returns you to RomM.",
   "android_package": "org.dolphinemu.dolphinemu",
   "android_play_store": true,
   "android_launch": {
@@ -9,7 +10,7 @@
   },
   "executable_name": {
     "windows": "Dolphin.exe",
-    "macos": "Dolphin"
+    "macos": "Dolphin.app/Contents/MacOS/Dolphin"
   },
   "executable_regex": {
     "linux": "Dolphin_Emulator-.*\\.AppImage$"
@@ -34,6 +35,20 @@
       "repo": "pkgforge-dev/Dolphin-emu-AppImage",
       "asset_regex": "Dolphin_Emulator-.*-anylinux-x86_64\\.AppImage$",
       "extract": false
+    },
+    "macos": {
+      "type": "github_tags",
+      "repo": "dolphin-emu/dolphin",
+      "tag_regex": "^([0-9]{4}[a-z]?)$",
+      "url_template": "https://dl.dolphin-emu.org/releases/{version}/dolphin-{version}-universal.dmg",
+      "extract": true
+    },
+    "android": {
+      "type": "github_tags",
+      "repo": "dolphin-emu/dolphin",
+      "tag_regex": "^([0-9]{4}[a-z]?)$",
+      "url_template": "https://dl.dolphin-emu.org/releases/{version}/dolphin-{version}.apk",
+      "extract": false
     }
   },
   "launch_args_with_game": "-u \"{emulator_dir}/User\" -b -e \"{rom_path}\"",
@@ -52,10 +67,24 @@
       "label": "Video Backend",
       "type": "dropdown",
       "default_value_string": "Vulkan",
+      "operating_systems": ["windows", "linux"],
       "options": {
         "Vulkan": "Vulkan",
         "Direct3D 11": "D3D",
         "Direct3D 12": "D3D12",
+        "OpenGL": "OGL"
+      },
+      "launch_arg_format": "-C Dolphin.Display.GFXBackend={value}"
+    },
+    {
+      "id": "video_backend_macos",
+      "label": "Video Backend",
+      "type": "dropdown",
+      "default_value_string": "Metal",
+      "operating_systems": ["macos"],
+      "options": {
+        "Metal": "Metal",
+        "Vulkan": "Vulkan",
         "OpenGL": "OGL"
       },
       "launch_arg_format": "-C Dolphin.Display.GFXBackend={value}"
