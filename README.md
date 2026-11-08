@@ -4,8 +4,8 @@ A couch-friendly client for [RomM](https://github.com/rommapp/romm). Browse your
 with a controller, download a game, and play it. The emulator is installed and set up for you,
 and your saves sync back to RomM.
 
-RomBox is an independent project. It is not affiliated with or endorsed by the RomM project.
-Until version 1.2.2 it was called RomM Frontend.
+RomBox is free and open source under the GPL-3.0. It is an independent project. It is not
+affiliated with or endorsed by the RomM project. Until version 1.2.2 it was called RomM Frontend.
 
 ![Carousel view](docs/images/carousel-view.jpg)
 
@@ -135,9 +135,9 @@ Any controller your PC recognises works in the app. For games:
 
 ## Steam
 
-RomBox is not sold on Steam. It adds itself to your Steam library as a non-Steam game. On Windows
-and Linux, when RomBox starts outside Steam and finds Steam installed, it offers to do this and
-restart from Steam. That gets you:
+RomBox is free and is not sold on Steam. It adds itself to your Steam library as a non-Steam game.
+On Windows and Linux, when RomBox starts outside Steam and finds Steam installed, it offers to do
+this and restart from Steam. That gets you:
 
 - **Steam Input**: every controller works, and each emulator gets the right one for every player.
 - **Steam Deck Game Mode and Big Picture**, with full controller navigation.
