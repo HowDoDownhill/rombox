@@ -43,6 +43,7 @@ public partial class AppInstance : Node
         }
 
         LegacyNameMigration.RemoveLegacyFilesInBackground();
+        AddChild(new UiSounds(configManager));
         Callable.From(ApplyDiscreteGpuPreference).CallDeferred();
     }
 

@@ -172,6 +172,8 @@ This is the section with the worst platform divergence. Do not skip it on either
 - [ ] Light theme under both styles: text, system logos, controller glyphs, switches and the
       selection highlight are readable in the game list, settings, start menu, downloads and the
       system-jump popup.
+- [ ] Interface Sounds: moving, Select, Back and changing system each make a sound; startup and a
+      library reload make none; turning the setting off silences them at once.
 - [ ] Text follows the four styles: settings, descriptions, start menu and card titles are the same
       Body size; no new `font_size` override in scenes or code (`grep -rn "theme_override_font_sizes\|AddThemeFontSizeOverride"`).
 - [ ] Interface Size: each value applies immediately and persists; at 130% and 150% on a 1280×800

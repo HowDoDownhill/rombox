@@ -1417,6 +1417,16 @@ Controller glyphs take `Appearance.IconTint` through the buttons' icon colours. 
 a light palette tint toward its background. The vignette drops from 0.7 to 0.2, which kept the
 corners from turning grey.
 
+### Interface sounds play only after a press
+`UiSounds` lives under `AppInstance` and plays four synthesised sounds from `assets/sounds/`
+(regenerate with `python tools/ui-sounds/make_ui_sounds.py`): a tick when the selection moves, rising
+and falling notes for Select and Back, and a sweep when the system changes. It reads input from the
+root window's `WindowInput` signal, which fires before any node can mark an event handled.
+
+Focus also moves without the player: at startup, on a library reload, when a panel opens. A move
+only sounds within 400 ms of a press, and not within 200 ms of a Select, Back or system change, so
+opening a panel plays one sound. Moves closer than 35 ms apart play once.
+
 ### Palettes are hand-tuned, not derived
 Palette entries are hand-tuned rather than produced by a blanket `.Darkened()` pass: the shader mixes
 Primary and Secondary over Bg aggressively, and uniformly darkening every palette collapsed them all
@@ -1585,13 +1595,15 @@ Measured on 2026-10-07 at 1920x1080, RTX 5080, worst frame / frames over 16.7 ms
 | System switch | 275 ms / 26 | 27 ms / 19 | **17.5 ms / 1** |
 | System switch back | 163 ms / 11 | 17.5 ms / 1 | **5.5 ms / 0** |
 
-### Audio, physics and navigation run on Godot's dummy servers
-The app plays no sound and has no physics bodies or navigation. `project.godot` sets
-`audio/driver/driver`, `physics/2d|3d/physics_engine` and `navigation/2d|3d/navigation_engine` to
-`Dummy` (3D physics was Jolt). On the RTX 5080 PC, idle private memory went from ~785 MB to ~757 MB.
-Thread count stayed at ~73 and idle CPU was too noisy to compare. The audio driver matters more on
-weak CPUs: Godot's mixer thread runs continuously even when silent. If a sound is ever added, the
-audio driver goes back to the platform default. Physics stays dummy unless physics nodes arrive.
+### Physics and navigation run on Godot's dummy servers
+The app has no physics bodies or navigation. `project.godot` sets `physics/2d|3d/physics_engine`
+and `navigation/2d|3d/navigation_engine` to `Dummy` (3D physics was Jolt). Together with a dummy
+audio driver, idle private memory on the RTX 5080 PC went from ~785 MB to ~757 MB. Thread count
+stayed at ~73 and idle CPU was too noisy to compare. Physics stays dummy unless physics nodes arrive.
+
+The audio driver went back to the platform default with the interface sounds (see "Interface sounds
+play only after a press"). Godot's mixer thread runs while the app is open, including with
+Interface Sounds off: the driver is chosen at startup and cannot be swapped at runtime.
 
 ### Controller glyphs use a fixed size, not expand_icon
 The bottom-bar buttons had `expand_icon` on, and their glyphs never appeared. With `expand_icon`, a

@@ -112,6 +112,7 @@ public partial class SystemCarousel : HBoxContainer
         if (newIndex >= Systems.Count) newIndex = 0;
         SetSelectionWithTimer(newIndex, 1);
         PulseArrow(rightArrow);
+        UiSounds.Play(UiSounds.Sound.Switch);
         return true;
     }
 
@@ -122,6 +123,7 @@ public partial class SystemCarousel : HBoxContainer
         if (newIndex < 0) newIndex = Systems.Count - 1;
         SetSelectionWithTimer(newIndex, -1);
         PulseArrow(leftArrow);
+        UiSounds.Play(UiSounds.Sound.Switch);
         return true;
     }
 

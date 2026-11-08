@@ -45,6 +45,7 @@ always does and the data lands in the store.
 | `AppTheme` | Any theme listed in the app, `Match System`, or one from `themes.json`. New installs start on `Dark` |
 | `AppStyle` | `Glass` (animated background, frosted panels) or `Simple` (flat colours, redraws only on change) |
 | `AppBackground` | `Flow`, `Mesh`, `Silk`, `Horizon`, `Blobs`, `Waves`, `Aurora`, `Bokeh`, `Grid`, `Gradient`, `Solid`. Glass only |
+| `UiSounds` | `true` plays interface sounds |
 | `InterfaceSize` | `Auto`, `85%`, `100%`, `115%`, `130%`, `150%` |
 | `HideGamesWithoutBoxArt` | `true` or `false` |
 | `ShowAllSystems` | `true` shows systems with no games |

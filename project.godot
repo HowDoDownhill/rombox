@@ -19,10 +19,6 @@ config/icon="res://assets/icons/rombox.png"
 config/windows_native_icon="res://assets/icons/rombox.ico"
 config/quit_on_go_back=false
 
-[audio]
-
-driver/driver="Dummy"
-
 [autoload]
 
 AppInstance="*uid://cukewmk3ypiu7"

@@ -119,6 +119,7 @@ public partial class CarouselButton : HBoxContainer
         int newIndex = ((Selected + direction) % ItemCount + ItemCount) % ItemCount;
         Select(newIndex);
         PulseArrow(direction < 0 ? leftArrow : rightArrow);
+        UiSounds.Play(UiSounds.Sound.Move);
         EmitSignal(SignalName.ItemSelected, newIndex);
     }
 

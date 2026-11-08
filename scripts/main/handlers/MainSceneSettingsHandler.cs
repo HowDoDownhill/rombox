@@ -364,6 +364,21 @@ public class MainSceneSettingsHandler
         interfaceSizeEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(interfaceSizeFieldBox);
         vbox.AddChild(interfaceSizeEntry);
 
+        HBoxContainer uiSoundsFieldBox = new HBoxContainer();
+        Label uiSoundsLabel = new Label();
+        uiSoundsLabel.Text = "Interface Sounds";
+        uiSoundsLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        uiSoundsFieldBox.AddChild(uiSoundsLabel);
+
+        CheckButton uiSoundsCheckbox = new CheckButton();
+        uiSoundsCheckbox.ButtonPressed = appInstance.configManager.UiSoundsEnabled;
+        uiSoundsCheckbox.Toggled += (bool toggledOn) => appInstance.configManager.SaveUiSoundsEnabled(toggledOn);
+
+        uiSoundsFieldBox.AddChild(uiSoundsCheckbox);
+        var uiSoundsEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        uiSoundsEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(uiSoundsFieldBox);
+        vbox.AddChild(uiSoundsEntry);
+
         HBoxContainer discreteGpuFieldBox = new HBoxContainer();
         Label discreteGpuLabel = new Label();
         discreteGpuLabel.Text = "Prefer Discrete GPU";

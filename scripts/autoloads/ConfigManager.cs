@@ -33,6 +33,7 @@ public partial class ConfigManager : Node
     public string AppTheme { get; private set; }
     public string AppBackground { get; private set; }
     public string AppStyle { get; private set; } = Appearance.GlassStyle;
+    public bool UiSoundsEnabled { get; private set; } = true;
     public string InterfaceSize { get; private set; }
     public string GameListView { get; private set; }
 
@@ -506,6 +507,7 @@ public partial class ConfigManager : Node
         AppTheme = (string)configurationFile.GetValue("UI", "AppTheme", DefaultThemeName);
         AppBackground = (string)configurationFile.GetValue("UI", "AppBackground", "Flow");
         AppStyle = (string)configurationFile.GetValue("UI", "AppStyle", Appearance.GlassStyle);
+        UiSoundsEnabled = (bool)configurationFile.GetValue("UI", "UiSounds", true);
         InterfaceSize = (string)configurationFile.GetValue("UI", "InterfaceSize", "Auto");
         GameListView = (string)configurationFile.GetValue("UI", "GameListView", DefaultGameListView);
 
@@ -578,6 +580,7 @@ public partial class ConfigManager : Node
         AppTheme = DefaultThemeName;
         AppBackground = "Flow";
         AppStyle = Appearance.GlassStyle;
+        UiSoundsEnabled = true;
         InterfaceSize = "Auto";
         GameListView = DefaultGameListView;
 
@@ -617,6 +620,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("UI", "AppTheme", AppTheme);
         configurationFile.SetValue("UI", "AppBackground", AppBackground);
         configurationFile.SetValue("UI", "AppStyle", AppStyle);
+        configurationFile.SetValue("UI", "UiSounds", UiSoundsEnabled);
         configurationFile.SetValue("UI", "InterfaceSize", InterfaceSize);
         configurationFile.SetValue("UI", "GameListView", GameListView);
         configurationFile.SetValue("Android", "CoresSetUp", string.Join(",", androidCoresSetUp));
@@ -713,6 +717,12 @@ public partial class ConfigManager : Node
     public void SaveAppStyle(string style)
     {
         AppStyle = style;
+        SaveConfig();
+    }
+
+    public void SaveUiSoundsEnabled(bool enabled)
+    {
+        UiSoundsEnabled = enabled;
         SaveConfig();
     }
 

@@ -223,6 +223,7 @@ public partial class MainScene : Control
         {
             view.ItemSelected += GameListHandler.OnGameSelected;
             view.ItemFocused += GameListHandler.OnGameSelected;
+            view.ItemFocused += _ => UiSounds.Play(UiSounds.Sound.Move);
             view.ItemActivated += index => OnPlayDownloadButtonPressed();
             view.JumpSectionRequested += GameListHandler.OnJumpSectionRequested;
         }
