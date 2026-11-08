@@ -558,17 +558,17 @@ public class MainSceneSettingsHandler
 
         Button addToSteamButton = new Button();
         addToSteamButton.ThemeTypeVariation = "ListButton";
-        addToSteamButton.Text = "Add to Steam";
         addToSteamButton.Visible = !ControllerSetupMethod.IsLaunchedThroughSteam;
-        addToSteamButton.Pressed += mainScene.InputHandler.AddAppToSteam;
+        addToSteamButton.Pressed += mainScene.SteamHandler.StartThroughSteam;
         steamLibraryBox.AddChild(addToSteamButton);
 
         void ShowSteamLibraryStatus()
         {
-            steamLibraryStatus.Text = DescribeSteamLibraryStatus();
+            steamLibraryStatus.Text = MainSceneSteamHandler.DescribeLibraryStatus();
+            addToSteamButton.Text = MainSceneSteamHandler.DescribeLibraryAction();
         }
 
-        mainScene.InputHandler.SteamShortcutChanged += ShowSteamLibraryStatus;
+        mainScene.SteamHandler.ShortcutChanged += ShowSteamLibraryStatus;
         formContainer.VisibilityChanged += () =>
         {
             if (formContainer.Visible)
@@ -976,18 +976,4 @@ public class MainSceneSettingsHandler
         return ControllerSetupMethod.IsLaunchedThroughSteam ? "Steam Handles Your Controllers" : "Start the App From Steam to Use It";
     }
 
-    private static string DescribeSteamLibraryStatus()
-    {
-        if (ControllerSetupMethod.IsLaunchedThroughSteam)
-        {
-            return "Running From Steam";
-        }
-
-        if (SteamShortcuts.FindShortcutsFile() == null)
-        {
-            return "Steam Not Found";
-        }
-
-        return SteamShortcuts.ContainsThisApp() ? "In Your Steam Library" : "Not in Your Steam Library";
-    }
 }

@@ -231,13 +231,30 @@ lobby from the command line, so one side can be the Linux test box (`docs/LINUX-
       Linux never asks.
 - [ ] A config saved with `ControllerMappingConsent="accepted"` (the retired ViGEm method) shows the
       first-launch prompt again.
-- [ ] Add to Steam with Steam closed: `shortcuts.vdf` gains a `RomBox` entry pointing at the
-      running executable, `shortcuts.vdf.romm-backup` holds the old file, and Steam lists RomM once
-      started. Pressing it again reports RomM is already in the library and adds nothing.
-- [ ] Add to Steam with Steam running: Restart Steam closes Steam, adds the entry, and opens Steam's
-      library with RomM in it. Not Now leaves Steam and `shortcuts.vdf` untouched.
-- [ ] With no Steam install, the Steam Library row reads `Steam Not Found` and Add to Steam explains
-      what to do.
+- [ ] Started outside Steam with Steam installed (Windows and Linux), the startup offer **Play
+      RomBox through Steam?** appears before the Controller Setup prompt, with the full text visible
+      without scrolling. Not Now and Back go on to the Controller Setup prompt and the offer returns
+      next launch; Don't Ask Again stops it for good
+      (`OfferSteamLaunch=false` under `[Steam]` in `config.cfg`).
+- [ ] Add to Steam and Restart with Steam closed: `shortcuts.vdf` gains a `RomBox` entry pointing
+      at the running executable; `grid/` gains `<appid>p.png`, `<appid>.png`, `<appid>_hero.png`,
+      `<appid>_logo.png` and `<appid>_icon.png`; `localconfig.vdf` has
+      `"UseSteamControllerConfig" "2"` under `apps/<appid>`; both files have a `.rombox-backup`. Steam
+      starts, RomBox opens from it with artwork in the library, and the first copy quits.
+- [ ] The same with Steam running: Restart Steam closes Steam, then the steps above run. Not Now
+      leaves Steam and its files untouched.
+- [ ] In the Steam-started copy, **Properties > Controller** shows Steam Input enabled, the offer
+      does not appear, and the Steam Library row reads `Running Through Steam`.
+- [ ] Already in the library and started outside Steam: the offer reads **Start RomBox through
+      Steam?** and Restart Through Steam relaunches without restarting Steam.
+- [ ] Move the RomBox folder: the offer reads **Fix RomBox's Steam shortcut?**, and fixing it
+      rewrites the same entry (same appid, play time kept) to the new path.
+- [ ] Updating from 1.2.2 through `romm-frontend-windows.zip`: the app comes back as `rombox.exe`
+      and the `romm-frontend.*` files and `data_romm-frontend_*` folder are gone a few seconds
+      later. With a Steam shortcut to `romm-frontend.exe`, they stay until the shortcut is fixed.
+- [ ] A download in progress: Add to Steam explains that downloads have to finish first.
+- [ ] With no Steam install, no offer appears, the Steam Library row reads `Steam Not Found`, and
+      Add to Steam explains what to do.
 - [ ] Steam Input chosen, started outside Steam: the status reads `Start the App From Steam to Use
       It`, **Start > Assign Controllers** is hidden, and a launch logs `not starting a session: the
       app was not launched through Steam`.

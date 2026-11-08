@@ -209,6 +209,9 @@ public partial class ConfigManager : Node
     public int EmulatorCloseHotkeyCount { get; private set; }
     public float EmulatorCloseHoldSeconds { get; private set; }
     public string ControllerMappingConsent { get; private set; }
+
+    // False once the user picks Don't Ask Again on the offer to start RomBox through Steam.
+    public bool OfferSteamLaunch { get; private set; } = true;
     public Godot.Collections.Array EmulatorCloseHotkeys { get; private set; }
 
     public System.Collections.Generic.Dictionary<string, string> PreferredEmulators { get; private set; } = new System.Collections.Generic.Dictionary<string, string>();
@@ -504,6 +507,7 @@ public partial class ConfigManager : Node
         EmulatorCloseHotkeys = (Godot.Collections.Array)configurationFile.GetValue("Input", "EmulatorCloseHotkeys", defaultHotkeyButtons);
         EmulatorCloseHoldSeconds = (float)configurationFile.GetValue("Input", "EmulatorCloseHoldSeconds", DefaultEmulatorCloseHoldSeconds);
         ControllerMappingConsent = (string)configurationFile.GetValue("Input", "ControllerMappingConsent", ControllerMappingConsentUnasked);
+        OfferSteamLaunch = (bool)configurationFile.GetValue("Steam", "OfferSteamLaunch", true);
 
         if (ControllerMappingConsent == RetiredControllerMappingConsentVirtualPads)
         {
@@ -573,6 +577,7 @@ public partial class ConfigManager : Node
         EmulatorCloseHotkeys = BuildDefaultEmulatorCloseHotkeys();
         EmulatorCloseHoldSeconds = DefaultEmulatorCloseHoldSeconds;
         ControllerMappingConsent = ControllerMappingConsentUnasked;
+        OfferSteamLaunch = true;
 
         WriteAllConfigurationValues();
         configurationFile.Save(configurationFilePath);
@@ -611,6 +616,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("Input", "EmulatorCloseHotkeys", EmulatorCloseHotkeys);
         configurationFile.SetValue("Input", "EmulatorCloseHoldSeconds", EmulatorCloseHoldSeconds);
         configurationFile.SetValue("Input", "ControllerMappingConsent", ControllerMappingConsent ?? ControllerMappingConsentUnasked);
+        configurationFile.SetValue("Steam", "OfferSteamLaunch", OfferSteamLaunch);
 
         if (PreferredEmulators != null)
         {
@@ -770,6 +776,12 @@ public partial class ConfigManager : Node
     public void SaveControllerMappingConsent(string consent)
     {
         ControllerMappingConsent = consent;
+        SaveConfig();
+    }
+
+    public void SaveOfferSteamLaunch(bool offer)
+    {
+        OfferSteamLaunch = offer;
         SaveConfig();
     }
 

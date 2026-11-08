@@ -36,6 +36,12 @@ public partial class AppInstance : Node
             return;
         }
 
+        if (SteamShortcuts.RunCommandLineAddIfRequested())
+        {
+            GetTree().Quit();
+            return;
+        }
+
         LegacyNameMigration.RemoveLegacyFilesInBackground();
         Callable.From(ApplyDiscreteGpuPreference).CallDeferred();
     }

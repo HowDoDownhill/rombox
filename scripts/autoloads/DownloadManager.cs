@@ -351,6 +351,8 @@ public partial class DownloadManager : Node
         EmitSignal(SignalName.DownloadCompleted, fileName, wasSuccessful);
     }
 
+    public bool HasUnfinishedTransfers => activeDownloadEntries.Any(entry => !entry.hasFinished) || externalTransfers.Keys.Any(transfer => !transfer.hasFinished);
+
     public bool IsDownloading(string fileName)
     {
         return activeDownloadEntries.Any(entry => entry.fileName == fileName);

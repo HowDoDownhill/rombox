@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 // Installs up to 1.2.2 update by extracting the release zip over the app folder and restarting
 // romm-frontend.exe. The release ships a bridge zip under the old asset name whose executable and
 // .pck carry the old names, so that restart runs current code. That copy places rombox.exe and
-// rombox.pck beside itself, starts them and quits. The rombox copy then deletes the old files.
+// rombox.pck beside itself, starts them and quits. The rombox copy then deletes the old files,
+// unless a Steam shortcut still points at the old executable.
 public static class LegacyNameMigration
 {
     private static readonly string[] LegacyFileNames =
@@ -54,7 +55,7 @@ public static class LegacyNameMigration
             {
                 File.Copy(legacyExecutablePath, newExecutablePath);
 
-                if (!OS.HasFeature("windows"))
+                if (!OperatingSystem.IsWindows())
                 {
                     File.SetUnixFileMode(newExecutablePath, File.GetUnixFileMode(legacyExecutablePath) | UnixFileMode.UserExecute);
                 }
@@ -97,6 +98,16 @@ public static class LegacyNameMigration
 
         if (!HasLegacyFiles(appDirectory))
         {
+            return;
+        }
+
+        // A Steam shortcut to the old executable keeps working through it until the user fixes
+        // the shortcut from Settings or the startup offer, so the old files stay until then.
+        string legacyExecutablePath = Path.Combine(appDirectory, AppIdentity.LegacyFileBaseName + AppIdentity.ExecutableExtension);
+
+        if (SteamShortcuts.HasShortcutTo(legacyExecutablePath))
+        {
+            GD.Print($"[Rename] Steam still starts {legacyExecutablePath}, so the old files stay for now.");
             return;
         }
 

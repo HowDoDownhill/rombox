@@ -1003,6 +1003,56 @@ so user edits and `PreferredEmulators` overrides both survive.
 
 ## Controller handling
 
+### RomBox reaches Steam as a non-Steam shortcut it writes itself
+RomBox is not sold on Steam. A store release would have to follow the rules RetroArch lives under
+there: no in-app downloads of emulators, and cores only as reviewed DLC, which is why RetroArch on
+Steam has no Dolphin, Citra or PCSX2 core. RomBox instead adds itself to the user's library and
+restarts through it, which gives Steam Input, Game Mode, the overlay and Remote Play with one build
+and the full emulator list. Store discovery, Workshop, Steam Cloud and Steam auto-update are given
+up.
+
+`MainSceneSteamHandler` makes the offer at startup when a Windows or Linux build starts outside
+Steam (no `SteamGameId` or `SteamAppId`) and Steam is installed, before the Controller Setup
+prompt, which waits for its answer. Accepting writes, with Steam closed:
+
+- the entry in `shortcuts.vdf` (binary KeyValues, `BinaryVdf`);
+- artwork in `config/grid/` named after the 32-bit appid: `p.png` capsule, `.png` wide capsule,
+  `_hero.png`, `_logo.png`, and `_icon.png`, which the entry's `icon` field points at. The PNGs
+  come from `tools/steam-art/render_steam_art.gd` and are read back from the imported textures;
+- `"UseSteamControllerConfig" "2"` under `UserLocalConfigStore/apps/<appid>` in `localconfig.vdf`
+  (text KeyValues, `TextVdf`). 0 is off, 1 follows Steam's global setting, 2 is on. This is the key
+  Steam ROM Manager writes. It is skipped when the user chose Manual controller setup.
+
+Then it opens `steam://rungameid/<appid << 32 | 0x02000000>` and quits. A cold Steam queues that
+URL and launches the shortcut once it is signed in.
+
+Steam reads both files when it starts and writes its in-memory copy back when it exits, so a write
+while Steam runs is lost. That is why the flow closes Steam with `steam://exit` first, and why an
+entry that is already current only gets artwork and Steam Input when Steam happens to be closed.
+`TextVdf` keeps key order and escapes, and a parse-and-write of a real 190 KB `localconfig.vdf`
+came back byte-identical; `BinaryVdf` round-trips `shortcuts.vdf` the same way.
+
+The appid in the entry is authoritative. For entries it writes, RomBox stores
+`CRC32("\"<exe>\"" + name) | 0x80000000`, as Steam ROM Manager does. Entries added by hand in a
+current Windows client carry an id of Steam's own: none of three checked matched the CRC. So
+artwork, `localconfig.vdf` and `rungameid` all use the id read from the entry, and repairing an
+entry keeps its id, which keeps play time, collections and Steam's per-game controller settings.
+
+An entry counts as this app's when its `Exe` is the running executable. An outdated one is either
+`romm-frontend.exe` in this folder or an entry named RomBox or RomM Frontend whose executable no
+longer exists, which covers a moved folder. A second copy of RomBox that still exists elsewhere
+keeps its own entry. A repair keeps any name the user gave the entry, except the old app name.
+
+Known gap: a user who added `romm-frontend.exe` to Steam by hand before the rename and only ever
+starts it from Steam runs through the bridge executable (see the rename note), and the offer never
+shows because the app is under Steam. It keeps working; the shortcut is fixed the first time
+RomBox starts outside Steam or from **Settings > Input Settings**, after which the old files go.
+Repairing from inside a Steam session would need Steam closed while its child is running.
+
+`ROMBOX_STEAM_ROOT` points every lookup at another folder holding `userdata/` and
+`config/loginusers.vdf`; with it set, the editor takes part too. `rombox -- --add-to-steam`
+writes the files and exits. Together they test the write path against a copy of real Steam data.
+
 ### Controller-config macros are disabled
 The macro-driven controller-binding writer ships disabled (`static readonly`, not `const` — a const
 would be folded at compile time and make every guarded branch an unreachable-code warning). Two

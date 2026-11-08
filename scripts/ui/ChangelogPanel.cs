@@ -44,7 +44,8 @@ public partial class ChangelogPanel : UiPanel
         AndroidCoreSetup,
         AndroidExitHint,
         SteamRestart,
-        SteamShortcutOutcome
+        SteamShortcutOutcome,
+        SteamLaunchOffer
     }
 
     public PromptSubject ActiveSubject { get; private set; } = PromptSubject.ApplicationUpdate;

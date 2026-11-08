@@ -22,6 +22,7 @@ Until version 1.2.2 it was called RomM Frontend.
 - [Saves and BIOS](#saves-and-bios)
 - [Netplay](#netplay)
 - [Controllers](#controllers)
+- [Steam](#steam)
 - [Settings](#settings)
 - [Files](#files)
 - [Troubleshooting](#troubleshooting)
@@ -120,16 +121,35 @@ Any controller your PC recognises works in the app. For games:
 
 - **Windows**: start the app from Steam with Steam Input on, and the app points each emulator at
   every player's controller. At first startup the app asks how to set up controllers:
-  - **Steam Input** (recommended). Outside Steam, this choice adds RomM to your Steam library.
+  - **Steam Input** (recommended). Outside Steam, this choice adds RomBox to your Steam library
+    and restarts it from there.
   - **Manual**, to set up each emulator yourself.
 
-  **Settings > Input Settings > Add to Steam** adds RomM to Steam at any time. Steam sets player
+  **Settings > Input Settings > Add to Steam** adds RomBox to Steam at any time. Steam sets player
   order. [Controller setup](docs/CONTROLLERS.md) has a guide for each method.
 - **Linux**: emulators use your controller directly, and the app points Dolphin and gopher64 at
   each player's controller when a game starts.
 - **Mac**: emulators use your controller directly. Set up each one from its own menu
   (**Start > Launch Current Emulator**); [Controller setup](docs/CONTROLLERS.md#manual) lists where.
 - **Wii** games use real Wii Remotes over Bluetooth. Press 1+2 on the remote while the game runs.
+
+## Steam
+
+RomBox is not sold on Steam. It adds itself to your Steam library as a non-Steam game. On Windows
+and Linux, when RomBox starts outside Steam and finds Steam installed, it offers to do this and
+restart from Steam. That gets you:
+
+- **Steam Input**: every controller works, and each emulator gets the right one for every player.
+- **Steam Deck Game Mode and Big Picture**, with full controller navigation.
+- **The Steam overlay, Remote Play and Steam Link.**
+
+If you skip it, games work the same. You set up controllers in each emulator yourself, and RomBox
+stays out of Game Mode, the overlay and streaming. **Don't Ask Again** stops the offer;
+**Settings > Input Settings > Steam Library** has the same button.
+
+Steam only reads new library entries when it starts, so RomBox closes Steam if it is open, adds
+its shortcut with library artwork and Steam Input turned on, and starts itself again through
+Steam. If you move the RomBox folder, the offer comes back to fix the shortcut.
 
 ## Settings
 

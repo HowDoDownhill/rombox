@@ -157,8 +157,6 @@ public class MainSceneInputHandler
         return connectedControllers != null && connectedControllers.Count > 0 ? connectedControllers[0].GodotDeviceId : -1;
     }
 
-    private const float SteamStatusVisibleSeconds = 2.0f;
-
     private static string BuildControllerSetupOfferBody()
     {
         var body = new System.Text.StringBuilder();
@@ -173,7 +171,7 @@ public class MainSceneInputHandler
 
         if (!ControllerSetupMethod.IsLaunchedThroughSteam)
         {
-            body.Append("\nRomBox is running outside Steam right now. Choosing Steam Input adds RomBox to your Steam library; start it from there.\n");
+            body.Append("\nRomBox is running outside Steam right now. Choosing Steam Input adds RomBox to your Steam library and restarts it from there.\n");
         }
 
         body.Append("\nYou can change this at any time in Settings > Input Settings.");
@@ -220,84 +218,8 @@ public class MainSceneInputHandler
 
         if (method == ControllerSetupMethod.SteamInput && !ControllerSetupMethod.IsLaunchedThroughSteam && SteamShortcuts.IsSupportedPlatform)
         {
-            AddAppToSteam();
+            mainScene.SteamHandler.StartThroughSteam();
         }
-    }
-
-    public event Action SteamShortcutChanged;
-
-    public async void AddAppToSteam()
-    {
-        if (SteamShortcuts.FindShortcutsFile() == null)
-        {
-            ShowSteamShortcutOutcome(SteamShortcutResult.SteamNotFound);
-            return;
-        }
-
-        if (SteamShortcuts.ContainsThisApp())
-        {
-            ShowSteamShortcutOutcome(SteamShortcutResult.AlreadyAdded);
-            return;
-        }
-
-        if (SteamShortcuts.IsSteamRunning())
-        {
-            mainScene.changelogPanel?.ShowPrompt(
-                ChangelogPanel.PromptSubject.SteamRestart,
-                "[b]Restart Steam?[/b]\n\nSteam only picks up new library entries when it starts, so RomBox will close Steam, add itself, and open Steam again.",
-                "Restart Steam",
-                "Not Now");
-            return;
-        }
-
-        await FinishAddingAppToSteam(false);
-    }
-
-    public async void RestartSteamAndAddApp()
-    {
-        mainScene.progressPanel?.ShowStatus("Closing Steam...");
-        await SteamShortcuts.CloseSteam();
-
-        if (SteamShortcuts.IsSteamRunning())
-        {
-            mainScene.progressPanel?.Close();
-            ShowSteamShortcutOutcome(SteamShortcutResult.Failed, "Steam didn't close. Close Steam yourself, then choose Add to Steam in Settings > Input Settings.");
-            return;
-        }
-
-        await FinishAddingAppToSteam(true);
-    }
-
-    private async Task FinishAddingAppToSteam(bool reopenSteam)
-    {
-        mainScene.progressPanel?.ShowStatus("Adding RomBox to Steam...");
-        SteamShortcutResult result = SteamShortcuts.AddThisApp();
-
-        if (reopenSteam)
-        {
-            SteamShortcuts.OpenSteamLibrary();
-        }
-
-        await mainScene.ToSignal(mainScene.GetTree().CreateTimer(SteamStatusVisibleSeconds), "timeout");
-        mainScene.progressPanel?.Close();
-        ShowSteamShortcutOutcome(result);
-        SteamShortcutChanged?.Invoke();
-    }
-
-    private void ShowSteamShortcutOutcome(SteamShortcutResult result, string failureText = null)
-    {
-        const string steamInputSteps = "In Steam, open RomBox's Properties > Controller and choose Enable Steam Input, then start RomBox from your Steam library.";
-
-        string body = result switch
-        {
-            SteamShortcutResult.Added => $"[b]RomBox is in your Steam library.[/b]\n\n{steamInputSteps}",
-            SteamShortcutResult.AlreadyAdded => $"[b]RomBox is already in your Steam library.[/b]\n\n{steamInputSteps}",
-            SteamShortcutResult.SteamNotFound => "[b]Steam wasn't found.[/b]\n\nInstall Steam and sign in, then choose Add to Steam in Settings > Input Settings. Until then, emulators keep their own controller settings.",
-            _ => $"[b]RomBox couldn't add itself to Steam.[/b]\n\n{failureText ?? "Add it yourself: in Steam, choose Games > Add a Non-Steam Game to My Library and pick this app."}"
-        };
-
-        bool appIsInSteam = result == SteamShortcutResult.Added || result == SteamShortcutResult.AlreadyAdded;
-        mainScene.changelogPanel?.ShowPrompt(ChangelogPanel.PromptSubject.SteamShortcutOutcome, body, appIsInSteam ? "Open Steam" : "OK", "Close");
     }
 
     public void BeginControllerAssignment()

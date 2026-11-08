@@ -26,7 +26,7 @@ public class ControllerSetupMethod
 
     public static IReadOnlyList<ControllerSetupMethod> All { get; } = new[] { SteamInput, Manual };
 
-    public static bool IsLaunchedThroughSteam => !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("SteamAppId"));
+    public static bool IsLaunchedThroughSteam => SteamShortcuts.IsLaunchedThroughSteam;
 
     public static ControllerSetupMethod Recommended => SteamInput;
 

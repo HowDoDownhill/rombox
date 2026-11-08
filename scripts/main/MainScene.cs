@@ -93,6 +93,7 @@ public partial class MainScene : Control
     public MainSceneNetplayHandler NetplayHandler { get; private set; }
     public MainSceneUpdaterHandler UpdaterHandler { get; private set; }
     public MainScenePopupHandler PopupHandler { get; private set; }
+    public MainSceneSteamHandler SteamHandler { get; private set; }
 
     public UiPanel fuzzySearchPopup;
     public Label fuzzySearchLabel;
@@ -134,6 +135,7 @@ public partial class MainScene : Control
         NetplayHandler.Initialise();
         UpdaterHandler = new MainSceneUpdaterHandler(this, appInstance);
         InputHandler = new MainSceneInputHandler(this, appInstance);
+        SteamHandler = new MainSceneSteamHandler(this, appInstance);
 
         if (systemCarousel != null)
         {
@@ -482,7 +484,12 @@ public partial class MainScene : Control
     private async void OfferControllerLayerOnceTheInterfaceHasSettled()
     {
         await ToSignal(GetTree().CreateTimer(ControllerLayerOfferDelaySeconds), "timeout");
-        InputHandler.OfferControllerLayerIfNotYetAsked();
+
+        // The controller question waits until the Steam offer is answered; see MainSceneSteamHandler.
+        if (!SteamHandler.OfferIfUseful())
+        {
+            InputHandler.OfferControllerLayerIfNotYetAsked();
+        }
     }
 
     public void ApplyTheme()
@@ -1069,19 +1076,13 @@ public partial class MainScene : Control
         if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamRestart)
         {
             changelogPanel.Close();
-            InputHandler.RestartSteamAndAddApp();
+            SteamHandler.RestartSteamThenAddAndRelaunch();
             return;
         }
 
         if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamShortcutOutcome)
         {
             changelogPanel.Close();
-
-            if (SteamShortcuts.ContainsThisApp())
-            {
-                SteamShortcuts.OpenSteamLibrary();
-            }
-
             return;
         }
 
@@ -1094,6 +1095,13 @@ public partial class MainScene : Control
         {
             changelogPanel.Close();
             InputHandler.OnControllerSetupMethodChosen(ControllerSetupMethod.All[choiceIndex]);
+            return;
+        }
+
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamLaunchOffer)
+        {
+            changelogPanel.Close();
+            SteamHandler.OnOfferChoiceMade(choiceIndex);
         }
     }
 
@@ -1125,6 +1133,13 @@ public partial class MainScene : Control
         {
             changelogPanel.Close();
             InputHandler.OnControllerSetupMethodChosen(ControllerSetupMethod.Manual);
+            return;
+        }
+
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamLaunchOffer)
+        {
+            changelogPanel.Close();
+            SteamHandler.OnOfferChoiceMade(MainSceneSteamHandler.NotNowChoice);
             return;
         }
 
