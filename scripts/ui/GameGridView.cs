@@ -18,6 +18,7 @@ public partial class GameGridView : ScrollingGameListView
     public static void ConfigureCard(GameCard card)
     {
         card.CaptionEnabled = false;
+        card.RingWhenSelected = false;
     }
 
 
@@ -31,6 +32,8 @@ public partial class GameGridView : ScrollingGameListView
     protected override float ContentHeight => RowCount * RowPitch + CellGap;
 
     protected override float SelectionHighlightGrow => CellGap * 0.5f;
+
+    protected override float SelectionRingGrow => FocusHighlight.RingGap;
 
     protected override bool HandleNavigation(InputEvent @event)
     {

@@ -13,7 +13,9 @@ public static class SelectionHighlighter
         viewport.GetTree().ProcessFrame += OnProcessFrame;
     }
 
-    public static void Set(Control item, Control area, bool selected, float grow = 0.0f)
+    // A ringGrow marks a game in the grid or list: under Simple the indicator draws the accent ring
+    // that far outside the area. Glass keeps the usual indicator grown by grow.
+    public static void Set(Control item, Control area, bool selected, float grow = 0.0f, float? ringGrow = null)
     {
         if (!GodotObject.IsInstanceValid(item) || !GodotObject.IsInstanceValid(area) || item.GetParent() is not Control host || !host.IsInsideTree())
         {
@@ -28,7 +30,7 @@ public static class SelectionHighlighter
                 indicatorsByHost[host.GetInstanceId()] = indicator;
             }
 
-            indicator.MoveTo(area, grow);
+            indicator.MoveTo(area, grow, ringGrow);
         }
 
         else if (indicatorsByHost.TryGetValue(host.GetInstanceId(), out SelectionIndicator indicator))
@@ -78,6 +80,6 @@ public static class SelectionHighlighter
     private static bool IsListButton(Control control)
     {
         return control is Button button
-            && (button.ThemeTypeVariation == "ListButton" || button.ThemeTypeVariation == "TitleButton");
+            && (button.ThemeTypeVariation == "ListButton" || button.ThemeTypeVariation == "TitleButton" || button.ThemeTypeVariation == "WarningListButton");
     }
 }

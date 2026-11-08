@@ -42,8 +42,9 @@ always does and the data lands in the store.
 | Key | Values |
 |---|---|
 | `GameListView` | `Carousel`, `Grid`, `List` |
-| `AppTheme` | Any theme listed in the app, `Match System`, or one from `themes.json` |
-| `AppBackground` | `Flow`, `Mesh`, `Silk`, `Horizon`, `Blobs`, `Waves`, `Aurora`, `Bokeh`, `Grid`, `Gradient`, `Solid` |
+| `AppTheme` | Any theme listed in the app, `Match System`, or one from `themes.json`. New installs start on `Dark` |
+| `AppStyle` | `Glass` (animated background, frosted panels) or `Simple` (flat colours, redraws only on change) |
+| `AppBackground` | `Flow`, `Mesh`, `Silk`, `Horizon`, `Blobs`, `Waves`, `Aurora`, `Bokeh`, `Grid`, `Gradient`, `Solid`. Glass only |
 | `InterfaceSize` | `Auto`, `85%`, `100%`, `115%`, `130%`, `150%` |
 | `HideGamesWithoutBoxArt` | `true` or `false` |
 | `ShowAllSystems` | `true` shows systems with no games |
@@ -211,3 +212,5 @@ accents, and the panel tint with its transparency:
   "My Theme": { "bg": "#05070d", "primary": "#13215a", "secondary": "#0a4a6e", "panel": "#080c1a8c" }
 }
 ```
+
+A theme whose base colour is light gets dark text, as the built-in Light theme does.

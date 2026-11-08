@@ -32,6 +32,9 @@ public abstract partial class ScrollingGameListView : GameListView
 
     protected abstract float SelectionHighlightGrow { get; }
 
+    // How far outside the selected item the Simple accent ring sits.
+    protected abstract float SelectionRingGrow { get; }
+
     public override void _Ready()
     {
         base._Ready();
@@ -78,7 +81,7 @@ public abstract partial class ScrollingGameListView : GameListView
 
         if (BoundCards.TryGetValue(SelectedIndex, out Control selectedCard))
         {
-            SelectionHighlighter.Set(selectedCard, selectedCard, true, SelectionHighlightGrow);
+            SelectionHighlighter.Set(selectedCard, selectedCard, true, SelectionHighlightGrow, SelectionRingGrow);
         }
 
         NotifyItemFocused();

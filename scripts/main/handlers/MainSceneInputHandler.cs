@@ -375,7 +375,7 @@ public class MainSceneInputHandler
 
         Label title = new Label();
         title.Text = "Controller Mappings";
-        title.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.8f));
+        title.ThemeTypeVariation = "MutedLabel";
         vbox.AddChild(title);
 
         int maxControllers = meta.ControllerConfig.MaxControllers > 0 ? meta.ControllerConfig.MaxControllers : 1;
@@ -394,7 +394,7 @@ public class MainSceneInputHandler
 
             Label playerLabel = new Label();
             playerLabel.Text = $"Player {currentPlayerIndex + 1}";
-            playerLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.8f, 1.0f));
+            playerLabel.ThemeTypeVariation = "AccentLabel";
             playerBox.AddChild(playerLabel);
 
             foreach (var kvp in meta.ControllerConfig.PlatformLayout)

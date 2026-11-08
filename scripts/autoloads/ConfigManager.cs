@@ -32,6 +32,7 @@ public partial class ConfigManager : Node
     public bool PreferDiscreteGpu { get; private set; }
     public string AppTheme { get; private set; }
     public string AppBackground { get; private set; }
+    public string AppStyle { get; private set; } = Appearance.GlassStyle;
     public string InterfaceSize { get; private set; }
     public string GameListView { get; private set; }
 
@@ -71,11 +72,16 @@ public partial class ConfigManager : Node
 
     public const string SystemThemeName = "Match System";
 
+    // The theme a new install starts with, and the fallback when Match System has no palette for a system.
+    public const string DefaultThemeName = "Dark";
+
     public static bool IsSystemTheme(string themeName) => themeName == SystemThemeName;
 
     private static readonly System.Collections.Generic.Dictionary<string, (Color Bg, Color Primary, Color Secondary, Color Panel)> BuiltInThemes = new System.Collections.Generic.Dictionary<string, (Color Bg, Color Primary, Color Secondary, Color Panel)>
     {
         { "Default", (new Color("#0a0713"), new Color("#341052"), new Color("#123a63"), new Color("#100c1a8c")) },
+        { "Light", (new Color("#ebecf0"), new Color("#cfd8ea"), new Color("#2f6fd6"), new Color("#ffffffb3")) },
+        { "Dark", (new Color("#2b2c30"), new Color("#3b3d44"), new Color("#2f6fd6"), new Color("#34363c8c")) },
         { "Midnight", (new Color("#04060d"), new Color("#13215a"), new Color("#0a4a6e"), new Color("#080c1a8c")) },
         { "Obsidian", (new Color("#0a0908"), new Color("#523312"), new Color("#7a5f22"), new Color("#13110e8c")) },
         { "Amethyst", (new Color("#0b0612"), new Color("#3a1a66"), new Color("#6e1c52"), new Color("#140c1f8c")) },
@@ -497,8 +503,9 @@ public partial class ConfigManager : Node
         PreferDiscreteGpu = (bool)configurationFile.GetValue("Graphics", "PreferDiscreteGpu", true);
         HideGamesWithoutBoxArt = (bool)configurationFile.GetValue("UI", "HideGamesWithoutBoxArt", false);
         ShowAllSystems = (bool)configurationFile.GetValue("UI", "ShowAllSystems", false);
-        AppTheme = (string)configurationFile.GetValue("UI", "AppTheme", "Default");
+        AppTheme = (string)configurationFile.GetValue("UI", "AppTheme", DefaultThemeName);
         AppBackground = (string)configurationFile.GetValue("UI", "AppBackground", "Flow");
+        AppStyle = (string)configurationFile.GetValue("UI", "AppStyle", Appearance.GlassStyle);
         InterfaceSize = (string)configurationFile.GetValue("UI", "InterfaceSize", "Auto");
         GameListView = (string)configurationFile.GetValue("UI", "GameListView", DefaultGameListView);
 
@@ -568,8 +575,9 @@ public partial class ConfigManager : Node
         RomMValidLoginLastUsed = false;
         HideGamesWithoutBoxArt = false;
         ShowAllSystems = false;
-        AppTheme = "Default";
+        AppTheme = DefaultThemeName;
         AppBackground = "Flow";
+        AppStyle = Appearance.GlassStyle;
         InterfaceSize = "Auto";
         GameListView = DefaultGameListView;
 
@@ -608,6 +616,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("UI", "ShowAllSystems", ShowAllSystems);
         configurationFile.SetValue("UI", "AppTheme", AppTheme);
         configurationFile.SetValue("UI", "AppBackground", AppBackground);
+        configurationFile.SetValue("UI", "AppStyle", AppStyle);
         configurationFile.SetValue("UI", "InterfaceSize", InterfaceSize);
         configurationFile.SetValue("UI", "GameListView", GameListView);
         configurationFile.SetValue("Android", "CoresSetUp", string.Join(",", androidCoresSetUp));
@@ -698,6 +707,12 @@ public partial class ConfigManager : Node
     public void SaveAppBackground(string backgroundStyle)
     {
         AppBackground = backgroundStyle;
+        SaveConfig();
+    }
+
+    public void SaveAppStyle(string style)
+    {
+        AppStyle = style;
         SaveConfig();
     }
 

@@ -18,6 +18,9 @@ public partial class GameTextListView : ScrollingGameListView
 
     protected override float SelectionHighlightGrow => 0.0f;
 
+    // Rows have no visible box, so the ring traces the row's own edge.
+    protected override float SelectionRingGrow => 0.0f;
+
     protected override void PrepareLayout()
     {
         Font font = GetThemeFont("font", "Label");

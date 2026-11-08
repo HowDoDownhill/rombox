@@ -62,7 +62,40 @@ public static class ControllerGlyph
         button.IconAlignment = HorizontalAlignment.Left;
         button.AddThemeConstantOverride("h_separation", GlyphSpacing);
         glyphButtons.Add(glyphButton);
+        TintIcon(button);
         ShowPrompt(glyphButton);
+
+        if (!followsAppearance)
+        {
+            followsAppearance = true;
+            Appearance.Changed += TintAllIcons;
+        }
+    }
+
+    private static bool followsAppearance;
+
+    // The glyphs are drawn white for dark screens; on a light palette they take the icon tint.
+    private static void TintIcon(Button button)
+    {
+        Color tint = Appearance.IconTint;
+        foreach (string state in new[] { "icon_normal_color", "icon_focus_color", "icon_hover_color", "icon_pressed_color", "icon_hover_pressed_color" })
+        {
+            button.AddThemeColorOverride(state, tint);
+        }
+        button.AddThemeColorOverride("icon_disabled_color", new Color(tint, 0.4f));
+    }
+
+    private static void TintAllIcons()
+    {
+        glyphButtons.RemoveAll(entry => !entry.Button.TryGetTarget(out Button button) || !GodotObject.IsInstanceValid(button));
+
+        foreach (GlyphButton glyphButton in glyphButtons)
+        {
+            if (glyphButton.Button.TryGetTarget(out Button button))
+            {
+                TintIcon(button);
+            }
+        }
     }
 
     private static void FollowLastController()

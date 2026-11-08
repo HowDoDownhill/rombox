@@ -157,8 +157,11 @@ Open **Start > Settings**.
 
 - **Game List Settings**: Carousel, Grid or List view, hiding games without cover art, and
   showing empty systems.
-- **General Settings**: app theme, background style, interface size (useful on a TV or a
-  handheld), and on Windows a preference for the dedicated GPU.
+- **General Settings**: style, app theme, background style, interface size (useful on a TV or a
+  handheld), and on Windows a preference for the dedicated GPU. **Glass** has
+  animated backgrounds and frosted panels. **Simple** uses flat colours and redraws the screen only
+  when something changes, which is easier on laptops and handhelds. The **Light** and **Dark**
+  themes suit Simple, and every other theme works with it too.
 - **Input Settings**: the combination that closes an emulator and how long to hold it, and on
   Windows the Controller Setup method.
 - **Each system**: which emulator it uses and that emulator's options, such as resolution or,

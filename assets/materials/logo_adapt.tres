@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/logo_adapt.gdshader" id="1_logo"]
+
+[resource]
+shader = ExtResource("1_logo")
+shader_parameter/strength = 0.0
+shader_parameter/ink_color = Color(0.11, 0.12, 0.14, 1)

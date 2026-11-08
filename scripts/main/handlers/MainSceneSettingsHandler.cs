@@ -81,7 +81,6 @@ public class MainSceneSettingsHandler
         var label = new Label();
         label.Text = headerName;
         label.ThemeTypeVariation = "CaptionLabel";
-        label.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f, 1f));
 
         var margin = new MarginContainer();
         margin.AddThemeConstantOverride("margin_top", 20);
@@ -235,6 +234,30 @@ public class MainSceneSettingsHandler
         scrollContainer.AddChild(vbox);
         mainScene.sectionOptionsContainer.AddChild(formContainer);
 
+        HBoxContainer styleFieldBox = new HBoxContainer();
+        Label styleLabel = new Label();
+        styleLabel.Text = "Style";
+        styleLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        styleFieldBox.AddChild(styleLabel);
+
+        CarouselButton styleOptionButton = new CarouselButton();
+        int selectedStyleIdx = 0;
+
+        for (int i = 0; i < Appearance.Styles.Length; i++)
+        {
+            styleOptionButton.AddItem(Appearance.Styles[i], i);
+            if (Appearance.Styles[i] == appInstance.configManager.AppStyle)
+            {
+                selectedStyleIdx = i;
+            }
+        }
+
+        styleOptionButton.Select(selectedStyleIdx);
+        styleFieldBox.AddChild(styleOptionButton);
+        var styleEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        styleEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(styleFieldBox);
+        vbox.AddChild(styleEntry);
+
         HBoxContainer fieldBox = new HBoxContainer();
         Label label = new Label();
         label.Text = "App Theme";
@@ -298,7 +321,17 @@ public class MainSceneSettingsHandler
         backgroundFieldBox.AddChild(backgroundOptionButton);
         var backgroundEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
         backgroundEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(backgroundFieldBox);
+        backgroundEntry.Visible = appInstance.configManager.AppStyle != Appearance.SimpleStyle;
         vbox.AddChild(backgroundEntry);
+
+        // Simple has one flat background, so the background choice only shows under Glass.
+        styleOptionButton.ItemSelected += (long index) =>
+        {
+            string style = styleOptionButton.GetItemText((int)index);
+            appInstance.configManager.SaveAppStyle(style);
+            backgroundEntry.Visible = style != Appearance.SimpleStyle;
+            mainScene.ApplyTheme();
+        };
 
         HBoxContainer interfaceSizeFieldBox = new HBoxContainer();
         Label interfaceSizeLabel = new Label();
@@ -507,7 +540,7 @@ public class MainSceneSettingsHandler
         controllerSetupBox.AddChild(controllerSetupLabel);
 
         Label controllerSetupStatus = new Label();
-        controllerSetupStatus.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
+        controllerSetupStatus.ThemeTypeVariation = "MutedLabel";
         controllerSetupBox.AddChild(controllerSetupStatus);
 
         CarouselButton controllerSetupOptionButton = new CarouselButton();
@@ -553,7 +586,7 @@ public class MainSceneSettingsHandler
         steamLibraryBox.AddChild(steamLibraryLabel);
 
         Label steamLibraryStatus = new Label();
-        steamLibraryStatus.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
+        steamLibraryStatus.ThemeTypeVariation = "MutedLabel";
         steamLibraryBox.AddChild(steamLibraryStatus);
 
         Button addToSteamButton = new Button();
@@ -842,7 +875,7 @@ public class MainSceneSettingsHandler
             + $"{selectedEmulatorDisplayName} keeps its own saves, so those will not carry over.";
         warningLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         warningLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        warningLabel.AddThemeColorOverride("font_color", new Color(1f, 0.78f, 0.35f, 1f));
+        warningLabel.ThemeTypeVariation = "WarningLabel";
 
         var warningEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
         warningEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(warningLabel);

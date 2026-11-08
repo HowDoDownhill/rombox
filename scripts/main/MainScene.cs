@@ -65,7 +65,7 @@ public partial class MainScene : Control
     [Export] public ChangelogPanel changelogPanel;
 
     [ExportGroup("Panel Frost")]
-    [Export(PropertyHint.Range, "0,1,0.01")] public float panelLuminosityFloor = 0.14f;
+    [Export(PropertyHint.Range, "0,1,0.01")] public float panelLuminosityFloor = Appearance.DefaultLuminosityFloor;
 
     [ExportGroup("Panel Shadow")]
     [Export(PropertyHint.Range, "0,120,1")] public int panelShadowSize = MicaShadow.DefaultSize;
@@ -239,7 +239,30 @@ public partial class MainScene : Control
         OfferControllerLayerOnceTheInterfaceHasSettled();
         CaptureLayoutIfRequested();
         RunBenchmarkIfRequested();
+        RunRedrawProbeIfRequested();
         WriteControllerReportIfRequested();
+    }
+
+    private const string RedrawProbeArgument = "--ui-redraw-probe";
+    private const double RedrawProbeSettleSeconds = 8.0;
+    private const double RedrawProbeSeconds = 5.0;
+
+    // Logs how many frames Godot drew while the interface sat idle, then quits. Under the Simple
+    // style low-processor mode should leave this near zero; Glass redraws every frame.
+    private async void RunRedrawProbeIfRequested()
+    {
+        if (!OS.GetCmdlineUserArgs().Contains(RedrawProbeArgument))
+        {
+            return;
+        }
+
+        await ToSignal(GetTree().CreateTimer(RedrawProbeSettleSeconds), SceneTreeTimer.SignalName.Timeout);
+        int framesBefore = Engine.GetFramesDrawn();
+        await ToSignal(GetTree().CreateTimer(RedrawProbeSeconds), SceneTreeTimer.SignalName.Timeout);
+        int framesDrawn = Engine.GetFramesDrawn() - framesBefore;
+
+        GD.Print($"[Redraw] {ActiveStyleName}: {framesDrawn} frames drawn in {RedrawProbeSeconds} s idle (low-processor mode {OS.LowProcessorUsageMode})");
+        GetTree().Quit();
     }
 
     private const string ControllerReportArgument = "--controller-report";
@@ -315,6 +338,7 @@ public partial class MainScene : Control
     private const string LayoutCaptureControllerArgument = "--ui-capture-controller";
     private const string LayoutCaptureGameViewArgumentPrefix = "--ui-capture-game-view=";
     private const string LayoutCaptureBackgroundArgumentPrefix = "--ui-capture-background=";
+    private const string LayoutCaptureStyleArgumentPrefix = "--ui-capture-style=";
 
     private string previewThemeName;
     private string previewBackgroundName;
@@ -322,6 +346,8 @@ public partial class MainScene : Control
     private string ActiveThemeName => previewThemeName ?? CaptureArgument(LayoutCaptureThemeArgumentPrefix) ?? appInstance.configManager.AppTheme;
 
     private string ActiveBackgroundName => previewBackgroundName ?? CaptureArgument(LayoutCaptureBackgroundArgumentPrefix) ?? appInstance.configManager.AppBackground;
+
+    private string ActiveStyleName => CaptureArgument(LayoutCaptureStyleArgumentPrefix) ?? appInstance.configManager.AppStyle;
 
     public void PreviewAppearance(string themeName, string backgroundName)
     {
@@ -401,6 +427,8 @@ public partial class MainScene : Control
         }
 
         await ToSignal(GetTree().CreateTimer(LayoutCaptureSettleSeconds - LayoutCaptureViewDelaySeconds), SceneTreeTimer.SignalName.Timeout);
+        // Low-processor mode (Simple style) draws nothing while the screen is still, so ask for a frame.
+        QueueRedraw();
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 
         Image capturedFrame = GetViewport().GetTexture().GetImage();
@@ -496,49 +524,8 @@ public partial class MainScene : Control
     {
         if (TryResolveThemeColors(out var colors))
         {
-            var bgMaterial = GD.Load<ShaderMaterial>("res://assets/materials/moving_background.tres");
-            if (bgMaterial != null)
-            {
-                var bgShader = GD.Load<Shader>(ConfigManager.BackgroundShaderPath(ActiveBackgroundName));
-                if (bgShader != null && bgMaterial.Shader != bgShader)
-                {
-                    bgMaterial.Shader = bgShader;
-                }
-
-                bgMaterial.SetShaderParameter("bg_color", colors.Bg);
-                bgMaterial.SetShaderParameter("primary_color", colors.Primary);
-                bgMaterial.SetShaderParameter("secondary_color", colors.Secondary);
-            }
-
-            var panelMaterial = GD.Load<ShaderMaterial>("res://assets/materials/mica_panel.tres");
-            if (panelMaterial != null)
-            {
-                Color tint = GetDarkestColor(colors.Bg, colors.Primary, colors.Secondary);
-                tint.A = colors.Panel.A;
-                panelMaterial.SetShaderParameter("mix_color", tint);
-                panelMaterial.SetShaderParameter("luminosity_floor", panelLuminosityFloor);
-            }
-
-            ApplyProgressBarAccent(colors.Primary, colors.Secondary);
+            Appearance.Apply(ActiveStyleName, ActiveBackgroundName, colors, panelLuminosityFloor);
         }
-    }
-
-    private const float ProgressAccentSaturation = 0.5f;
-    private const float ProgressAccentValue = 1.0f;
-    private const float ProgressGlowAlpha = 0.35f;
-
-    private static void ApplyProgressBarAccent(Color primary, Color secondary)
-    {
-        if (ThemeDB.GetProjectTheme()?.GetStylebox("fill", "ProgressBar") is not StyleBoxFlat fill)
-        {
-            return;
-        }
-
-        Color source = primary.S * primary.V >= secondary.S * secondary.V ? primary : secondary;
-        Color accent = Color.FromHsv(source.H, ProgressAccentSaturation, ProgressAccentValue);
-
-        fill.BgColor = accent;
-        fill.ShadowColor = new Color(accent, ProgressGlowAlpha);
     }
 
     private bool TryResolveThemeColors(out (Color Bg, Color Primary, Color Secondary, Color Panel) colors)
@@ -553,7 +540,7 @@ public partial class MainScene : Control
                 colors = derived.Value;
                 return true;
             }
-            return ConfigManager.Themes.TryGetValue("Default", out colors);
+            return ConfigManager.Themes.TryGetValue(ConfigManager.DefaultThemeName, out colors);
         }
 
         return ConfigManager.Themes.TryGetValue(currentTheme, out colors);
@@ -568,22 +555,6 @@ public partial class MainScene : Control
             if (systems == null || index < 0 || index >= systems.Count) return null;
             return systems[index];
         }
-    }
-
-    private static Color GetDarkestColor(params Color[] candidates)
-    {
-        Color darkest = candidates[0];
-        float min = float.MaxValue;
-        foreach (var c in candidates)
-        {
-            float luminance = 0.2126f * c.R + 0.7152f * c.G + 0.0722f * c.B;
-            if (luminance < min)
-            {
-                min = luminance;
-                darkest = c;
-            }
-        }
-        return darkest;
     }
 
     private void OnReleasePickerClosed()

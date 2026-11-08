@@ -8,15 +8,21 @@ public sealed class SelectionIndicator
     private const float InvisibleAlpha = 0.01f;
     private const float FreshStartAlpha = 0.05f;
 
-    private static readonly StyleBoxFlat Style = FocusHighlight.CreateIndicatorStyle();
 
     private readonly Control host;
     private readonly Rid canvasItem;
     private Control target;
     private float grow;
+    private float? ringGrow;
     private Rect2 currentRect;
     private float alpha;
     private bool active;
+
+    // What was last drawn. Redrawing an unchanged indicator every frame would keep Godot's
+    // low-processor mode from ever skipping a frame.
+    private Rect2 drawnRect;
+    private float drawnAlpha = -1.0f;
+    private int drawnStyleVersion = -1;
 
     public SelectionIndicator(Control host)
     {
@@ -28,10 +34,15 @@ public sealed class SelectionIndicator
 
     public bool IsHostValid => GodotObject.IsInstanceValid(host) && host.IsInsideTree();
 
-    public void MoveTo(Control area, float areaGrow)
+    private bool DrawsRing => ringGrow.HasValue && Appearance.IsSimple;
+
+    private StyleBox Style => DrawsRing ? FocusHighlight.RingStyle : FocusHighlight.IndicatorStyle;
+
+    public void MoveTo(Control area, float areaGrow, float? areaRingGrow = null)
     {
         target = area;
         grow = areaGrow;
+        ringGrow = areaRingGrow;
         active = true;
 
         if (alpha < FreshStartAlpha && TryResolveTargetRect(out Rect2 startRect))
@@ -79,6 +90,15 @@ public sealed class SelectionIndicator
             alpha = 0.0f;
         }
 
+        if (currentRect == drawnRect && alpha == drawnAlpha && FocusHighlight.StyleVersion == drawnStyleVersion)
+        {
+            return;
+        }
+
+        drawnRect = currentRect;
+        drawnAlpha = alpha;
+        drawnStyleVersion = FocusHighlight.StyleVersion;
+
         RenderingServer.CanvasItemClear(canvasItem);
 
         if (alpha > 0.0f)
@@ -105,7 +125,7 @@ public sealed class SelectionIndicator
         Transform2D toHost = host.GetGlobalTransform().AffineInverse() * target.GetGlobalTransform();
         Vector2 start = toHost * Vector2.Zero;
         Vector2 end = toHost * target.Size;
-        rect = new Rect2(start, end - start).Abs().Grow(grow);
+        rect = new Rect2(start, end - start).Abs().Grow(DrawsRing ? ringGrow.Value : grow);
         return true;
     }
 }

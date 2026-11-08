@@ -1233,10 +1233,11 @@ have picked up list styling too.
 
 Progress bars are styled once in the theme: a 12-unit rounded track at 10% white and a rounded fill
 with a soft glow (`shadow_size` 6 at 35%). The percentage text Godot draws inside the bar is off on
-every bar; the surrounding labels already state progress. `MainScene.ApplyProgressBarAccent` tints
-the fill from the app theme: the hue of whichever of `primary` / `secondary` is more vivid
-(saturation x value), at saturation 0.5 and full value. Lightening the theme colour toward white
-instead turned every dark theme into the same washed-out grey-blue. The loading screen runs before
+every bar; the surrounding labels already state progress. The fill takes `Appearance.Accent`: the
+hue of whichever of `primary` / `secondary` is more vivid (saturation x value), at saturation 0.5
+and full value on dark palettes and 0.75 / 0.78 on light ones, or a neutral grey when the palette
+has no hue. Lightening the theme colour toward white instead turned every dark theme into the same
+washed-out grey-blue. The loading screen runs before
 any theme is applied and shows the theme file's default fill.
 
 Larger text needed two layout changes. The settings sidebar scrolled sideways once names outgrew it;
@@ -1368,6 +1369,53 @@ styles lift the accents themselves.
 
 `--ui-capture-theme=` and `--ui-capture-background=` override the saved choices for one capture run
 without writing the config.
+
+### Simple style draws only when something changes
+`Appearance` holds the two styles. Glass is the animated background plus frosted panels. Simple
+swaps the shaders on the two shared materials: `bg_flat.gdshader` on `moving_background.tres` and
+`flat_panel.gdshader` on `mica_panel.tres`. Each declares the uniforms of the shaders it replaces,
+so the values survive a switch back. Then it turns on `OS.LowProcessorUsageMode`.
+
+Low-processor mode only skips frames when nothing marks the canvas dirty. Three things did:
+
+- every background calls `finish()`, whose grain reads `TIME`, and a shader reading `TIME` makes
+  Godot redraw every frame. `bg_flat` reads no `TIME` and has no grain;
+- the mica shader samples the screen, which costs a back-buffer copy per panel. `flat_panel` fills
+  the stylebox shape with one opaque colour;
+- `SelectionIndicator` cleared and redrew its canvas item every frame, settled or not. It now
+  redraws only when its rect, alpha or `FocusHighlight.StyleVersion` changed.
+
+`-- --ui-redraw-probe` waits for the UI to settle, counts `Engine.GetFramesDrawn()` over five idle
+seconds and quits. Simple drew 0 frames and Glass 85 on the development PC. `--ui-capture-style=`
+overrides the saved style for one run. The layout capture asks for a redraw before it waits for
+`FramePostDraw`, since under Simple an idle screen never sends one.
+
+Simple panels are the palette background lifted 8% toward white on dark palettes and 70% on light
+ones, which is near white. Simple marks the selection with a 3-unit accent border on the shared
+indicator. The selected game gets a 4-unit accent ring with no fill in every view. The carousel draws
+it on the card itself (`GameCard`'s ring style, a duplicate of the scene's focus style), 6 units
+outside the card. The grid and list views pass a `ringGrow` to `SelectionHighlighter.Set`, and their
+gliding indicator then draws `FocusHighlight.RingStyle` that far outside the item: `RingGap` (6) for
+grid cards, 0 for list rows, which have no visible box. The indicator picks the style and grow when it
+resolves its rect, so switching style while the app runs glides the indicator to the new shape.
+Switches are drawn as SVG in the accent colour, because Godot's switch is pale grey.
+
+### Light palettes switch the text colours at runtime
+A palette is light when its background's luminance is above 0.5. `Appearance` then writes dark text
+colours into the project theme (`Label`, `Button`, `LineEdit`, `CaptionLabel`, `RichTextLabel` and
+the `MutedLabel`, `WarningLabel`, `AccentLabel` and `WarningListButton` variations), and white
+washes such as a pressed row or the progress track become black at a lower alpha. Labels that used
+to set a colour override in code use those variations, so a palette change reaches forms that were
+built earlier. `Theme.SetColor` always announces a change and every control then re-reads its
+theme, so values are only written when they differ: under Match System a system switch would
+otherwise relayout the whole UI.
+
+Platform logos and the list rows' installed icon use `logo_adapt.tres`. Many logos are white
+wordmarks, so on a light palette the shader maps grey pixels from white toward the text colour and
+leaves coloured pixels alone, which keeps the Dreamcast swirl orange while its wordmark turns dark.
+Controller glyphs take `Appearance.IconTint` through the buttons' icon colours. Frosted panels over
+a light palette tint toward its background. The vignette drops from 0.7 to 0.2, which kept the
+corners from turning grey.
 
 ### Palettes are hand-tuned, not derived
 Palette entries are hand-tuned rather than produced by a blanket `.Darkened()` pass: the shader mixes

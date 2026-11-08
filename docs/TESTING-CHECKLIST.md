@@ -164,6 +164,14 @@ This is the section with the worst platform divergence. Do not skip it on either
 - [ ] Panel open/close, section transitions, and the panel stack behave with both mouse and controller.
 - [ ] Theme and background changes apply. Mesh, Silk and Horizon animate smoothly at the
       display's native resolution (4K on the laptop) with no banding in the dark areas.
+- [ ] Style: switching Glass and Simple applies at once, and Background Style shows only under
+      Glass. `-- --ui-redraw-probe --ui-capture-style=Simple` logs `0 frames drawn` (Glass logs
+      dozens).
+- [ ] Simple: the selected game has an accent ring in the carousel, grid and list. In the grid and
+      list it glides to the next game when the selection moves.
+- [ ] Light theme under both styles: text, system logos, controller glyphs, switches and the
+      selection highlight are readable in the game list, settings, start menu, downloads and the
+      system-jump popup.
 - [ ] Text follows the four styles: settings, descriptions, start menu and card titles are the same
       Body size; no new `font_size` override in scenes or code (`grep -rn "theme_override_font_sizes\|AddThemeFontSizeOverride"`).
 - [ ] Interface Size: each value applies immediately and persists; at 130% and 150% on a 1280×800

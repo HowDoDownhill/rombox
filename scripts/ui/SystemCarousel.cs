@@ -37,6 +37,29 @@ public partial class SystemCarousel : HBoxContainer
         MakeClickable(rightArrow, ev => HandleArrowClick(ev, true));
         MakeClickable(systemIcon, HandleLogoClick);
         MakeClickable(systemLabel, HandleLogoClick);
+
+        if (systemIcon != null)
+        {
+            systemIcon.Material = Appearance.LogoMaterial;
+        }
+
+        RestArrows();
+    }
+
+    public override void _EnterTree()
+    {
+        Appearance.Changed += RestArrows;
+    }
+
+    public override void _ExitTree()
+    {
+        Appearance.Changed -= RestArrows;
+    }
+
+    private void RestArrows()
+    {
+        if (leftArrow != null) leftArrow.SelfModulate = ArrowRestingTint;
+        if (rightArrow != null) rightArrow.SelfModulate = ArrowRestingTint;
     }
 
     private void MakeClickable(Control control, Control.GuiInputEventHandler onGuiInput)
@@ -103,8 +126,8 @@ public partial class SystemCarousel : HBoxContainer
     }
 
     private const float ArrowPulseSeconds = 0.22f;
-    private static readonly Color ArrowRestingTint = new Color(0.635f, 0.659f, 0.733f, 0.85f);
-    private static readonly Color ArrowActiveTint = new Color(0.961f, 0.965f, 0.98f, 1.0f);
+    private static Color ArrowRestingTint => new Color(Appearance.CaptionText, 0.85f);
+    private static Color ArrowActiveTint => Appearance.StrongText;
 
     private const float ArrowPulseScale = 1.18f;
 

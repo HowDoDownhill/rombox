@@ -100,14 +100,7 @@ public partial class ReleasePickerPopup : UiPanel
                 CustomMinimumSize = new Vector2(400, 44)
             };
             entryBtn.Text = BuildEntryText(release, installedVersion);
-            entryBtn.ThemeTypeVariation = "ListButton";
-
-            if (EmulatorVersions.IsDowngrade(release.VersionLabel, installedVersion))
-            {
-                entryBtn.AddThemeColorOverride("font_color", DowngradeColor);
-                entryBtn.AddThemeColorOverride("font_hover_color", DowngradeColor);
-                entryBtn.AddThemeColorOverride("font_focus_color", DowngradeColor);
-            }
+            entryBtn.ThemeTypeVariation = EmulatorVersions.IsDowngrade(release.VersionLabel, installedVersion) ? "WarningListButton" : "ListButton";
 
             entryBtn.Pressed += () =>
             {
@@ -124,8 +117,6 @@ public partial class ReleasePickerPopup : UiPanel
             releaseListContainer.GetChild<Button>(0).GrabFocus();
         }
     }
-
-    private static readonly Color DowngradeColor = new Color(1.0f, 0.72f, 0.42f);
 
     private static string BuildEntryText(ReleaseOption release, string installedVersion)
     {

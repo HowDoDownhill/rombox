@@ -8,7 +8,7 @@ public partial class GameListRow : Control, IGameListItem
     private const float RestingTextAlpha = 0.72f;
 
     private readonly Label titleLabel = new Label();
-    private readonly TextureRect installedIcon = new TextureRect();
+    private readonly TextureRect installedIcon = new TextureRect { Material = Appearance.LogoMaterial };
     private bool selected;
 
     public bool ShowsCover => false;

@@ -32,6 +32,10 @@ public partial class GameCard : Control, ICarouselItem, IGameListItem
 
     public bool CaptionEnabled { get; set; } = true;
 
+    // The carousel marks its selected card on the card itself. The grid draws a selection indicator
+    // around the card instead, so its cards keep only the shadow.
+    public bool RingWhenSelected { get; set; } = true;
+
     public float FrameCoverAspect { get; set; }
 
     public float TextureAspect
@@ -112,6 +116,72 @@ public partial class GameCard : Control, ICarouselItem, IGameListItem
             selected = value;
             FocusPanel.Visible = value;
             CardPanel.Material = value ? MicaMaterial : null;
+
+            if (value && !focusStyleChosen)
+            {
+                focusStyleChosen = true;
+                EnsureSharedStyles();
+                if (RingWhenSelected)
+                {
+                    FocusPanel.AddThemeStyleboxOverride("panel", ringFocusStyle);
+                }
+            }
+        }
+    }
+
+    private bool focusStyleChosen;
+
+    private const int CardCornerRadius = 8;
+    private const int SimpleRingWidth = 4;
+    private const int SimpleRingGap = FocusHighlight.RingGap;
+
+    // The scene's styles are shared by every card, so recolouring them once recolours all cards.
+    private static StyleBoxFlat cardStyle;
+    private static StyleBoxFlat shadowFocusStyle;
+    private static StyleBoxFlat ringFocusStyle;
+
+    private void EnsureSharedStyles()
+    {
+        if (cardStyle != null)
+        {
+            return;
+        }
+
+        cardStyle = CardPanel.GetThemeStylebox("panel") as StyleBoxFlat;
+        shadowFocusStyle = FocusPanel.GetThemeStylebox("panel") as StyleBoxFlat;
+        ringFocusStyle = shadowFocusStyle?.Duplicate() as StyleBoxFlat;
+        Appearance.Changed += RestyleSharedStyles;
+        RestyleSharedStyles();
+    }
+
+    public override void _Ready()
+    {
+        EnsureSharedStyles();
+    }
+
+    // Simple draws an accent ring a little outside the selected carousel card.
+    private static void RestyleSharedStyles()
+    {
+        if (cardStyle != null)
+        {
+            cardStyle.BgColor = new Color(0, 0, 0, Appearance.IsLight ? 0.07f : 0.25f);
+        }
+
+        Color shadow = new Color(0, 0, 0, Appearance.IsLight ? 0.2f : 0.45f);
+
+        if (shadowFocusStyle != null)
+        {
+            shadowFocusStyle.ShadowColor = shadow;
+        }
+
+        if (ringFocusStyle != null)
+        {
+            bool ring = Appearance.IsSimple;
+            ringFocusStyle.ShadowColor = shadow;
+            ringFocusStyle.BorderColor = Appearance.Accent;
+            ringFocusStyle.SetBorderWidthAll(ring ? SimpleRingWidth : 0);
+            ringFocusStyle.SetExpandMarginAll(ring ? SimpleRingGap : 0);
+            ringFocusStyle.SetCornerRadiusAll(ring ? CardCornerRadius + SimpleRingGap : CardCornerRadius);
         }
     }
 

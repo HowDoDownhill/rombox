@@ -69,7 +69,7 @@ public partial class SystemJumpPopup : UiPanel
 
             if (texture != null)
             {
-                var icon = new TextureRect { Texture = texture, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, CustomMinimumSize = new Vector2(100, 80) };
+                var icon = new TextureRect { Texture = texture, Material = Appearance.LogoMaterial, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, CustomMinimumSize = new Vector2(100, 80) };
                 vbox.AddChild(icon);
             }
 
