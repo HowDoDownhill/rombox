@@ -30,6 +30,7 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(SyncCompletePayload))]
 [JsonSerializable(typeof(GithubReleaseInfo))]
 [JsonSerializable(typeof(RomHashEntry))]
+[JsonSerializable(typeof(Dictionary<int, LocalGameInfo>))]
 [JsonSerializable(typeof(Dictionary<string, RomHashEntry>))]
 public partial class RommJsonContext : JsonSerializerContext
 {

@@ -140,7 +140,7 @@ public partial class LoadingScreen : Control
         {
             appInstance.dataBus.gameCache.Clear();
             await ShowMessageThenContinue(library.SourceId == LibrarySources.Local
-                ? $"No games found in {appInstance.configManager.LocalLibraryPath}. RomBox looks for one folder per system, named like snes, psx or megadrive."
+                ? $"No games found in {appInstance.configManager.LocalLibraryPath}. Check that it has a folder for each console, like snes or psx."
                 : "No systems found.");
             return;
         }

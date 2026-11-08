@@ -32,6 +32,10 @@ public partial class AssetManager : Node
 
     private readonly IArtworkScraper scraper = new LibretroThumbnails();
 
+    private GameInfoScraper gameInfo;
+
+    public GameInfoScraper GameInfo => gameInfo ??= new GameInfoScraper(appInstance);
+
     // Games already looked up this run, so scrolling back past a card doesn't ask again.
     private readonly HashSet<int> scrapedGameIds = new();
 

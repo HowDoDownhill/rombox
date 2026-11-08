@@ -194,8 +194,36 @@ public static class Appearance
         }
     }
 
+    private const int TextFieldFocusWidth = 2;
+    private const int TextFieldFocusRadius = 3;
+
+    private static StyleBoxFlat textFieldFocusStyle;
+    private static StyleBoxFlat textFieldNormalStyle;
+    private static Color textFieldDefaultBackground;
+
+    // Godot's own outline sits outside the field, so a scrolling list cuts off the edges touching it.
+    private static void ApplyTextFieldFocus(Theme theme)
+    {
+        if (textFieldFocusStyle == null)
+        {
+            textFieldFocusStyle = new StyleBoxFlat { DrawCenter = false, AntiAliasing = true };
+            textFieldFocusStyle.SetBorderWidthAll(TextFieldFocusWidth);
+            textFieldFocusStyle.SetCornerRadiusAll(TextFieldFocusRadius);
+            theme.SetStylebox("focus", "LineEdit", textFieldFocusStyle);
+
+            textFieldNormalStyle = ThemeDB.GetDefaultTheme().GetStylebox("normal", "LineEdit").Duplicate() as StyleBoxFlat;
+            textFieldDefaultBackground = textFieldNormalStyle.BgColor;
+            theme.SetStylebox("normal", "LineEdit", textFieldNormalStyle);
+        }
+
+        textFieldFocusStyle.BorderColor = Accent;
+        textFieldNormalStyle.BgColor = IsLight ? Overlay(0.0f, 0.06f) : textFieldDefaultBackground;
+    }
+
     private static void ApplyThemeStyles(Theme theme)
     {
+        ApplyTextFieldFocus(theme);
+
         if (theme.GetStylebox("pressed", "ListButton") is StyleBoxFlat pressed)
         {
             pressed.BgColor = Overlay(0.18f, 0.1f);

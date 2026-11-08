@@ -69,8 +69,8 @@ public static class LibrarySources
     public static string Describe(string sourceId)
     {
         return sourceId == Local
-            ? "Games already on this computer or a mounted network share, one folder per system. Works with ES-DE, EmuDeck and RetroArch folder layouts."
-            : "A RomM server you or a friend runs. Games download when you play them, and saves sync back to the server.";
+            ? "Your games are already on this computer or a connected drive."
+            : "Your games are on a RomM server. RomBox downloads a game when you want to play it.";
     }
 
     public static ILibraryBackend Create(string sourceId, AppInstance appInstance)

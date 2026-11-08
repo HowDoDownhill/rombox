@@ -1456,12 +1456,33 @@ and a snapshot are saved as `_0.jpg` and `_1.jpg` although they are PNGs, which 
 - Arcade romsets rarely match, since the file is a short name such as `sf2` and the thumbnails use the
   full title. That needs a romset name table.
 
+### Local game info comes from Hasheous's open lookup
+`GameInfoScraper` sends the selected game's hash to `/api/v1/Lookup/ByHash` and shows the publisher,
+year and `AIDescription` attribute. That text is machine-written, so the app says so under it.
+
+Hasheous's IGDB proxy would give human-written summaries, and it answers 401 without a
+`X-Client-API-Key`. Using it means registering RomBox for a key of its own.
+
+- A lookup waits 700 ms for the selection to settle, keeps only the newest request, and leaves a second
+  between requests. Hasheous publishes no numeric limits. A 429 pauses lookups for its `Retry-After`,
+  or five minutes.
+- Answers live in `assets/local/game_info.json`, keyed by game id with the file size. A miss is
+  retried after 30 days.
+- A file is hashed with MD5 up to 1 GiB. A zip uses the CRC of its largest entry, read from the zip
+  directory. A `.m3u`, `.cue` or `.gdi` uses its first track. `.7z`, `.chd`, `.rvz` and similar
+  containers are skipped because their hash matches no known dump.
+- Headered SNES and NES dumps will miss, since the signatures describe clean ROMs.
+
 ### The setup wizard
 `LoginScreen` redirects to `SetupWizard` while `Setup/Complete` is false. Installs from before the
 wizard have no such key and count as set up when they hold a RomM host or a valid login. The Steam
 step decides once, in `_Ready`, whether it appears: answering it writes the settings it reads, and a
 step list recalculated afterwards would lose the step and stall the wizard. `Back` and `Next` have
 explicit focus neighbours because Godot's geometry sends right from Back up to the wide rows.
+
+A controller's A button is the `Select` action, and Godot's `ui_accept` holds only keyboard keys, so
+the wizard and login screen press the focused control through `ControllerPress`. `--setup-keys` sends
+real joypad events for that reason: an earlier version sent `ui_accept` and passed while A did nothing.
 
 ### Interface sounds play only after a press
 `UiSounds` lives under `AppInstance` and plays four synthesised sounds from `assets/sounds/`

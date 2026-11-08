@@ -410,6 +410,30 @@ public static class LocalLibraryScanner
         return covered;
     }
 
+    // The first file a .m3u, .cue or .gdi points at, beside that index file.
+    public static string FirstDiscFile(string indexPath)
+    {
+        string folder = Path.GetDirectoryName(indexPath);
+        string extension = Path.GetExtension(indexPath).ToLowerInvariant();
+
+        foreach (string line in extension == ".gdi" ? SafeLines(indexPath).Skip(1) : SafeLines(indexPath))
+        {
+            string file = extension switch
+            {
+                ".cue" => MatchedFileName(CueFileLine.Match(line)),
+                ".gdi" => MatchedFileName(GdiTrackLine.Match(line)),
+                _ => line.Trim().Length > 0 && !line.TrimStart().StartsWith("#") ? line.Trim() : null
+            };
+
+            if (file != null)
+            {
+                return Path.Combine(folder, file);
+            }
+        }
+
+        return null;
+    }
+
     private static string MatchedFileName(Match match)
     {
         if (!match.Success)

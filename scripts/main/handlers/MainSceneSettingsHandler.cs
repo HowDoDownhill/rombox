@@ -539,6 +539,22 @@ public class MainSceneSettingsHandler
         scrapeEntry.Visible = !appInstance.Library.Has(LibraryFeatures.Artwork);
         vbox.AddChild(scrapeEntry);
 
+        HBoxContainer gameInfoBox = new HBoxContainer();
+        Label gameInfoLabel = new Label();
+        gameInfoLabel.Text = "Download Game Info";
+        gameInfoLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        gameInfoBox.AddChild(gameInfoLabel);
+
+        CheckButton gameInfoCheckbox = new CheckButton();
+        gameInfoCheckbox.ButtonPressed = appInstance.configManager.ScrapeGameInfo;
+        gameInfoCheckbox.Toggled += (bool toggledOn) => appInstance.configManager.SaveScrapeGameInfo(toggledOn);
+        gameInfoBox.AddChild(gameInfoCheckbox);
+
+        var gameInfoEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        gameInfoEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(gameInfoBox);
+        gameInfoEntry.Visible = appInstance.configManager.LibrarySource == LibrarySources.Local;
+        vbox.AddChild(gameInfoEntry);
+
         HBoxContainer fieldBox2 = new HBoxContainer();
         Label label2 = new Label();
         label2.Text = "Show All Systems";

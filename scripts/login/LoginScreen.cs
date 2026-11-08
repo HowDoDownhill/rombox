@@ -51,7 +51,26 @@ public partial class LoginScreen : Control
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 
         PopulateFieldsFromConfig();
+        FocusFirstControl();
         AttemptAutoLogin();
+        ControllerTestKeys.RunIfRequested(this);
+    }
+
+    // With nothing focused, a controller would have nothing to move from.
+    private void FocusFirstControl()
+    {
+        Control first = string.IsNullOrEmpty(rommHostInput.Text) ? rommHostInput : loginButton;
+        Callable.From(first.GrabFocus).CallDeferred();
+    }
+
+    public override void _Input(InputEvent inputEvent)
+    {
+        Viewport viewport = GetViewport();
+
+        if (ControllerPress.IsPress(inputEvent) && viewport.GuiGetFocusOwner() is Control focused && ControllerPress.Press(focused))
+        {
+            viewport.SetInputAsHandled();
+        }
     }
 
     private void PopulateFieldsFromConfig()
@@ -92,6 +111,7 @@ public partial class LoginScreen : Control
         StartupTimeline.Mark("auth start");
         result = await appInstance.rommApi.AuthenticateAsync(username, password, host, apiKey);
         StartupTimeline.Mark("auth done");
+        GD.Print($"[Login] sign-in {(result.isSuccess ? "succeeded" : "failed")}.");
 
         if (result.isSuccess)
         {

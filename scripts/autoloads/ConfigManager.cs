@@ -28,6 +28,9 @@ public partial class ConfigManager : Node
     // Whether a library with no artwork of its own looks up art online.
     public bool ScrapeArtwork { get; private set; } = true;
 
+    // Whether a local library sends a selected game's file hash to Hasheous to identify it.
+    public bool ScrapeGameInfo { get; private set; } = true;
+
     // False until the first-run setup finishes. Installs that already signed in to RomM count as set up.
     public bool SetupComplete { get; private set; }
 
@@ -539,6 +542,7 @@ public partial class ConfigManager : Node
         LibrarySource = (string)configurationFile.GetValue("Library", "Source", LibrarySources.RomM);
         LocalLibraryPath = (string)configurationFile.GetValue("Library", "LocalPath", "");
         ScrapeArtwork = (bool)configurationFile.GetValue("Library", "ScrapeArtwork", true);
+        ScrapeGameInfo = (bool)configurationFile.GetValue("Library", "ScrapeGameInfo", true);
         SetupComplete = configurationFile.HasSectionKey("Setup", "Complete")
             ? (bool)configurationFile.GetValue("Setup", "Complete", false)
             : !string.IsNullOrEmpty(RomMHost) || RomMValidLoginLastUsed;
@@ -622,6 +626,7 @@ public partial class ConfigManager : Node
         LibrarySource = LibrarySources.RomM;
         LocalLibraryPath = "";
         ScrapeArtwork = true;
+        ScrapeGameInfo = true;
         SetupComplete = false;
 
         WriteAllConfigurationValues();
@@ -667,6 +672,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("Library", "Source", LibrarySource);
         configurationFile.SetValue("Library", "LocalPath", LocalLibraryPath ?? "");
         configurationFile.SetValue("Library", "ScrapeArtwork", ScrapeArtwork);
+        configurationFile.SetValue("Library", "ScrapeGameInfo", ScrapeGameInfo);
         configurationFile.SetValue("Setup", "Complete", SetupComplete);
 
         if (PreferredEmulators != null)
@@ -858,6 +864,12 @@ public partial class ConfigManager : Node
     public void SaveScrapeArtwork(bool enabled)
     {
         ScrapeArtwork = enabled;
+        SaveConfig();
+    }
+
+    public void SaveScrapeGameInfo(bool enabled)
+    {
+        ScrapeGameInfo = enabled;
         SaveConfig();
     }
 

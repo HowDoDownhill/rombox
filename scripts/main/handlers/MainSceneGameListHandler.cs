@@ -27,6 +27,7 @@ public partial class MainSceneGameListHandler
         this.appInstance = appInstance;
         appInstance.downloadManager.DownloadProgressUpdated += OnDownloadProgressUpdated;
         appInstance.assetManager.AssetDownloaded += OnAssetDownloaded;
+        appInstance.assetManager.GameInfo.Updated += OnGameInfoUpdated;
 
         foreach (GameListView view in mainScene.gameListViews)
         {
@@ -58,12 +59,21 @@ public partial class MainSceneGameListHandler
         if (appInstance.assetManager != null)
         {
             appInstance.assetManager.AssetDownloaded -= OnAssetDownloaded;
+            appInstance.assetManager.GameInfo.Updated -= OnGameInfoUpdated;
         }
     }
 
     private bool marqueeRefreshPending;
     private bool coverRefreshPending;
     private bool screenshotsRefreshPending;
+
+    private void OnGameInfoUpdated(Game game)
+    {
+        if (game == currentlySelectedGame && mainScene.detailsPanelContainer != null)
+        {
+            UpdateDetailsTitleAndDescription(game);
+        }
+    }
 
     private void OnAssetDownloaded(int gameId, string assetType)
     {
@@ -783,6 +793,11 @@ public partial class MainSceneGameListHandler
     public void ShowGameDetails(Game game)
     {
         appInstance.assetManager.RequestGameAssets(game);
+
+        if (appInstance.Library.SourceId == LibrarySources.Local)
+        {
+            appInstance.assetManager.GameInfo.Request(game);
+        }
 
         if (mainScene.detailsPanelContainer == null)
         {

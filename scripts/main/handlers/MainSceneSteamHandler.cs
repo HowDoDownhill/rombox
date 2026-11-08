@@ -25,26 +25,22 @@ public class MainSceneSteamHandler
         this.appInstance = appInstance;
     }
 
-    private const string Benefits =
-        "• [b]Steam Input.[/b] Every controller works, and each emulator gets the right one for every player.\n" +
-        "• [b]Steam Deck Game Mode and Big Picture.[/b]\n" +
-        "• [b]The Steam overlay, Remote Play and Steam Link.[/b]\n";
+    private const string Benefits = "Open RomBox from your Steam library and use your controllers in every game.\n";
 
-    private const string WhatYouMiss =
-        "If you skip this, your games still work. You set up controllers in each emulator yourself, and RomBox stays out of Game Mode, the overlay and streaming.";
+    private const string WhatYouMiss = "If you skip this, you'll set up your controllers in each emulator yourself.";
 
     public static string BuildOfferBody(SteamShortcutState state)
     {
         string heading = state switch
         {
-            SteamShortcutState.Current => "[b]Start RomBox through Steam?[/b]\n\nRomBox is in your Steam library. Starting it from there gives you:\n",
-            SteamShortcutState.Outdated => "[b]Fix RomBox's Steam shortcut?[/b]\n\nYour Steam shortcut points at an old location or name. Fixed, and started from Steam, you get:\n",
-            _ => "[b]Play RomBox through Steam?[/b]\n\nRomBox can add itself to your Steam library and restart from there. You get:\n"
+            SteamShortcutState.Current => "[b]Open RomBox from Steam?[/b]\n\nRomBox is already in your Steam library.\n",
+            SteamShortcutState.Outdated => "[b]Fix RomBox's Steam shortcut?[/b]\n\nYour Steam shortcut is out of date.\n",
+            _ => "[b]Add RomBox to Steam?[/b]\n\n"
         };
 
         string howItWorks = state == SteamShortcutState.Current
-            ? "RomBox closes and Steam starts it again."
-            : "Steam restarts if it is open, then starts RomBox.";
+            ? "RomBox will close and reopen from Steam."
+            : "If Steam is open, it will restart. RomBox will then reopen from Steam.";
 
         return heading + Benefits + "\n" + WhatYouMiss + "\n\n" + howItWorks;
     }
@@ -113,7 +109,7 @@ public class MainSceneSteamHandler
 
         if (appInstance.downloadManager?.HasUnfinishedTransfers == true)
         {
-            ShowOutcome("[b]Downloads are still running.[/b]\n\nRomBox restarts to move into Steam. Let your downloads finish, then choose Add to Steam in Settings > Input Settings.");
+            ShowOutcome("[b]Downloads are still running.[/b]\n\nWait for them to finish, then choose Add to Steam in Settings > Input Settings.");
             return;
         }
 
@@ -141,7 +137,7 @@ public class MainSceneSteamHandler
         {
             mainScene.changelogPanel?.ShowPrompt(
                 ChangelogPanel.PromptSubject.SteamRestart,
-                "[b]Restart Steam?[/b]\n\nSteam only reads new library entries when it starts. RomBox will close Steam, add itself, and start again from Steam.",
+                "[b]Restart Steam?[/b]\n\nRomBox will close Steam, add itself, and reopen from Steam.",
                 "Restart Steam",
                 "Not Now");
             return;

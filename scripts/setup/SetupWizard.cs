@@ -76,7 +76,7 @@ public partial class SetupWizard : Control
 
         ShowStep(Step.Welcome);
         CaptureIfRequested();
-        PressKeysIfRequested();
+        ControllerTestKeys.RunIfRequested(this);
     }
 
     // The order of steps follows the choices made so far.
@@ -269,16 +269,14 @@ public partial class SetupWizard : Control
     private void BuildWelcome()
     {
         titleLabel.Text = wasSetUpBefore ? "Set Up RomBox Again" : "Welcome to RomBox";
-        bodyLabel.Text = "RomBox puts your game library on the big screen and starts each game in the right emulator.\n\n"
-            + "This takes about a minute. You'll choose how RomBox looks, where your games come from, and whether to start it through Steam. "
-            + "Everything here can be changed later in Settings.";
+        bodyLabel.Text = "Let's get RomBox ready. This takes about a minute, and you can change anything later in Settings.";
         nextButton.Text = "Get Started";
     }
 
     private void BuildLook()
     {
         titleLabel.Text = "Choose a Look";
-        bodyLabel.Text = "[b]Glass[/b] has an animated background and frosted panels. [b]Simple[/b] uses flat colours and only redraws when something changes, which suits laptops and handhelds.";
+        bodyLabel.Text = "Glass has a moving background and see-through panels. Simple has flat colours and runs better on laptops and handhelds.";
         nextButton.Text = "Next";
 
         CarouselButton styleButton = AddCarouselRow("Style", Appearance.Styles, config.AppStyle);
@@ -306,7 +304,7 @@ public partial class SetupWizard : Control
         {
             ThemeTypeVariation = "MutedLabel",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            Text = "Match System picks colours from each system's logo once your library is loaded."
+            Text = "Match System changes the colours to suit each console."
         };
         content.AddChild(hint);
     }
@@ -319,7 +317,7 @@ public partial class SetupWizard : Control
     private void BuildSource()
     {
         titleLabel.Text = "Where Are Your Games?";
-        bodyLabel.Text = "RomBox shows one library at a time. You can switch later by running setup again.";
+        bodyLabel.Text = "Choose one. You can switch later in Settings.";
         nextButton.Visible = false;
 
         foreach (string source in LibrarySources.All)
@@ -347,13 +345,13 @@ public partial class SetupWizard : Control
     private void BuildRomM()
     {
         titleLabel.Text = "Connect to RomM";
-        bodyLabel.Text = "Enter your server's address, then either an API key or your username and password. An API key comes from your RomM profile page.";
+        bodyLabel.Text = "Enter your server address, then your username and password. You can use an API key in place of a password.";
         nextButton.Text = "Connect";
 
         hostInput = AddTextRow("Server Address", config.RomMHost, "https://romm.example.com", false);
         usernameInput = AddTextRow("Username", config.RomMUsername, "Your RomM username", false);
         passwordInput = AddTextRow("Password", config.RomMPassword, "Your RomM password", true);
-        apiKeyInput = AddTextRow("API Key", config.RomMApiKey, "Optional, instead of a password", true);
+        apiKeyInput = AddTextRow("API Key", config.RomMApiKey, "Optional", true);
         firstFocus = hostInput;
     }
 
@@ -384,12 +382,11 @@ public partial class SetupWizard : Control
     private void BuildLocal()
     {
         titleLabel.Text = "Choose Your Games Folder";
-        bodyLabel.Text = "Pick the folder that holds one folder per system, such as [i]snes[/i], [i]psx[/i] or [i]megadrive[/i]. "
-            + "ES-DE, EmuDeck and RetroArch folders work as they are. RomBox only reads this folder; it never moves or deletes your games.";
+        bodyLabel.Text = "Choose the folder that has a folder for each console inside it, like snes or psx. RomBox won't change or delete anything in it.";
         nextButton.Text = "Next";
 
         string suggested = !string.IsNullOrEmpty(config.LocalLibraryPath) ? config.LocalLibraryPath : FindLikelyGamesFolder() ?? "";
-        folderInput = AddTextRow("Folder", suggested, "The folder holding your system folders", false);
+        folderInput = AddTextRow("Folder", suggested, "Your games folder", false);
         folderInput.TextChanged += _ => ClearScan();
         folderInput.TextSubmitted += _ => ScanFolder();
         firstFocus = folderInput;
@@ -409,8 +406,18 @@ public partial class SetupWizard : Control
         scanButton.Pressed += ScanFolder;
         buttons.AddChild(scanButton);
 
-        CheckButton scrapeCheck = AddCheckRow("Download Box Art from libretro", config.ScrapeArtwork);
+        CheckButton scrapeCheck = AddCheckRow("Download Box Art", config.ScrapeArtwork);
         scrapeCheck.Toggled += enabled => config.SaveScrapeArtwork(enabled);
+
+        CheckButton gameInfoCheck = AddCheckRow("Download Game Info", config.ScrapeGameInfo);
+        gameInfoCheck.Toggled += enabled => config.SaveScrapeGameInfo(enabled);
+
+        content.AddChild(new Label
+        {
+            ThemeTypeVariation = "MutedLabel",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            Text = "Box art comes from libretro. For game info, RomBox sends a code made from the game you select to Hasheous."
+        });
 
         scanSummary = new RichTextLabel
         {
@@ -500,7 +507,7 @@ public partial class SetupWizard : Control
 
         if (scan.GameCount == 0)
         {
-            text.Append("[b]No games found here.[/b] RomBox looks for folders named after systems, such as snes, psx or megadrive.");
+            text.Append("[b]No games found here.[/b] Check that this folder has a folder for each console, like snes or psx.");
             ShowStatus("", false);
         }
         else
@@ -511,7 +518,7 @@ public partial class SetupWizard : Control
 
         if (scan.UnrecognisedFolders.Count > 0)
         {
-            text.Append("\n\n[color=#" + Appearance.CaptionText.ToHtml(false) + "]Not recognised as systems: ");
+            text.Append("\n\n[color=#" + Appearance.CaptionText.ToHtml(false) + "]Skipped these folders: ");
             text.Append(string.Join(", ", scan.UnrecognisedFolders.Take(12)));
             text.Append(scan.UnrecognisedFolders.Count > 12 ? $" and {scan.UnrecognisedFolders.Count - 12} more" : "");
             text.Append("[/color]");
@@ -527,7 +534,7 @@ public partial class SetupWizard : Control
         if (lastScan == null || lastScannedPath != path)
         {
             ScanFolder();
-            ShowStatus("Checking the folder first. Press Next again once games are found.", false);
+            ShowStatus("Checking this folder. Press Next again when it's done.", false);
             return;
         }
 
@@ -578,7 +585,7 @@ public partial class SetupWizard : Control
         if (!offersSteamShortcut)
         {
             titleLabel.Text = "Set Up Controllers";
-            bodyLabel.Text = "RomBox can point each emulator at the right controller for every player through Steam Input.";
+            bodyLabel.Text = "How do you want to set up your controllers?";
             nextButton.Visible = false;
 
             foreach (ControllerSetupMethod method in ControllerSetupMethod.All)
@@ -598,13 +605,10 @@ public partial class SetupWizard : Control
 
         SteamShortcutState state = SteamShortcuts.GetState();
         titleLabel.Text = state == SteamShortcutState.Current ? "Start Through Steam" : "Add RomBox to Steam";
-        bodyLabel.Text = "Started from Steam, RomBox gets:\n"
-            + "• [b]Steam Input.[/b] Every controller works, and each emulator gets the right one for every player.\n"
-            + "• [b]Steam Deck Game Mode and Big Picture.[/b]\n"
-            + "• [b]The Steam overlay, Remote Play and Steam Link.[/b]\n\n"
+        bodyLabel.Text = "Open RomBox from your Steam library and use your controllers in every game.\n\n"
             + (SteamShortcuts.IsSteamRunning() && state != SteamShortcutState.Current
-                ? "When you finish setup, RomBox closes Steam, adds itself, and starts again from Steam."
-                : "When you finish setup, RomBox restarts from Steam.");
+                ? "When you finish, RomBox will close Steam, add itself, and reopen from Steam."
+                : "When you finish, RomBox will reopen from Steam.");
         nextButton.Visible = false;
 
         string acceptLabel = state switch
@@ -614,7 +618,7 @@ public partial class SetupWizard : Control
             _ => "Add to Steam (Recommended)"
         };
 
-        Button accept = AddOptionButton(acceptLabel, "You can still start RomBox outside Steam whenever you like.");
+        Button accept = AddOptionButton(acceptLabel, "You can still open RomBox without Steam.");
         accept.Pressed += () =>
         {
             addToSteam = true;
@@ -628,7 +632,7 @@ public partial class SetupWizard : Control
         };
         firstFocus = accept;
 
-        Button skip = AddOptionButton("Not Now", "Your games still work. You set up controllers in each emulator yourself. Settings > Input Settings > Add to Steam does this later.");
+        Button skip = AddOptionButton("Not Now", "You'll set up your controllers in each emulator yourself. You can add RomBox to Steam later in Settings.");
         skip.Pressed += () =>
         {
             addToSteam = false;
@@ -649,8 +653,8 @@ public partial class SetupWizard : Control
         string library = config.LibrarySource == LibrarySources.Local
             ? $"your games in [b]{EscapeBbcode(config.LocalLibraryPath)}[/b]"
             : $"your RomM server at [b]{EscapeBbcode(config.RomMHost)}[/b]";
-        string steam = addToSteam ? " RomBox will restart through Steam first." : "";
-        bodyLabel.Text = $"RomBox will load {library}.{steam}\n\nPress the Options button any time for settings, including running this setup again.";
+        string steam = addToSteam ? " It will reopen from Steam first." : "";
+        bodyLabel.Text = $"RomBox will load {library}.{steam}\n\nYou can change any of this from Options > Settings.";
         nextButton.Text = addToSteam ? "Finish and Restart Through Steam" : "Start RomBox";
     }
 
@@ -729,7 +733,7 @@ public partial class SetupWizard : Control
             if (SteamShortcuts.IsSteamRunning())
             {
                 SetBusy(false);
-                ShowStatus("Steam didn't close, so RomBox wasn't added. Settings > Input Settings > Add to Steam tries again.", true);
+                ShowStatus("Steam didn't close, so RomBox wasn't added. You can try again in Settings > Input Settings.", true);
                 await ToSignal(GetTree().CreateTimer(SteamStatusSeconds * 2), SceneTreeTimer.SignalName.Timeout);
                 return false;
             }
@@ -879,7 +883,38 @@ public partial class SetupWizard : Control
     // Left and right change the focused row's value, and Select toggles or presses it, as in Settings.
     public override void _Input(InputEvent inputEvent)
     {
-        if (GetViewport().GuiGetFocusOwner() is not SettingsListEntry entry || busy)
+        // Finishing setup replaces this scene mid-press, which leaves GetViewport() empty afterwards.
+        Viewport viewport = GetViewport();
+
+        Control focused = viewport.GuiGetFocusOwner();
+
+        if (focused == null || busy)
+        {
+            return;
+        }
+
+        bool isController = inputEvent is InputEventJoypadButton || inputEvent is InputEventJoypadMotion;
+
+        if (ControllerPress.IsPress(inputEvent) && ControllerPress.Press(focused))
+        {
+            viewport.SetInputAsHandled();
+            return;
+        }
+
+        // A text field is already typing when it gets focus, so B has to act before the field sees it.
+        if (isController && inputEvent.IsActionPressed("Back"))
+        {
+            GoBack();
+            viewport.SetInputAsHandled();
+            return;
+        }
+
+        if (focused is LineEdit field && field.IsEditing())
+        {
+            return;
+        }
+
+        if (focused is not SettingsListEntry entry)
         {
             return;
         }
@@ -887,62 +922,34 @@ public partial class SetupWizard : Control
         if (inputEvent.IsActionPressed("ui_left", true))
         {
             entry.CycleWidget(-1);
-            GetViewport().SetInputAsHandled();
+            viewport.SetInputAsHandled();
         }
         else if (inputEvent.IsActionPressed("ui_right", true))
         {
             entry.CycleWidget(1);
-            GetViewport().SetInputAsHandled();
+            viewport.SetInputAsHandled();
         }
         else if (inputEvent.IsActionPressed("ui_accept"))
         {
             entry.InteractWithWidget();
-            GetViewport().SetInputAsHandled();
+            viewport.SetInputAsHandled();
         }
     }
 
     public override void _UnhandledInput(InputEvent inputEvent)
     {
+        // Finishing setup replaces this scene mid-press, which leaves GetViewport() empty afterwards.
+        Viewport viewport = GetViewport();
+
         if (inputEvent.IsActionPressed("ui_cancel") || inputEvent.IsActionPressed("Back"))
         {
-            if (GetViewport().GuiGetFocusOwner() is LineEdit lineEdit && lineEdit.IsEditing())
+            if (viewport.GuiGetFocusOwner() is LineEdit lineEdit && lineEdit.IsEditing())
             {
                 return;
             }
 
             GoBack();
-            GetViewport().SetInputAsHandled();
-        }
-    }
-
-    // --setup-keys=accept,down,right,... sends those ui_ actions in order, to walk the wizard as a
-    // controller would. Each key logs what held focus when it was sent.
-    private async void PressKeysIfRequested()
-    {
-        const string prefix = "--setup-keys=";
-        string keys = OS.GetCmdlineUserArgs().FirstOrDefault(argument => argument.StartsWith(prefix))?.Substring(prefix.Length);
-
-        if (keys == null)
-        {
-            return;
-        }
-
-        SceneTree tree = GetTree();
-        await ToSignal(tree.CreateTimer(1.5), SceneTreeTimer.SignalName.Timeout);
-
-        foreach (string key in keys.Split(','))
-        {
-            if (!IsInsideTree())
-            {
-                return;
-            }
-
-            Control focused = GetViewport().GuiGetFocusOwner();
-            GD.Print($"[Setup] key {key} on {focused?.GetType().Name}:{(focused as Button)?.Text}");
-            Input.ParseInputEvent(new InputEventAction { Action = "ui_" + key, Pressed = true });
-            await ToSignal(tree.CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
-            Input.ParseInputEvent(new InputEventAction { Action = "ui_" + key, Pressed = false });
-            await ToSignal(tree.CreateTimer(0.6), SceneTreeTimer.SignalName.Timeout);
+            viewport.SetInputAsHandled();
         }
     }
 

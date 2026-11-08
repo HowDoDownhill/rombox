@@ -51,11 +51,13 @@ Delete (or move aside) `config.cfg`, `games.cache`, `systems.cache`, `emulators/
 ### Setup wizard
 
 `-- --setup-capture=<png> --setup-step=<Welcome|Look|Source|RomM|Local|Steam|Done>` saves one step as
-an image. `-- --setup-keys=accept,down,right,...` sends those `ui_` actions and logs what had focus.
+an image. `-- --setup-keys=a,b,up,down,left,right,stickup,stickdown` sends those as joypad events and
+logs what had focus.
 The editor skips the Steam step unless `ROMBOX_STEAM_ROOT` points at a Steam folder.
 
 - [ ] A clean profile opens the wizard. A profile already signed in to RomM goes to the library.
 - [ ] Controller only: every step can be finished, and down from the last control reaches Next.
+- [ ] Login screen, after a failed sign-in: a controller can move between the fields and press Login.
 - [ ] Look: Style and Theme change the screen at once.
 - [ ] RomM: a wrong address or password shows an error and stays on the step.
 - [ ] Local: an ES-DE or EmuDeck folder is found by itself or through Browse, and the count is right.
@@ -69,6 +71,8 @@ The editor skips the Steam step unless `ROMBOX_STEAM_ROOT` points at a Steam fol
 - [ ] Local library art: covers, logos and screenshots appear for No-Intro and Redump file names, and
       for names with no region tag. A game with no match keeps its title card. A second start lists
       nothing new. Settings > Game List Settings > Download Box Art off stops new requests.
+- [ ] Local library info: a known dump shows its publisher, year and summary with the AI note after
+      the selection rests. Scrolling quickly hashes nothing. A second start uses the saved answer.
 
 ## 2. Library and browsing
 

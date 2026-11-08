@@ -160,8 +160,7 @@ public class MainSceneInputHandler
     private static string BuildControllerSetupOfferBody()
     {
         var body = new System.Text.StringBuilder();
-        body.Append("[b]How should RomBox set up your controllers?[/b]\n\n");
-        body.Append("RomBox can point each emulator at the right controller for every player, so Player 1 stays Player 1. It does this through Steam Input.\n\n");
+        body.Append("[b]How do you want to set up your controllers?[/b]\n\n");
 
         foreach (ControllerSetupMethod method in ControllerSetupMethod.All)
         {
@@ -171,10 +170,10 @@ public class MainSceneInputHandler
 
         if (!ControllerSetupMethod.IsLaunchedThroughSteam)
         {
-            body.Append("\nRomBox is running outside Steam right now. Choosing Steam Input adds RomBox to your Steam library and restarts it from there.\n");
+            body.Append("\nIf you choose Steam Input, RomBox will add itself to Steam and reopen from there.\n");
         }
 
-        body.Append("\nYou can change this at any time in Settings > Input Settings.");
+        body.Append("\nYou can change this later in Settings > Input Settings.");
         return body.ToString();
     }
 

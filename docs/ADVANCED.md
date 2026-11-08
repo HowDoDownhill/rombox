@@ -57,6 +57,7 @@ always does and the data lands in the store.
 | `Library/Source` | `RomM` or `Local` |
 | `Library/LocalPath` | The root of a local library, holding one folder per system |
 | `Library/ScrapeArtwork` | `true` downloads art for a local library from libretro's thumbnail server |
+| `Library/ScrapeGameInfo` | `true` sends the selected local game's file hash to Hasheous to identify it |
 | `Setup/Complete` | `false` shows the setup wizard at the next start |
 
 ### `[Input]`
