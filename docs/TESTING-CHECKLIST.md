@@ -33,14 +33,15 @@ filesystem, a real controller, a real OS difference.
       `build/macos/rombox-macos.zip` (~140 MB). The zip holds one `RomBox.app` with
       `Contents/Resources/data_rombox_macos_arm64/` and `..._x86_64/`, and the `.pck`
       inside it contains `bundled/install_scripts.zip`.
-- [ ] `build-release` copies `rombox-macos.zip` into `releases/`.
 - [ ] Exported binary launches and reaches the login screen.
 
 ## 1. First run on a clean profile
 
 Delete (or move aside) `config.cfg`, `games.cache`, `systems.cache`, `emulators/EmulatorMap.json`.
 
-- [ ] Login screen accepts host + credentials, and separately accepts an API key.
+- [ ] Login screen accepts host + credentials, and separately accepts an API key. A key pasted with a
+      stray space or invisible character still signs in; a key with other odd characters shows a
+      message saying to copy it again.
 - [ ] Loading screen fetches systems, games and firmware without an unhandled exception.
 - [ ] Required directories are created (`roms/`, `bios/`, `emulators/`, `saves/`, `downloads/`,
       `assets/*`) and each non-project directory gets a `.gdignore`.
@@ -62,6 +63,9 @@ The editor skips the Steam step unless `ROMBOX_STEAM_ROOT` points at a Steam fol
 - [ ] RomM: a wrong address or password shows an error and stays on the step.
 - [ ] Local: an ES-DE or EmuDeck folder is found by itself or through Browse, and the count is right.
       Multi-disc games list once. `.bin` Genesis ROMs and `.md` files are listed.
+- [ ] Local, Create Console Folders: a new path is created with a folder for each console, Next opens
+      an empty library, and a second press adds nothing. A folder already named `megadrive` gets no
+      `genesis` beside it. A path ending in a console name, such as `roms/snes`, is refused.
 - [ ] Steam, with Steam running: finishing closes Steam, adds the shortcut and restarts through it.
 - [ ] Not Now: no Steam or controller prompt appears afterwards.
 - [ ] Run Setup Again: Cancel returns to the library. Switching source shows the other library, and
@@ -200,8 +204,11 @@ This is the section with the worst platform divergence. Do not skip it on either
       system-jump popup.
 - [ ] Game Details, Large Image and Box Art: switching applies at once and keeps the selected game.
       Screenshots rotate every 5 seconds. A game with no art still lays out cleanly on both.
+- [ ] Start > Open ROMs Folder opens the file manager on the local games folder, or on `roms` with
+      RomM. A missing folder shows a message. The button is hidden on Android.
 - [ ] Interface Sounds: moving, Select, Back and changing system each make a sound; startup and a
       library reload make none; turning the setting off silences them at once.
+- [ ] Interface Sounds stay silent when pressing buttons while a game is running or another program is in front.
 - [ ] Text follows the four styles: settings, descriptions, start menu and card titles are the same
       Body size; no new `font_size` override in scenes or code (`grep -rn "theme_override_font_sizes\|AddThemeFontSizeOverride"`).
 - [ ] Interface Size: each value applies immediately and persists; at 130% and 150% on a 1280×800

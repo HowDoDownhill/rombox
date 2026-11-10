@@ -48,10 +48,6 @@ cp -f releases/rombox-linux.zip releases/romm-frontend-linux.zip
 "$SEVEN_ZIP" rn releases/romm-frontend-linux.zip rombox.x86_64 romm-frontend.x86_64 rombox.pck romm-frontend.pck
 
 echo
-echo "Copying macOS Release..."
-cp -f build/macos/rombox-macos.zip releases/rombox-macos.zip
-
-echo
 echo "Release packages created successfully in the 'releases' folder!"
-echo "You can now upload 'rombox-windows.zip', 'rombox-linux.zip', 'rombox-macos.zip',"
-echo "'romm-frontend-windows.zip' and 'romm-frontend-linux.zip' to GitHub Releases."
+echo "You can now upload 'rombox-windows.zip', 'rombox-linux.zip', 'romm-frontend-windows.zip'"
+echo "and 'romm-frontend-linux.zip' to GitHub Releases."

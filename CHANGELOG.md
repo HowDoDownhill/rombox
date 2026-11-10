@@ -1,3 +1,29 @@
+RomBox - Version 1.3.0 Changelog
+
+✨ New Features
+
+    New Name: RomM Frontend is now RomBox. Updating renames the app's files for you and keeps your games, saves and settings. If you start it from a Steam shortcut, RomBox offers to fix the shortcut.
+    Setup Guide: A new install now walks you through the look of the app, where your games are, and Steam. It works with a controller. To go through it again, choose Settings > General Settings > Run Setup Again.
+    Games in Your Own Folders: RomBox can now show games already on your computer or a network share, with no RomM server. It reads the folder layouts from ES-DE, EmuDeck and RetroArch. Starting from nothing? Setup can create a folder for each console. Save sync, collections and netplay need RomM for now.
+    Art and Game Info for Local Games: Box art, logos and screenshots download from libretro's thumbnail collection. The publisher, year and an AI-written summary come from Hasheous, using a code made from the game you select. Both can be turned off in Game List Settings.
+    Two Game Details Layouts: Large Image shows the game's screenshots across the panel, changing every 5 seconds. Box Art shows the cover and a list of facts beside a screenshot. Choose one in Settings > Game List Settings > Game Details. With a RomM library, choose Start > Refresh All Games once to show each game's year and company.
+    Open ROMs Folder: A new Start menu option shows your games folder in your file manager.
+    Simple Style: Flat colours that redraw the screen only when something changes, which is easier on laptops and handhelds. Choose it in Settings > General Settings > Style.
+    Light and Dark Themes: Two new themes, and Dark is the default on new installs.
+    Interface Sounds: Short sounds when you move, select, go back and change system. Turn them off in General Settings.
+    Add to Steam: On Windows and Linux, RomBox can add itself to your Steam library with artwork and Steam Input turned on, then restart from Steam. That brings controller support in every emulator, Game Mode, the overlay and Remote Play. RomBox offers this at startup, and the same button is in Settings > Input Settings.
+
+🔧 Changes
+
+    Controller Setup (Windows): The ViGEm option is gone. If you were using it, RomBox asks you to choose again at startup.
+
+🐛 Bug Fixes
+
+    Login Screen With a Controller: A controller can now move between the fields and press Login.
+    Text Boxes: The highlight on a selected text box now goes all the way around it.
+
+---
+
 RomM Frontend - Version 1.2.2 Changelog
 
 🐛 Bug Fixes

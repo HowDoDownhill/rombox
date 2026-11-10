@@ -37,8 +37,8 @@ A local library has no save sync, collections or netplay yet.
 
 ## Install
 
-You need a RomM server and a 64-bit PC running Windows 10/11 or Linux, or a Mac (Apple Silicon or
-Intel) running macOS 12 or later.
+You need a 64-bit PC running Windows 10/11 or Linux. Your games can come from a RomM server or
+from folders on your computer.
 
 1. Download `rombox-windows.zip` or `rombox-linux.zip` from
    [Releases](https://github.com/HowDoDownhill/rombox/releases/latest).
@@ -46,18 +46,17 @@ Intel) running macOS 12 or later.
    stays in that folder.
 3. Run `rombox.exe` on Windows or `rombox.sh` on Linux.
 
-On a Mac:
-
-1. Download `rombox-macos.zip`, open it, and move `RomBox.app` to Applications.
-2. Open it. The app is not notarized by Apple, so macOS blocks the first open: go to
-   **System Settings > Privacy & Security** and choose **Open Anyway**.
-3. Everything it downloads goes to `~/Library/Application Support/RomBox`.
-
 Nothing else needs installing. Updates are offered in the app when a new release is out.
 
 ## First launch
 
-Enter your server details:
+A new install opens a short setup that works with a controller, keyboard or mouse:
+
+1. **Look**: style, theme, game list view, game details layout and interface sounds.
+2. **Where your games are**: a RomM server or a folder on your computer.
+3. **Steam or controllers**: add RomBox to your Steam library, or choose how to set up controllers.
+
+For RomM, enter your server details:
 
 - **Server Address**: the full URL, such as `https://romm.example.com` or `http://192.168.1.50:8080`.
 - **Username** and **Password**: your RomM login.
@@ -65,6 +64,12 @@ Enter your server details:
 
 They are saved for next time. Your library, cover art and BIOS files then download in the
 background.
+
+For local games, choose the folder that has a folder for each console inside it, like `snes` or
+`psx`. Starting from nothing? **Create Console Folders** makes them for you. RomBox won't change or
+delete your games.
+
+To go through setup again, choose **Settings > General Settings > Run Setup Again**.
 
 ## Controls
 
@@ -98,7 +103,8 @@ To leave a game, hold **View** for two seconds. You can change this combination 
 **Settings > Input Settings**.
 
 The **Start** menu holds everything else for the selected game: favorites, the system's
-emulator and BIOS, netplay, controller assignment, a random game, and settings.
+emulator and BIOS, netplay, controller assignment, a random game, and settings. **Open ROMs Folder**
+shows your games folder in your file manager.
 
 ## Saves and BIOS
 
@@ -137,8 +143,6 @@ Any controller your PC recognises works in the app. For games:
   order. [Controller setup](docs/CONTROLLERS.md) has a guide for each method.
 - **Linux**: emulators use your controller directly, and the app points Dolphin and gopher64 at
   each player's controller when a game starts.
-- **Mac**: emulators use your controller directly. Set up each one from its own menu
-  (**Start > Launch Current Emulator**); [Controller setup](docs/CONTROLLERS.md#manual) lists where.
 - **Wii** games use real Wii Remotes over Bluetooth. Press 1+2 on the remote while the game runs.
 
 ## Steam
@@ -163,8 +167,9 @@ Steam. If you move the RomBox folder, the offer comes back to fix the shortcut.
 
 Open **Start > Settings**.
 
-- **Game List Settings**: Carousel, Grid or List view, hiding games without cover art, and
-  showing empty systems.
+- **Game List Settings**: Carousel, Grid or List view, the **Large Image** or **Box Art** game
+  details layout, hiding games without cover art, and showing empty systems. With local folders,
+  this is also where you turn off **Download Box Art** and **Download Game Info**.
 - **General Settings**: your library and **Run Setup Again**, which switches between RomM and local
   folders; style, app theme, background style, interface size (useful on a TV or a
   handheld), interface sounds, and on Windows a preference for the dedicated GPU. **Glass** has
@@ -178,8 +183,7 @@ Open **Start > Settings**.
 
 ## Files
 
-Everything lives in the app folder. On a Mac it lives in
-`~/Library/Application Support/RomBox`.
+Everything lives in the app folder.
 
 | Folder | Contents |
 |---|---|

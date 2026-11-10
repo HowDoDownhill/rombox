@@ -45,11 +45,7 @@ copy /y "releases\rombox-linux.zip" "releases\romm-frontend-linux.zip" >nul
 tools\7zip\windows\7za.exe rn "releases\romm-frontend-linux.zip" rombox.x86_64 romm-frontend.x86_64 rombox.pck romm-frontend.pck
 
 echo.
-echo Copying macOS Release...
-copy /y "build\macos\rombox-macos.zip" "releases\rombox-macos.zip" >nul
-
-echo.
 echo Release packages created successfully in the 'releases' folder!
-echo You can now upload 'rombox-windows.zip', 'rombox-linux.zip', 'rombox-macos.zip',
-echo 'romm-frontend-windows.zip' and 'romm-frontend-linux.zip' to GitHub Releases.
+echo You can now upload 'rombox-windows.zip', 'rombox-linux.zip', 'romm-frontend-windows.zip'
+echo and 'romm-frontend-linux.zip' to GitHub Releases.
 pause
