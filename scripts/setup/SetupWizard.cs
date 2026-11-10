@@ -351,13 +351,13 @@ public partial class SetupWizard : Control
     private void BuildRomM()
     {
         titleLabel.Text = "Connect to RomM";
-        bodyLabel.Text = "Enter your server address, then your username and password. You can use an API key in place of a password.";
+        bodyLabel.Text = "Enter your server address, username, password and an API key. Make the key in RomM under your profile, then Client API Tokens.";
         nextButton.Text = "Connect";
 
         hostInput = AddTextRow("Server Address", config.RomMHost, "https://romm.example.com", false);
         usernameInput = AddTextRow("Username", config.RomMUsername, "Your RomM username", false);
         passwordInput = AddTextRow("Password", config.RomMPassword, "Your RomM password", true);
-        apiKeyInput = AddTextRow("API Key", config.RomMApiKey, "Optional", true);
+        apiKeyInput = AddTextRow("API Key", config.RomMApiKey, "From RomM's Client API Tokens", true);
         firstFocus = hostInput;
     }
 

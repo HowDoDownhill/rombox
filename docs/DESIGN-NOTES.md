@@ -1457,8 +1457,9 @@ and a snapshot are saved as `_0.jpg` and `_1.jpg` although they are PNGs, which 
   full title. That needs a romset name table.
 
 ### Local game info comes from Hasheous's open lookup
-`GameInfoScraper` sends the selected game's hash to `/api/v1/Lookup/ByHash` and shows the publisher,
-year and `AIDescription` attribute. That text is machine-written, so the app says so under it.
+`GameInfoScraper` sends the selected game's hash to `/api/v1/Lookup/ByHash` and shows the publisher
+and year. The answer also carries an `AIDescription` attribute. It is machine-written, and the user
+chose to leave it out, so local games have no description until the IGDB proxy below is in use.
 
 Hasheous's IGDB proxy would give human-written summaries, and it answers 401 without a
 `X-Client-API-Key`. Using it means registering RomBox for a key of its own.

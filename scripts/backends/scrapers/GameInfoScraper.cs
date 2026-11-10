@@ -28,19 +28,15 @@ public class LocalGameInfo
 
     [JsonPropertyName("year")]
     public string Year { get; set; }
-
-    [JsonPropertyName("description")]
-    public string Description { get; set; }
 }
 
-// Identifies a local game by its file hash through Hasheous, for the publisher, year and description.
+// Identifies a local game by its file hash through Hasheous, for the publisher and year. Hasheous also
+// returns an AI-written description, which RomBox leaves out.
 // The hash leaves this machine only for the game the player stays on, one lookup at a time.
 public sealed class GameInfoScraper
 {
     private const string LookupUrl = "https://hasheous.org/api/v1/Lookup/ByHash/";
     private const string InfoFileName = "game_info.json";
-    private const string AiDescriptionAttribute = "AIDescription";
-    private const string AiDescriptionNote = "AI-written summary from Hasheous.";
     private const long MaximumHashedBytes = 1024L * 1024L * 1024L;
     private const int SettleMilliseconds = 700;
     private const int LookupGapMilliseconds = 1000;
@@ -204,17 +200,6 @@ public sealed class GameInfoScraper
             info.Year = ReadString(game, "year");
         }
 
-        if (root.TryGetProperty("attributes", out JsonElement attributes) && attributes.ValueKind == JsonValueKind.Array)
-        {
-            foreach (JsonElement attribute in attributes.EnumerateArray())
-            {
-                if (ReadString(attribute, "attributeName") == AiDescriptionAttribute)
-                {
-                    info.Description = ReadString(attribute, "value");
-                }
-            }
-        }
-
         return info;
     }
 
@@ -232,11 +217,6 @@ public sealed class GameInfoScraper
 
         game.LocalCompany = info.Publisher;
         game.LocalYear = info.Year;
-
-        if (!string.IsNullOrWhiteSpace(info.Description))
-        {
-            game.Description = info.Description + "\n\n" + AiDescriptionNote;
-        }
     }
 
     private void LoadSavedInfo()

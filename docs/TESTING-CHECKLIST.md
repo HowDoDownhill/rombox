@@ -39,7 +39,8 @@ filesystem, a real controller, a real OS difference.
 
 Delete (or move aside) `config.cfg`, `games.cache`, `systems.cache`, `emulators/EmulatorMap.json`.
 
-- [ ] Login screen accepts host + credentials, and separately accepts an API key. A key pasted with a
+- [ ] Login screen needs host, username, password and API key. An empty field, a wrong password, a
+      wrong key and a key from another RomM user each show their own message. A key pasted with a
       stray space or invisible character still signs in; a key with other odd characters shows a
       message saying to copy it again.
 - [ ] Loading screen fetches systems, games and firmware without an unhandled exception.

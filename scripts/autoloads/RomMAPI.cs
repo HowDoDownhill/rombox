@@ -15,7 +15,6 @@ public partial class RomMAPI : Node
     public string ApiHost => apiHostUrl;
     private string apiHostUrl;
     private string authenticationToken;
-    private bool isUsingBasicAuthentication = false;
 
     private const int TransferBufferSizeBytes = 1024 * 1024;
 
@@ -39,76 +38,43 @@ public partial class RomMAPI : Node
 
         httpClient.DefaultRequestHeaders.Clear();
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        isUsingBasicAuthentication = false;
+        authenticationToken = null;
 
         apiKey = CleanApiKey(apiKey);
 
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(apiKey))
+        {
+            return (false, "Enter your username, password and API key.");
+        }
+
         if (apiKey.Any(character => character > 127))
         {
-            return (false, "That API key has characters an API key can't have. Copy it from RomM again, or clear it to sign in with your password.");
+            return (false, "That API key has characters an API key can't have. Copy it from RomM again.");
         }
-
-        if (!string.IsNullOrEmpty(apiKey))
-        {
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-            try
-            {
-                HttpResponseMessage apiKeyTestResponse = await httpClient.GetAsync($"{apiHostUrl}/api/platforms");
-
-                if (apiKeyTestResponse.IsSuccessStatusCode)
-                {
-                    authenticationToken = apiKey;
-                    return (true, null);
-                }
-
-                return (false, $"Server rejected API key: {apiKeyTestResponse.StatusCode}");
-            }
-
-            catch (Exception exception)
-            {
-                return (false, $"Connection failed: {exception.Message}");
-            }
-        }
-
-        var tokenRequestBody = new Dictionary<string, string>
-        {
-            { "grant_type", "password" },
-            { "username", username },
-            { "password", password },
-            { "scope", "platforms.read roms.read assets.read assets.write devices.read devices.write" }
-        };
-        var encodedFormContent = new FormUrlEncodedContent(tokenRequestBody);
 
         try
         {
-            HttpResponseMessage tokenResponse = await httpClient.PostAsync($"{apiHostUrl}/api/token", encodedFormContent);
-
-            if (tokenResponse.IsSuccessStatusCode)
+            if (!await IsPasswordAcceptedAsync(username, password))
             {
-                string tokenResponseBody = await tokenResponse.Content.ReadAsStringAsync();
-                var deserializedTokenResponse = JsonSerializer.Deserialize(tokenResponseBody, RommJsonContext.Default.DictionaryStringString);
-
-                if (deserializedTokenResponse != null && deserializedTokenResponse.ContainsKey("access_token"))
-                {
-                    authenticationToken = deserializedTokenResponse["access_token"];
-                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authenticationToken);
-                    return (true, null);
-                }
+                return (false, "RomM didn't accept that username and password.");
             }
 
-            var base64EncodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedCredentials);
+            using var keyCheck = new HttpRequestMessage(HttpMethod.Get, $"{apiHostUrl}/api/platforms");
+            keyCheck.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            using HttpResponseMessage keyResponse = await httpClient.SendAsync(keyCheck);
 
-            HttpResponseMessage basicAuthTestResponse = await httpClient.GetAsync($"{apiHostUrl}/api/platforms");
-
-            if (basicAuthTestResponse.IsSuccessStatusCode)
+            if (!keyResponse.IsSuccessStatusCode)
             {
-                isUsingBasicAuthentication = true;
-                return (true, null);
+                GD.Print($"[Login] RomM answered the API key check with {(int)keyResponse.StatusCode}.");
+                return (false, "RomM didn't accept that API key.");
             }
 
-            return (false, $"Login failed: {tokenResponse.StatusCode} / {basicAuthTestResponse.StatusCode}");
+            string keyOwner = await ReadKeyOwnerAsync(apiKey);
+
+            if (keyOwner != null && !string.Equals(keyOwner, username.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "That API key belongs to a different RomM user.");
+            }
         }
 
         catch (HttpRequestException exception)
@@ -121,6 +87,62 @@ public partial class RomMAPI : Node
         {
             GD.PrintErr($"An unexpected error occurred: {exception.Message}");
             return (false, "An unexpected error occurred.");
+        }
+
+        // Every request after sign-in uses the key. The password is only checked here.
+        authenticationToken = apiKey;
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        return (true, null);
+    }
+
+    // RomM takes a password at its token endpoint. Older servers take it as Basic authentication instead.
+    private async Task<bool> IsPasswordAcceptedAsync(string username, string password)
+    {
+        var tokenRequestBody = new Dictionary<string, string>
+        {
+            { "grant_type", "password" },
+            { "username", username },
+            { "password", password },
+            { "scope", "platforms.read roms.read assets.read assets.write devices.read devices.write" }
+        };
+
+        using (HttpResponseMessage tokenResponse = await httpClient.PostAsync($"{apiHostUrl}/api/token", new FormUrlEncodedContent(tokenRequestBody)))
+        {
+            if (tokenResponse.IsSuccessStatusCode)
+            {
+                return true;
+            }
+        }
+
+        using var basicCheck = new HttpRequestMessage(HttpMethod.Get, $"{apiHostUrl}/api/platforms");
+        basicCheck.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}")));
+        using HttpResponseMessage basicResponse = await httpClient.SendAsync(basicCheck);
+        return basicResponse.IsSuccessStatusCode;
+    }
+
+    // The username the key was made for, or null when the key's scopes don't allow asking.
+    private async Task<string> ReadKeyOwnerAsync(string apiKey)
+    {
+        using var ownerCheck = new HttpRequestMessage(HttpMethod.Get, $"{apiHostUrl}/api/users/me");
+        ownerCheck.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        using HttpResponseMessage ownerResponse = await httpClient.SendAsync(ownerCheck);
+
+        if (!ownerResponse.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        try
+        {
+            using JsonDocument owner = JsonDocument.Parse(await ownerResponse.Content.ReadAsStringAsync());
+            return owner.RootElement.TryGetProperty("username", out JsonElement name) && name.ValueKind == JsonValueKind.String
+                ? name.GetString()?.Trim()
+                : null;
+        }
+
+        catch (JsonException)
+        {
+            return null;
         }
     }
 

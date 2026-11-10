@@ -5,7 +5,7 @@ RomBox - Version 1.3.0 Changelog
     New Name: RomM Frontend is now RomBox. Updating renames the app's files for you and keeps your games, saves and settings. If you start it from a Steam shortcut, RomBox offers to fix the shortcut.
     Setup Guide: A new install now walks you through the look of the app, where your games are, and Steam. It works with a controller. To go through it again, choose Settings > General Settings > Run Setup Again.
     Games in Your Own Folders: RomBox can now show games already on your computer or a network share, with no RomM server. It reads the folder layouts from ES-DE, EmuDeck and RetroArch. Starting from nothing? Setup can create a folder for each console. Save sync, collections and netplay need RomM for now.
-    Art and Game Info for Local Games: Box art, logos and screenshots download from libretro's thumbnail collection. The publisher, year and an AI-written summary come from Hasheous, using a code made from the game you select. Both can be turned off in Game List Settings.
+    Art and Game Info for Local Games: Box art, logos and screenshots download from libretro's thumbnail collection. The publisher and year come from Hasheous, using a code made from the game you select. Both can be turned off in Game List Settings.
     Two Game Details Layouts: Large Image shows the game's screenshots across the panel, changing every 5 seconds. Box Art shows the cover and a list of facts beside a screenshot. Choose one in Settings > Game List Settings > Game Details. With a RomM library, choose Start > Refresh All Games once to show each game's year and company.
     Open ROMs Folder: A new Start menu option shows your games folder in your file manager.
     Simple Style: Flat colours that redraw the screen only when something changes, which is easier on laptops and handhelds. Choose it in Settings > General Settings > Style.
@@ -16,11 +16,13 @@ RomBox - Version 1.3.0 Changelog
 🔧 Changes
 
     Controller Setup (Windows): The ViGEm option is gone. If you were using it, RomBox asks you to choose again at startup.
+    Signing In: RomM sign-in now needs your username, password and an API key. If you signed in with only a password, RomBox shows the login screen after updating. Make a key in RomM under your profile, then Client API Tokens.
 
 🐛 Bug Fixes
 
     Login Screen With a Controller: A controller can now move between the fields and press Login.
     Text Boxes: The highlight on a selected text box now goes all the way around it.
+    Pasted API Keys: A key copied with a stray space or invisible character failed to sign in with "Request headers must contain only ASCII characters". It now signs in.
 
 ---
 

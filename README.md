@@ -12,7 +12,7 @@ using the folder layout from ES-DE, EmuDeck or RetroArch. Setup asks which one y
 time you start it. Box art, logos and screenshots for local games come from
 [libretro's thumbnail collection](https://github.com/libretro-thumbnails/libretro-thumbnails). The
 game you select is identified by its file hash through [Hasheous](https://hasheous.org), which
-supplies its publisher, year and an AI-written summary. Both can be turned off in Game List Settings.
+supplies its publisher and year. Both can be turned off in Game List Settings.
 A local library has no save sync, collections or netplay yet.
 
 ![Carousel view](docs/images/carousel-view.jpg)
@@ -56,7 +56,7 @@ A new install opens a short setup that works with a controller, keyboard or mous
 2. **Where your games are**: a RomM server or a folder on your computer.
 3. **Steam or controllers**: add RomBox to your Steam library, or choose how to set up controllers.
 
-For RomM, enter your server details:
+For RomM, enter your server details. All four are needed:
 
 - **Server Address**: the full URL, such as `https://romm.example.com` or `http://192.168.1.50:8080`.
 - **Username** and **Password**: your RomM login.
