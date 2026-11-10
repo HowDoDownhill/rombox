@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -39,6 +40,13 @@ public partial class RomMAPI : Node
         httpClient.DefaultRequestHeaders.Clear();
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         isUsingBasicAuthentication = false;
+
+        apiKey = CleanApiKey(apiKey);
+
+        if (apiKey.Any(character => character > 127))
+        {
+            return (false, "That API key has characters an API key can't have. Copy it from RomM again, or clear it to sign in with your password.");
+        }
 
         if (!string.IsNullOrEmpty(apiKey))
         {
@@ -89,7 +97,7 @@ public partial class RomMAPI : Node
                 }
             }
 
-            var base64EncodedCredentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
+            var base64EncodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedCredentials);
 
             HttpResponseMessage basicAuthTestResponse = await httpClient.GetAsync($"{apiHostUrl}/api/platforms");
@@ -114,6 +122,14 @@ public partial class RomMAPI : Node
             GD.PrintErr($"An unexpected error occurred: {exception.Message}");
             return (false, "An unexpected error occurred.");
         }
+    }
+
+    // Copying a key from a web page can bring spaces and invisible characters with it.
+    private static string CleanApiKey(string apiKey)
+    {
+        return new string((apiKey ?? "")
+            .Where(character => !char.IsWhiteSpace(character) && char.GetUnicodeCategory(character) != UnicodeCategory.Format)
+            .ToArray());
     }
 
     public async Task<List<GameSystem>> GetSystemsAsync()

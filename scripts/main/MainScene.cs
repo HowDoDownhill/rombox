@@ -195,6 +195,12 @@ public partial class MainScene : Control
             if (startMenuPanel.settingsButton != null) startMenuPanel.settingsButton.Pressed += PopupHandler.OnSettingsMenuPressed;
             if (startMenuPanel.refreshAllGamesButton != null) startMenuPanel.refreshAllGamesButton.Pressed += PopupHandler.OnRefreshGamesPressed;
             if (startMenuPanel.refreshCurrentSystemButton != null) startMenuPanel.refreshCurrentSystemButton.Pressed += PopupHandler.OnRefreshCurrentSystemGamesPressed;
+            if (startMenuPanel.openRomsFolderButton != null)
+            {
+                startMenuPanel.openRomsFolderButton.Visible = !OS.HasFeature("android");
+                startMenuPanel.openRomsFolderButton.Pressed += PopupHandler.OnOpenRomsFolderPressed;
+            }
+
             if (startMenuPanel.quitButton != null) startMenuPanel.quitButton.Pressed += PopupHandler.OnQuitPressed;
             if (startMenuPanel.randomGameButton != null) startMenuPanel.randomGameButton.Pressed += PopupHandler.OnRandomGamePressed;
         }
@@ -1135,12 +1141,7 @@ public partial class MainScene : Control
 
     private bool ShouldFrontendIgnoreInput()
     {
-        if (appInstance.emulatorManager != null && appInstance.emulatorManager.IsEmulatorRunning)
-        {
-            return true;
-        }
-
-        if (appInstance.inputLayer != null && appInstance.inputLayer.IsSessionActive)
+        if (appInstance.IsControllerInUseElsewhere)
         {
             return true;
         }

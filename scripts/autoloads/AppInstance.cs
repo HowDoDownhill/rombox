@@ -18,6 +18,11 @@ public partial class AppInstance : Node
     public NetplayPortMapper netplayPortMapper;
     public InputLayer inputLayer;
 
+    // A running game or controller session has the controller. RomBox still receives its events.
+    public bool IsControllerInUseElsewhere =>
+        (emulatorManager != null && emulatorManager.IsEmulatorRunning)
+        || (inputLayer != null && inputLayer.IsSessionActive);
+
     private ILibraryBackend library;
 
     // The source the library comes from, following the saved setting.
@@ -61,7 +66,7 @@ public partial class AppInstance : Node
         }
 
         LegacyNameMigration.RemoveLegacyFilesInBackground();
-        AddChild(new UiSounds(configManager));
+        AddChild(new UiSounds(this));
         Callable.From(ApplyDiscreteGpuPreference).CallDeferred();
     }
 

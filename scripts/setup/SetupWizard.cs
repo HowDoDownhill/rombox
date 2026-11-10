@@ -53,6 +53,7 @@ public partial class SetupWizard : Control
     private RichTextLabel scanSummary;
     private LocalLibraryScan lastScan;
     private string lastScannedPath;
+    private string foldersReadyPath;
 
     public override void _Ready()
     {
@@ -387,10 +388,10 @@ public partial class SetupWizard : Control
     private void BuildLocal()
     {
         titleLabel.Text = "Choose Your Games Folder";
-        bodyLabel.Text = "Choose the folder that has a folder for each console inside it, like snes or psx. RomBox won't change or delete anything in it.";
+        bodyLabel.Text = "Choose the folder that has a folder for each console inside it, like snes or psx. RomBox won't change or delete your games.";
         nextButton.Text = "Next";
 
-        string suggested = !string.IsNullOrEmpty(config.LocalLibraryPath) ? config.LocalLibraryPath : FindLikelyGamesFolder() ?? "";
+        string suggested = !string.IsNullOrEmpty(config.LocalLibraryPath) ? config.LocalLibraryPath : FindLikelyGamesFolder() ?? config.RomsPath ?? "";
         folderInput = AddTextRow("Folder", suggested, "Your games folder", false);
         folderInput.TextChanged += _ => ClearScan();
         folderInput.TextSubmitted += _ => ScanFolder();
@@ -410,6 +411,10 @@ public partial class SetupWizard : Control
         var scanButton = new Button { ThemeTypeVariation = "ListButton", Text = "Look for Games" };
         scanButton.Pressed += ScanFolder;
         buttons.AddChild(scanButton);
+
+        var createFoldersButton = new Button { ThemeTypeVariation = "ListButton", Text = "Create Console Folders" };
+        createFoldersButton.Pressed += CreateConsoleFolders;
+        buttons.AddChild(createFoldersButton);
 
         CheckButton scrapeCheck = AddCheckRow("Download Box Art", config.ScrapeArtwork);
         scrapeCheck.Toggled += enabled => config.SaveScrapeArtwork(enabled);
@@ -481,6 +486,37 @@ public partial class SetupWizard : Control
         }
     }
 
+    private void CreateConsoleFolders()
+    {
+        string path = folderInput.Text.Trim();
+
+        if (!Path.IsPathRooted(path))
+        {
+            ShowStatus("Enter the full path of a folder first.", true);
+            return;
+        }
+
+        if (LocalLibraryScanner.MatchFolder(Path.GetFileName(Path.TrimEndingDirectorySeparator(path))).HasValue)
+        {
+            ShowStatus("This is one console's folder. Choose the folder it's in.", true);
+            return;
+        }
+
+        try
+        {
+            LocalLibraryScanner.CreateSystemFolders(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            GD.PrintErr($"[Setup] Could not create console folders in {path}: {exception.Message}");
+            ShowStatus("RomBox couldn't create folders there. Choose another folder.", true);
+            return;
+        }
+
+        foldersReadyPath = path;
+        ScanFolder();
+    }
+
     private async void ScanFolder()
     {
         string path = folderInput.Text.Trim();
@@ -512,13 +548,20 @@ public partial class SetupWizard : Control
 
         if (scan.GameCount == 0)
         {
-            text.Append("[b]No games found here.[/b] Check that this folder has a folder for each console, like snes or psx.");
+            text.Append(foldersReadyPath == lastScannedPath
+                ? "[b]Your console folders are ready.[/b] Press Next, then put your games in them and choose Refresh All Games in the Start menu."
+                : "[b]No games found here.[/b] Check that this folder has a folder for each console, like snes or psx. To make them, press Create Console Folders.");
             ShowStatus("", false);
         }
         else
         {
             text.Append($"[b]Found {scan.GameCount.ToString("N0", CultureInfo.InvariantCulture)} games in {scan.Systems.Count} systems.[/b]\n");
             text.Append(string.Join(", ", scan.Systems.Select(system => $"{system.Name} ({system.RomCount.ToString("N0", CultureInfo.InvariantCulture)})")));
+
+            if (foldersReadyPath == lastScannedPath)
+            {
+                text.Append("\nFolders for the other consoles are ready too.");
+            }
         }
 
         if (scan.UnrecognisedFolders.Count > 0)
@@ -543,9 +586,9 @@ public partial class SetupWizard : Control
             return;
         }
 
-        if (lastScan.GameCount == 0)
+        if (lastScan.GameCount == 0 && foldersReadyPath != path)
         {
-            ShowStatus("Choose a folder with games in it.", true);
+            ShowStatus("Choose a folder with games in it, or press Create Console Folders.", true);
             return;
         }
 

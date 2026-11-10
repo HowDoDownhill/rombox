@@ -11,7 +11,7 @@ script = ExtResource("4_damper")
 [sub_resource type="Resource" id="Resource_drag"]
 script = ExtResource("4_damper")
 
-[node name="StartMenuPanel" type="Control" node_paths=PackedStringArray("ContentRoot", "menuView", "biosView", "optionsList", "biosList", "launchEmulatorButton", "updateEmulatorButton", "uninstallEmulatorButton", "selectBiosButton", "favoriteGameButton", "hostNetplayButton", "joinNetplayButton", "netplayView", "netplayCodeLabel", "netplayInfoLabel", "assignControllersButton", "settingsButton", "randomGameButton", "refreshAllGamesButton", "refreshCurrentSystemButton", "quitButton")]
+[node name="StartMenuPanel" type="Control" node_paths=PackedStringArray("ContentRoot", "menuView", "biosView", "optionsList", "biosList", "launchEmulatorButton", "updateEmulatorButton", "uninstallEmulatorButton", "selectBiosButton", "favoriteGameButton", "hostNetplayButton", "joinNetplayButton", "netplayView", "netplayCodeLabel", "netplayInfoLabel", "assignControllersButton", "settingsButton", "randomGameButton", "refreshAllGamesButton", "refreshCurrentSystemButton", "openRomsFolderButton", "quitButton")]
 visible = false
 custom_minimum_size = Vector2(400, 600)
 layout_mode = 3
@@ -47,6 +47,7 @@ settingsButton = NodePath("Panel/StartMenuContainer/StartMenu/SettingsButton")
 randomGameButton = NodePath("Panel/StartMenuContainer/StartMenu/RandomGameButton")
 refreshAllGamesButton = NodePath("Panel/StartMenuContainer/StartMenu/RefreshAllGamesButton")
 refreshCurrentSystemButton = NodePath("Panel/StartMenuContainer/StartMenu/RefreshCurrentSystemsGamesButton")
+openRomsFolderButton = NodePath("Panel/StartMenuContainer/StartMenu/OpenRomsFolderButton")
 quitButton = NodePath("Panel/StartMenuContainer/StartMenu/QuitButton")
 
 [node name="Panel" type="Panel" parent="."]
@@ -140,6 +141,11 @@ theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Refresh Current System
 "
+
+[node name="OpenRomsFolderButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+theme_type_variation = &"ListButton"
+layout_mode = 2
+text = "Open ROMs Folder"
 
 [node name="QuitButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
 theme_type_variation = &"ListButton"

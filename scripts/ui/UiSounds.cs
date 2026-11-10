@@ -25,14 +25,16 @@ public partial class UiSounds : Node
     private static UiSounds instance;
 
     private readonly Dictionary<Sound, AudioStreamPlayer> players = new Dictionary<Sound, AudioStreamPlayer>();
+    private AppInstance appInstance;
     private ConfigManager configManager;
     private ulong lastInputAt;
     private ulong lastMoveAt;
     private ulong lastActionAt;
 
-    public UiSounds(ConfigManager configManager)
+    public UiSounds(AppInstance appInstance)
     {
-        this.configManager = configManager;
+        this.appInstance = appInstance;
+        configManager = appInstance.configManager;
         Name = "UiSounds";
         ProcessMode = ProcessModeEnum.Always;
     }
@@ -72,7 +74,7 @@ public partial class UiSounds : Node
 
     private void OnWindowInput(InputEvent inputEvent)
     {
-        if (inputEvent is InputEventMouseMotion || !inputEvent.IsPressed())
+        if (inputEvent is InputEventMouseMotion || !inputEvent.IsPressed() || IsInputMeantForAnotherProgram())
         {
             return;
         }
@@ -92,6 +94,12 @@ public partial class UiSounds : Node
         {
             PlaySound(Sound.Back);
         }
+    }
+
+    // Controller presses still arrive while a game is running or another program is in front.
+    private bool IsInputMeantForAnotherProgram()
+    {
+        return appInstance?.IsControllerInUseElsewhere == true || !GetWindow().HasFocus();
     }
 
     private void PlaySound(Sound sound)

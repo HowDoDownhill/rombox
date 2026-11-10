@@ -24,6 +24,7 @@ public partial class StartMenuPanel : UiPanel
     [Export] public Button randomGameButton;
     [Export] public Button refreshAllGamesButton;
     [Export] public Button refreshCurrentSystemButton;
+    [Export] public Button openRomsFolderButton;
     [Export] public Button quitButton;
 
     private Control focusBeforeBiosView;

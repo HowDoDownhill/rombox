@@ -211,6 +211,31 @@ public static class LocalLibraryScanner
         return null;
     }
 
+    // Makes a folder for each system the root doesn't already have under any accepted name. The first
+    // name listed for a system is the one ES-DE uses, so other frontends can share the folder.
+    public static int CreateSystemFolders(string rootPath)
+    {
+        Directory.CreateDirectory(rootPath);
+
+        var existing = new HashSet<string>(
+            Directory.EnumerateDirectories(rootPath).Select(Path.GetFileName),
+            StringComparer.OrdinalIgnoreCase);
+        int created = 0;
+
+        foreach (var system in KnownSystems)
+        {
+            if (system.Folders.Any(existing.Contains))
+            {
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.Combine(rootPath, system.Folders[0]));
+            created++;
+        }
+
+        return created;
+    }
+
     public static LocalLibraryScan Scan(string rootPath)
     {
         var result = new LocalLibraryScan();

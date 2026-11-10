@@ -511,6 +511,30 @@ public class MainScenePopupHandler
         mainScene.gameList?.GrabFocus();
     }
 
+    public async void OnOpenRomsFolderPressed()
+    {
+        mainScene.startMenuPanel?.Close();
+
+        ConfigManager config = appInstance.configManager;
+        bool isLocal = config.LibrarySource == LibrarySources.Local;
+        string folder = isLocal ? config.LocalLibraryPath : config.RomsPath;
+
+        if (!isLocal)
+        {
+            System.IO.Directory.CreateDirectory(folder);
+        }
+
+        if (System.IO.Directory.Exists(folder) && OS.ShellShowInFileManager(folder, true) == Error.Ok)
+        {
+            return;
+        }
+
+        GD.PrintErr($"[Menu] Could not open the ROMs folder: {folder}");
+        mainScene.progressPanel?.ShowStatus("That folder couldn't be opened.");
+        await mainScene.ToSignal(mainScene.GetTree().CreateTimer(2.0f), "timeout");
+        mainScene.progressPanel?.Close();
+    }
+
     public void OnQuitPressed()
     {
         mainScene.GetTree().Quit();

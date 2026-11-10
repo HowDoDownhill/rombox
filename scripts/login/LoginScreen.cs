@@ -111,7 +111,7 @@ public partial class LoginScreen : Control
         StartupTimeline.Mark("auth start");
         result = await appInstance.rommApi.AuthenticateAsync(username, password, host, apiKey);
         StartupTimeline.Mark("auth done");
-        GD.Print($"[Login] sign-in {(result.isSuccess ? "succeeded" : "failed")}.");
+        GD.Print($"[Login] sign-in {(result.isSuccess ? "succeeded." : "failed: " + result.errorMessage)}");
 
         if (result.isSuccess)
         {
