@@ -415,6 +415,32 @@ public class MainSceneSettingsHandler
         uiSoundsEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(uiSoundsFieldBox);
         vbox.AddChild(uiSoundsEntry);
 
+        HBoxContainer preReleaseFieldBox = new HBoxContainer();
+        Label preReleaseLabel = new Label();
+        preReleaseLabel.Text = "Get Test Builds Early";
+        preReleaseLabel.TooltipText = "Updates include test builds with new features before they are finished. They may have problems.";
+        preReleaseLabel.MouseFilter = Control.MouseFilterEnum.Stop;
+        preReleaseLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        preReleaseFieldBox.AddChild(preReleaseLabel);
+
+        CheckButton preReleaseCheckbox = new CheckButton();
+        preReleaseCheckbox.ButtonPressed = appInstance.configManager.PreReleaseBuilds;
+        preReleaseCheckbox.Toggled += (bool toggledOn) =>
+        {
+            appInstance.configManager.SavePreReleaseBuilds(toggledOn);
+
+            // Turning it on looks for a test build straight away, so there is no need to restart.
+            if (toggledOn)
+            {
+                _ = mainScene.GetNodeOrNull<AppUpdater>("/root/AppUpdater")?.CheckForUpdatesAsync();
+            }
+        };
+
+        preReleaseFieldBox.AddChild(preReleaseCheckbox);
+        var preReleaseEntry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        preReleaseEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(preReleaseFieldBox);
+        vbox.AddChild(preReleaseEntry);
+
         HBoxContainer discreteGpuFieldBox = new HBoxContainer();
         Label discreteGpuLabel = new Label();
         discreteGpuLabel.Text = "Prefer Discrete GPU";

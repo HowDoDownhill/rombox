@@ -11,7 +11,7 @@ using System.Linq;
 
 public partial class AppUpdater : Node
 {
-    public const string CurrentVersion = "v1.3.0";
+    public const string CurrentVersion = "v1.3.1";
     private const string RepoOwner = "HowDoDownhill";
     private const string RepoName = "rombox";
     private const int TransferBufferSizeBytes = 1024 * 1024;
@@ -51,17 +51,9 @@ public partial class AppUpdater : Node
     {
         try
         {
-            string url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
-            var response = await httpClient.GetAsync(url);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                GD.PrintErr($"Failed to check for updates: {response.StatusCode}");
-                return;
-            }
-
-            string json = await response.Content.ReadAsStringAsync();
-            var releaseInfo = JsonSerializer.Deserialize(json, RommJsonContext.Default.GithubReleaseInfo);
+            GithubReleaseInfo releaseInfo = appInstance.configManager.PreReleaseBuilds
+                ? await FindNewestReleaseIncludingPreReleasesAsync()
+                : await FindLatestFullReleaseAsync();
             
             if (releaseInfo != null && !string.IsNullOrEmpty(releaseInfo.TagName))
             {
@@ -76,6 +68,56 @@ public partial class AppUpdater : Node
         {
             GD.PrintErr($"Exception checking for updates: {ex.Message}");
         }
+    }
+
+    // GitHub's "latest" is the newest full release; pre-releases are never it.
+    private async Task<GithubReleaseInfo> FindLatestFullReleaseAsync()
+    {
+        string url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
+        var response = await httpClient.GetAsync(url);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            GD.PrintErr($"Failed to check for updates: {response.StatusCode}");
+            return null;
+        }
+
+        string json = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize(json, RommJsonContext.Default.GithubReleaseInfo);
+    }
+
+    // For players who chose pre-release builds: the highest version among the recent releases,
+    // full or pre-release. A full release with a higher number still wins, so a tester moves on
+    // to it when it ships.
+    private async Task<GithubReleaseInfo> FindNewestReleaseIncludingPreReleasesAsync()
+    {
+        string url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases?per_page=20";
+        var response = await httpClient.GetAsync(url);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            GD.PrintErr($"Failed to check for updates: {response.StatusCode}");
+            return null;
+        }
+
+        string json = await response.Content.ReadAsStringAsync();
+        var releases = JsonSerializer.Deserialize(json, RommJsonContext.Default.ListGithubReleaseInfo);
+        GithubReleaseInfo newest = null;
+
+        foreach (GithubReleaseInfo release in releases ?? new System.Collections.Generic.List<GithubReleaseInfo>())
+        {
+            if (release.IsDraft || string.IsNullOrEmpty(release.TagName) || !Version.TryParse(release.TagName.TrimStart('v', 'V'), out Version version))
+            {
+                continue;
+            }
+
+            if (newest == null || version > Version.Parse(newest.TagName.TrimStart('v', 'V')))
+            {
+                newest = release;
+            }
+        }
+
+        return newest;
     }
 
     private bool IsNewerVersion(string remoteVersion, string localVersion)
