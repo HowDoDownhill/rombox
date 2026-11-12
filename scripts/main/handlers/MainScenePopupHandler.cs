@@ -161,8 +161,8 @@ public class MainScenePopupHandler
 
         bool isAlreadyInSession = appInstance.netplayLobby != null && appInstance.netplayLobby.IsInLobby;
 
-        // Peers match on the RomM server and its game ids, which a local library doesn't have.
-        bool sourceSupportsNetplay = appInstance.Library.Has(LibraryFeatures.Netplay);
+        // A session streams the host's game, so it works with any library source.
+        bool sourceSupportsNetplay = true;
 
         hostNetplayBtn.Text = "Host Session";
         hostNetplayBtn.Disabled = isAlreadyInSession;
@@ -178,14 +178,101 @@ public class MainScenePopupHandler
         }
     }
 
-    public async void OnHostNetplayPressed()
+    private const int InstallDriverChoice = 0;
+
+    // Hosting starts here. If this computer cannot plug in controllers for guests, the player is
+    // told why first and chooses what to do; nothing is installed without that choice.
+    public void OnHostNetplayPressed()
     {
         if (appInstance.netplayManager == null || appInstance.netplayLobby == null || appInstance.netplayLobby.IsInLobby)
         {
             return;
         }
 
-        int hostPort = appInstance.netplayManager.ResolveDefaultPort(null);
+        string missing = StreamVirtualPadBackends.FindMissingRequirement();
+
+        if (missing == null || mainScene.changelogPanel == null)
+        {
+            HostSession();
+            return;
+        }
+
+        GD.Print($"[Stream] guest controllers are unavailable: {missing}");
+
+        if (VirtualPadDriverInstaller.IsSupportedPlatform)
+        {
+            mainScene.changelogPanel.ShowChoices(
+                ChangelogPanel.PromptSubject.GuestControllerSetup,
+                "[b]Install a controller driver?[/b]\n\n"
+                + "For guests to play with their own controllers, this PC needs a small driver called ViGEmBus. "
+                + "It lets RomBox plug in a controller for each guest. RomBox downloads it from its maker, Nefarius, "
+                + "and Windows asks for your permission once.\n\n"
+                + "Guests don't need it. Without it, guests can watch and listen but can't play.",
+                new[] { "Install the Driver (Recommended)", "Host Without Guest Controllers", "Cancel" },
+                InstallDriverChoice);
+            return;
+        }
+
+        mainScene.changelogPanel.ShowChoices(
+            ChangelogPanel.PromptSubject.GuestControllerSetup,
+            "[b]Guests won't be able to use controllers.[/b]\n\n"
+            + "RomBox isn't allowed to add controllers on this computer. Installing Steam, or the steam-devices package, "
+            + "allows it; then host again.\n\n"
+            + "You can host now anyway. Guests can watch and listen but can't play.",
+            new[] { "Host Without Guest Controllers", "Cancel" },
+            0);
+    }
+
+    public async void OnGuestControllerSetupChosen(int choiceIndex)
+    {
+        bool canInstall = VirtualPadDriverInstaller.IsSupportedPlatform;
+        int hostAnywayChoice = canInstall ? 1 : 0;
+
+        if (choiceIndex == hostAnywayChoice)
+        {
+            HostSession();
+            return;
+        }
+
+        if (!canInstall || choiceIndex != InstallDriverChoice)
+        {
+            return;
+        }
+
+        string lastStatus = "";
+        bool installed = await VirtualPadDriverInstaller.DownloadAndInstall(
+            appInstance,
+            () => StreamVirtualPadBackends.FindMissingRequirement() == null,
+            status =>
+            {
+                lastStatus = status;
+                mainScene.progressPanel?.ShowStatus(status);
+            });
+
+        mainScene.progressPanel?.Close();
+
+        if (installed)
+        {
+            HostSession();
+            return;
+        }
+
+        mainScene.changelogPanel?.ShowPrompt(
+            ChangelogPanel.PromptSubject.Notice,
+            $"[b]The controller driver wasn't installed.[/b]\n\n{lastStatus}\n\nChoose Host Session to try again, or to host without guest controllers.",
+            "OK",
+            "Close");
+    }
+
+    private async void HostSession()
+    {
+        if (appInstance.netplayManager == null || appInstance.netplayLobby == null || appInstance.netplayLobby.IsInLobby)
+        {
+            return;
+        }
+
+        // The port guests receive the stream on. The join code carries it.
+        int hostPort = StreamProtocol.DefaultPort;
 
         string localAddress = appInstance.netplayManager.ResolveLocalHostAddress();
 
@@ -194,8 +281,6 @@ public class MainScenePopupHandler
             mainScene.startMenuPanel?.ShowNetplayView("Failed", "No local network address was found, so a join code cannot be generated.\nPress Back to return.");
             return;
         }
-
-        appInstance.netplayManager.BeginHosting(hostPort);
 
         mainScene.startMenuPanel?.ShowNetplayView("Hosting", "Starting the session and asking the router to open a port...");
 
@@ -261,7 +346,6 @@ public class MainScenePopupHandler
             return;
         }
 
-        appInstance.netplayManager.BeginJoining(hostAddress, netplayPort);
         JoinResolvedLobby(hostAddress, appInstance.netplayLobby.ResolveLobbyPort(), $"{hostAddress}:{netplayPort}");
     }
 

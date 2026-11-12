@@ -1379,5 +1379,7 @@
     <Content Include="Scenes\main_scene.tscn" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Concentus" Version="2.2.2" />
+    <PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />
   </ItemGroup>
 </Project>

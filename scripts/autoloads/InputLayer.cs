@@ -83,9 +83,13 @@ public partial class InputLayer : Node
         return controllerManager.GetConnectedControllers().OrderBy(ResolveAssignedPlayerPosition).ToList();
     }
 
-    public bool IsMappingEnabled => OperatingSystem.IsLinux()
+    // Set while a lobby hosts a stream. The guests' controllers are plugged in on this machine
+    // and the emulator has to be told about every player, whatever the controller setting says.
+    public bool IsStreamSessionRequested { get; set; }
+
+    public bool IsMappingEnabled => IsStreamSessionRequested || (OperatingSystem.IsLinux()
         ? ResolveConsent() != InputLayerConsent.Declined
-        : ResolveConsent() == InputLayerConsent.SteamInput && ControllerSetupMethod.IsLaunchedThroughSteam;
+        : ResolveConsent() == InputLayerConsent.SteamInput && ControllerSetupMethod.IsLaunchedThroughSteam);
 
     public bool UsesSteamInput => OperatingSystem.IsLinux()
         ? IsMappingEnabled && ControllerSetupMethod.IsLaunchedThroughSteam && IsSteamVirtualPadConnected()

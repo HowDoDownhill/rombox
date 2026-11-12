@@ -61,9 +61,11 @@ load_graphical_session_environment() {
         fi
     fi
 
+    # The login manager keeps its own X server (often :0, owned by root). The session's
+    # XWayland socket is the one this user owns.
     if [ -z "${DISPLAY:-}" ]; then
         for socket in /tmp/.X11-unix/X*; do
-            if [ -S "$socket" ]; then
+            if [ -S "$socket" ] && [ -O "$socket" ]; then
                 export DISPLAY=":${socket##*/X}"
                 break
             fi

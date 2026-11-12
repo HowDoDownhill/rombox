@@ -18,10 +18,12 @@ public partial class AppInstance : Node
     public NetplayPortMapper netplayPortMapper;
     public InputLayer inputLayer;
 
-    // A running game or controller session has the controller. RomBox still receives its events.
+    // A running game, controller session or stream from a host has the controller. RomBox still
+    // receives its events.
     public bool IsControllerInUseElsewhere =>
         (emulatorManager != null && emulatorManager.IsEmulatorRunning)
-        || (inputLayer != null && inputLayer.IsSessionActive);
+        || (inputLayer != null && inputLayer.IsSessionActive)
+        || StreamGuestView.IsOpen;
 
     private ILibraryBackend library;
 
@@ -67,6 +69,7 @@ public partial class AppInstance : Node
 
         LegacyNameMigration.RemoveLegacyFilesInBackground();
         AddChild(new UiSounds(this));
+        StreamCommandLine.StartIfRequested(this);
         Callable.From(ApplyDiscreteGpuPreference).CallDeferred();
     }
 

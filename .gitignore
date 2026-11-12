@@ -75,6 +75,9 @@ tools/linux-test/config.json
 CLAUDE.md
 AGENTS.md
 
+# FFmpeg binaries for game streaming: about 155 MB, fetched as tools/ffmpeg/README.md describes
+/tools/ffmpeg/*/
+
 # Local scratch: API dumps and the script that fetches them carry server data and tokens
 fetch.ps1
 scratch_*.json

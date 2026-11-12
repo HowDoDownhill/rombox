@@ -51,6 +51,14 @@ copy_tree "install_scripts" "build/windows/install_scripts"
 rm -rf "build/windows/tools"
 copy_tree "tools/7zip" "build/windows/tools/7zip"
 
+# Game streaming on Windows runs FFmpeg from this folder. It is kept out of git because of its
+# size; tools/ffmpeg/README.md says where it comes from. Linux uses the system's FFmpeg.
+if [ -d "tools/ffmpeg/windows" ]; then
+    copy_tree "tools/ffmpeg/windows" "build/windows/tools/ffmpeg/windows"
+else
+    echo "tools/ffmpeg/windows is missing; this Windows build cannot host or join a stream."
+fi
+
 echo "Exporting game to Linux..."
 mkdir -p build/linux
 rm -rf build/linux/data_rombox_*

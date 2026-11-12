@@ -8,6 +8,7 @@
     tools\linux-test\deploy.ps1 -Action logs          # tail the remote log
     tools\linux-test\deploy.ps1 -Action shot          # screenshot the remote screen back to here
     tools\linux-test\deploy.ps1 -Action stop
+    tools\linux-test\deploy.ps1 -Action push-login -LoginConfigPath build\windows\config.cfg
 #>
 [CmdletBinding()]
 param(
@@ -20,7 +21,9 @@ param(
     [string]$Gpu = 'discrete',
     [string[]]$AppArgs = @(),
     [int]$LogLines = 200,
-    [string]$ConfigPath
+    [string]$ConfigPath,
+    # The config.cfg whose sign-in is pushed. Defaults to the one in the project folder.
+    [string]$LoginConfigPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -141,6 +144,10 @@ function Copy-RuntimeDataIntoBuild {
         New-Item -ItemType Directory -Force $destination | Out-Null
         Copy-Item (Join-Path $ProjectRoot "$dir\*") $destination -Recurse -Force
     }
+
+    # The Windows FFmpeg binaries are about 155 MB and no use on the test machine.
+    $windowsFfmpeg = Join-Path $LinuxBuildDir 'tools\ffmpeg\windows'
+    if (Test-Path $windowsFfmpeg) { Remove-Item $windowsFfmpeg -Recurse -Force }
 }
 
 # Only these paths ship. The build folder also accumulates runtime data (config.cfg
@@ -246,7 +253,7 @@ function Push-Build {
 $LoginKeys = @('Host', 'Username', 'Password', 'ApiKey', 'ValidLoginLastUsed')
 
 function Read-LocalRomMSection {
-    $localConfig = Join-Path $ProjectRoot 'config.cfg'
+    $localConfig = if ($LoginConfigPath) { $LoginConfigPath } else { Join-Path $ProjectRoot 'config.cfg' }
     if (-not (Test-Path $localConfig)) { throw "No config.cfg at $localConfig to take login details from." }
 
     $values = [ordered]@{}

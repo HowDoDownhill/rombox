@@ -1,5 +1,6 @@
 using Godot;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 
 public class MainSceneNetplayHandler
@@ -10,6 +11,10 @@ public class MainSceneNetplayHandler
     private string activeJoinCode;
     private bool isLocallyReady;
     private int lastPushedRomId;
+
+    // The host's stream while its game runs, and the guest's view of it.
+    private StreamHostNode streamHost;
+    private StreamGuestView streamView;
 
     public MainSceneNetplayHandler(MainScene mainScene, AppInstance appInstance)
     {
@@ -29,9 +34,12 @@ public class MainSceneNetplayHandler
             appInstance.netplayLobby.GameSelectionChanged += OnGameSelectionChanged;
             appInstance.netplayLobby.HostBrowsingGameChanged += OnHostBrowsingGameChanged;
             appInstance.netplayLobby.StartRequested += OnStartRequested;
+            appInstance.netplayLobby.StopRequested += CloseStreamView;
             appInstance.netplayLobby.LobbyClosed += OnLobbyClosed;
             appInstance.netplayLobby.RequiredRomHashChanged += OnRequiredRomHashChanged;
         }
+
+        Input.JoyConnectionChanged += OnControllersChanged;
 
         if (mainScene.lobbyActionButton != null)
         {
@@ -74,9 +82,13 @@ public class MainSceneNetplayHandler
             appInstance.netplayLobby.GameSelectionChanged -= OnGameSelectionChanged;
             appInstance.netplayLobby.HostBrowsingGameChanged -= OnHostBrowsingGameChanged;
             appInstance.netplayLobby.StartRequested -= OnStartRequested;
+            appInstance.netplayLobby.StopRequested -= CloseStreamView;
             appInstance.netplayLobby.LobbyClosed -= OnLobbyClosed;
             appInstance.netplayLobby.RequiredRomHashChanged -= OnRequiredRomHashChanged;
         }
+
+        Input.JoyConnectionChanged -= OnControllersChanged;
+        StopStreaming();
 
         if (appInstance.downloadManager != null)
         {
@@ -211,6 +223,7 @@ public class MainSceneNetplayHandler
 
     public void LeaveLobby()
     {
+        StopStreaming();
         appInstance.netplayLobby?.LeaveLobby();
         appInstance.netplayDiscovery?.StopAdvertising();
         appInstance.netplayManager?.EndSession();
@@ -239,22 +252,14 @@ public class MainSceneNetplayHandler
             return;
         }
 
-        if (appInstance.netplayManager != null && !appInstance.netplayManager.SupportsNetplayForGame(selectedGame))
-        {
-            return;
-        }
-
         lastPushedRomId = selectedGame.Id;
         isLocallyReady = false;
 
         string hostEmulatorName = appInstance.emulatorManager.GetMappedEmulator(selectedGame.System?.Slug ?? selectedGame.PlatformSlug);
-        string hostEmulatorVersion = appInstance.emulatorManager.GetInstalledVersion(hostEmulatorName);
 
-        appInstance.netplayLobby.SelectGame(selectedGame.Id, selectedGame.Name, hostEmulatorName, hostEmulatorVersion, ResolvePublishedRomHash(selectedGame));
+        // Guests watch the stream, so no emulator version or game file has to match theirs.
+        appInstance.netplayLobby.SelectGame(selectedGame.Id, selectedGame.Name, hostEmulatorName, "", "");
         appInstance.netplayDiscovery?.UpdateAdvertisement(selectedGame.Id, selectedGame.Name, appInstance.netplayLobby.Members.Count);
-
-        PublishHostRomHashWhenComputed(selectedGame);
-        MapEmulatorNetplayPort(hostEmulatorName);
 
         RefreshLobbyPanel();
     }
@@ -481,8 +486,24 @@ public class MainSceneNetplayHandler
 
     private bool IsLocallyReadyOrHosting => isLocallyReady || (appInstance.netplayLobby?.IsHosting ?? false);
 
+    private bool IsGuest => IsLobbyVisible && !appInstance.netplayLobby.IsHosting;
+
+    // How many controllers this player brings, which is how many the host plugs in for them.
+    private static int LocalControllerCount => System.Math.Min(Input.GetConnectedJoypads().Count, StreamProtocol.MaxPadsPerGuest);
+
+    private void OnControllersChanged(long deviceId, bool connected)
+    {
+        ReportPreparednessIfInLobby();
+    }
+
     private bool LocalPlayerHasGame()
     {
+        // A guest needs nothing but the host's choice; the game runs on the host.
+        if (IsGuest)
+        {
+            return appInstance.netplayLobby.SelectedRomId > 0;
+        }
+
         var lobbyGameAction = ResolveLobbyGameAction();
 
         return lobbyGameAction != null
@@ -799,14 +820,15 @@ public class MainSceneNetplayHandler
 
         bool isReady = isPrepared && IsLocallyReadyOrHosting;
         string preparednessText = DescribeLocalPreparedness();
-        string localVersion = ResolveLocalEmulatorVersion();
-        string readinessSignature = $"{isPrepared}|{isReady}|{preparednessText}|{localVersion}";
+        string localVersion = IsGuest ? "" : ResolveLocalEmulatorVersion();
+        int controllerCount = LocalControllerCount;
+        string readinessSignature = $"{isPrepared}|{isReady}|{preparednessText}|{localVersion}|{controllerCount}";
 
         if (readinessSignature != lastReportedReadinessSignature)
         {
             lastReportedReadinessSignature = readinessSignature;
             GD.Print($"[Netplay] preparedness now \"{preparednessText}\" (prepared={isPrepared} ready={isReady}).");
-            appInstance.netplayLobby.ReportLocalReadiness(isPrepared, isReady, preparednessText, localVersion);
+            appInstance.netplayLobby.ReportLocalReadiness(isPrepared, isReady, preparednessText, localVersion, controllerCount);
         }
 
         RefreshLobbyPanel();
@@ -823,7 +845,6 @@ public class MainSceneNetplayHandler
         hasAutoStartedCurrentSelection = false;
         hasAutoDownloadedCurrentSelection = false;
         ResetLocalRomVerification();
-        VerifyLocalRomAgainstHost();
 
         if (appInstance.netplayLobby != null && !appInstance.netplayLobby.IsHosting)
         {
@@ -1102,6 +1123,23 @@ public class MainSceneNetplayHandler
 
     private string DescribeLocalPreparedness()
     {
+        if (IsGuest)
+        {
+            if (appInstance.netplayLobby.SelectedRomId <= 0)
+            {
+                return "No game selected";
+            }
+
+            string controllers = LocalControllerCount switch
+            {
+                0 => "no controller",
+                1 => "1 controller",
+                _ => $"{LocalControllerCount} controllers"
+            };
+
+            return $"{(isLocallyReady ? "Ready" : "Not ready")}, {controllers}";
+        }
+
         var lobbyGameAction = ResolveLobbyGameAction();
 
         if (lobbyGameAction == null)
@@ -1159,12 +1197,21 @@ public class MainSceneNetplayHandler
         }
 
         var lobby = appInstance.netplayLobby;
+
+        if (!lobby.IsHosting)
+        {
+            bool hostHasChosen = lobby.SelectedRomId > 0;
+            mainScene.lobbyActionButton.Disabled = !hostHasChosen;
+            mainScene.lobbyActionButton.Text = !hostHasChosen ? "Waiting For Host" : isLocallyReady ? "Not Ready" : "Ready";
+            return;
+        }
+
         var selectedGame = ResolveSelectedLobbyGame();
 
         if (selectedGame == null)
         {
             mainScene.lobbyActionButton.Disabled = true;
-            mainScene.lobbyActionButton.Text = lobby.IsHosting ? "Select A Game" : "Waiting For Host";
+            mainScene.lobbyActionButton.Text = "Select A Game";
             return;
         }
 
@@ -1226,6 +1273,18 @@ public class MainSceneNetplayHandler
     private void OnLobbyActionPressed()
     {
         var lobby = appInstance.netplayLobby;
+
+        if (lobby != null && !lobby.IsHosting)
+        {
+            if (lobby.SelectedRomId > 0)
+            {
+                isLocallyReady = !isLocallyReady;
+                ReportPreparednessIfInLobby();
+            }
+
+            return;
+        }
+
         var selectedGame = ResolveSelectedLobbyGame();
 
         if (lobby == null || selectedGame == null)
@@ -1269,14 +1328,6 @@ public class MainSceneNetplayHandler
             return;
         }
 
-        if (!lobby.IsHosting)
-        {
-            isLocallyReady = !isLocallyReady;
-            lobby.ReportLocalReadiness(true, isLocallyReady, DescribeLocalPreparedness(), ResolveLocalEmulatorVersion());
-            RefreshLobbyPanel();
-            return;
-        }
-
         StartHostedGame(selectedGame);
     }
 
@@ -1295,6 +1346,7 @@ public class MainSceneNetplayHandler
         if (hasHostedGameRunning)
         {
             hasHostedGameRunning = false;
+            StopStreaming();
             appInstance.netplayLobby?.ReleaseMembersToStop();
             appInstance.netplayLobby?.ClearMemberReadiness();
         }
@@ -1302,28 +1354,139 @@ public class MainSceneNetplayHandler
         ReportPreparednessIfInLobby();
     }
 
-    private void StartHostedGame(Game selectedGame)
+    private const double ControllerArrivalTimeoutSeconds = 3.0;
+    private const double EmulatorWindowTimeoutSeconds = 60.0;
+    private const double EmulatorWindowSettleSeconds = 2.0;
+
+    // Starts the game for everyone: plugs in a controller for each of the guests' controllers,
+    // launches the emulator so it sets up every player, then streams its window to the guests.
+    private async void StartHostedGame(Game selectedGame)
     {
         var lobby = appInstance.netplayLobby;
 
-        string opponentAddress = lobby?.ResolveFirstRemoteMemberAddress();
-
-        if (!string.IsNullOrEmpty(opponentAddress))
+        if (hasHostedGameRunning || lobby == null)
         {
-            GD.Print($"[Netplay] Hosting against {opponentAddress}.");
+            return;
         }
 
-        int netplayPort = ResolveEmulatorNetplayPort(ResolveRequiredEmulatorName());
-
-        appInstance.netplayManager?.BeginHosting(netplayPort, opponentAddress);
-
         hasHostedGameRunning = true;
+        StopStreaming();
+
+        streamHost = new StreamHostNode(StreamProtocol.DefaultPort);
+        mainScene.AddChild(streamHost);
+
+        int controllersBefore = Input.GetConnectedJoypads().Count;
+        int controllersReserved = 0;
+
+        foreach (var member in lobby.Members.Where(member => member.PeerId != lobby.LocalPeerId))
+        {
+            controllersReserved += streamHost.ReservePads((uint)member.PeerId, member.ControllerCount);
+        }
+
+        // The emulator's controller settings are written from the controllers Godot can see, so
+        // the new ones have to show up before the launch.
+        double secondsWaited = 0.0;
+
+        while (Input.GetConnectedJoypads().Count < controllersBefore + controllersReserved && secondsWaited < ControllerArrivalTimeoutSeconds)
+        {
+            await mainScene.ToSignal(mainScene.GetTree().CreateTimer(HostListeningPollSeconds), SceneTreeTimer.SignalName.Timeout);
+            secondsWaited += HostListeningPollSeconds;
+        }
+
+        GD.Print($"[Stream] {controllersReserved} guest controller(s) plugged in after {secondsWaited:0.0}s; {Input.GetConnectedJoypads().Count} controller(s) in all.");
+
+        if (appInstance.inputLayer != null)
+        {
+            appInstance.inputLayer.IsStreamSessionRequested = true;
+        }
+
         appInstance.emulatorManager.LaunchEmulatorWithGame(selectedGame);
+
+        StreamCaptureTarget target = await WaitForEmulatorWindow();
+
+        if (target == null || streamHost == null)
+        {
+            GD.PrintErr("[Stream] the game did not open a window to stream.");
+            return;
+        }
+
+        streamHost.StartCapture(target);
 
         string hostAddress = appInstance.netplayPortMapper?.ExternalAddress
             ?? appInstance.netplayManager?.ResolveLocalHostAddress();
 
-        ReleaseMembersOnceHostIsListening(lobby, hostAddress, netplayPort);
+        lobby.ReleaseMembersToStart(hostAddress, streamHost.Port);
+    }
+
+    private async System.Threading.Tasks.Task<StreamCaptureTarget> WaitForEmulatorWindow()
+    {
+        double secondsWaited = 0.0;
+
+        while (secondsWaited < EmulatorWindowTimeoutSeconds && hasHostedGameRunning)
+        {
+            await mainScene.ToSignal(mainScene.GetTree().CreateTimer(HostListeningPollSeconds), SceneTreeTimer.SignalName.Timeout);
+            secondsWaited += HostListeningPollSeconds;
+
+            System.Diagnostics.Process emulator = appInstance.emulatorManager.ActiveEmulatorProcess;
+
+            if (emulator == null)
+            {
+                continue;
+            }
+
+            // Linux: the whole X display, until capture can follow one program's window.
+            if (!System.OperatingSystem.IsWindows())
+            {
+                await mainScene.ToSignal(mainScene.GetTree().CreateTimer(EmulatorWindowSettleSeconds), SceneTreeTimer.SignalName.Timeout);
+                return new StreamCaptureTarget();
+            }
+
+            try
+            {
+                emulator.Refresh();
+
+                if (emulator.MainWindowHandle == System.IntPtr.Zero)
+                {
+                    continue;
+                }
+
+                // The first window can be a splash or a console; give the game window time to appear.
+                await mainScene.ToSignal(mainScene.GetTree().CreateTimer(EmulatorWindowSettleSeconds), SceneTreeTimer.SignalName.Timeout);
+                GD.Print($"[Stream] streaming {emulator.ProcessName} after {secondsWaited:0.0}s.");
+                return new StreamCaptureTarget { WindowExe = emulator.ProcessName + ".exe" };
+            }
+            catch (System.Exception)
+            {
+            }
+        }
+
+        return null;
+    }
+
+    private void StopStreaming()
+    {
+        if (streamHost != null)
+        {
+            streamHost.QueueFree();
+            streamHost = null;
+        }
+
+        if (appInstance.inputLayer != null)
+        {
+            appInstance.inputLayer.IsStreamSessionRequested = false;
+        }
+
+        CloseStreamView();
+    }
+
+    private void CloseStreamView()
+    {
+        if (streamView != null && GodotObject.IsInstanceValid(streamView))
+        {
+            streamView.QueueFree();
+        }
+
+        streamView = null;
     }
 
     private const double HostListeningPollSeconds = 0.25;
@@ -1375,25 +1538,50 @@ public class MainSceneNetplayHandler
         }
     }
 
-    private void OnStartRequested(string hostAddress, int netplayPort)
+    // The host's game is up: show its stream. The guest joins with its lobby id, which is how
+    // the host knows which reserved controllers are this guest's.
+    private void OnStartRequested(string hostAddress, int streamPort)
     {
-        var selectedGame = ResolveSelectedLobbyGame();
+        string reachableHostAddress = string.IsNullOrEmpty(lobbyHostAddress) ? hostAddress : lobbyHostAddress;
 
-        if (selectedGame == null || appInstance.netplayManager == null)
+        if (!IPAddress.TryParse(reachableHostAddress, out IPAddress address))
         {
+            try
+            {
+                address = Dns.GetHostAddresses(reachableHostAddress).FirstOrDefault();
+            }
+            catch (System.Exception)
+            {
+                address = null;
+            }
+        }
+
+        if (address == null)
+        {
+            GD.PrintErr($"[Stream] could not find the host at {reachableHostAddress}.");
             return;
         }
 
-        string reachableHostAddress = string.IsNullOrEmpty(lobbyHostAddress) ? hostAddress : lobbyHostAddress;
+        GD.Print($"[Stream] opening the host's stream at {address}:{streamPort} (host advertised {hostAddress}).");
 
-        GD.Print($"[Netplay] Connecting to {reachableHostAddress}:{netplayPort} (host advertised {hostAddress}).");
+        CloseStreamView();
+        streamView = new StreamGuestView(new IPEndPoint(address, streamPort), (uint)appInstance.netplayLobby.LocalPeerId);
+        streamView.TreeExited += OnStreamViewClosed;
+        mainScene.GetTree().Root.AddChild(streamView);
+    }
 
-        appInstance.netplayManager.BeginJoining(reachableHostAddress, netplayPort);
-        appInstance.emulatorManager.LaunchEmulatorWithGame(selectedGame);
+    // The guest closed the view, or the host's game ended: back to the lobby, not ready.
+    private void OnStreamViewClosed()
+    {
+        streamView = null;
+        isLocallyReady = false;
+        lastReportedReadinessSignature = null;
+        ReportPreparednessIfInLobby();
     }
 
     private void OnLobbyClosed(string reason)
     {
+        StopStreaming();
         activeJoinCode = null;
         isLocallyReady = false;
         lastReportedReadinessSignature = null;

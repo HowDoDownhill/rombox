@@ -4222,3 +4222,269 @@ Emulator names for save sync follow Sigil's layout ids: the libretro core name f
 `flycast_standalone`, `dolphin_standalone`, `duckstation`, `pcsx2_standalone` (also ARMSX2),
 `ppsspp_standalone`, `azahar`, `melonds`, `mgba_standalone` for standalone emulators. snes9x, ares
 and gopher64 have no row of their own, so the libretro default (`{stem}.srm`) applies.
+
+---
+
+## Game streaming
+
+Prototype in `scripts/streaming/`, measured 2026-11-10 on Windows 11 with an RTX 5080, FFmpeg
+9.0.2 for capture and encoding, and Blender 5.2's FFmpeg 8.1 libraries for decoding. Start it with
+`-- --stream-host=title:<regex>` on one copy and `-- --stream-join=<address>` on another;
+`--stream-window=x,y,w,h` places the window for tests.
+
+### How a frame travels
+
+The host runs `ffmpeg` with the `gfxcapture` source (Windows.Graphics.Capture), which finds a
+window by handle, title or program name (`window_exe=retroarch.exe`) and captures it even when
+other windows cover it. NVENC encodes with no B-frames, no look-ahead and a two-frame rate buffer,
+and ffmpeg writes FLV to its output. RomBox splits each frame into 1200-byte UDP packets with a
+small header (`StreamProtocol`). The guest rebuilds frames (`FrameReassembler`) and decodes them
+in-process through libavcodec (`StreamDecoder`). The guest view uploads the three picture planes
+as textures each frame, and a shader converts them to colour.
+
+### Measured delay
+
+A window drawing its frame number as 16 black and white blocks was captured, and the counters in
+the source window and the guest view were read from the same screen grab, so display delay cancels
+out. Host and guest ran on the same PC.
+
+| Pipeline | Average behind the source |
+|---|---|
+| ffmpeg to ffmpeg over UDP, shown by `ffplay` | 2.6 frames, about 43 ms |
+| RomBox host to RomBox guest, decoded in-process | 1.1 frames, about 18 ms (120 samples) |
+
+Decoding takes about 3 ms per 1280x720 frame on one CPU thread.
+
+### Linux, both directions, across the network
+
+Measured 2026-11-11 between the Windows PC and the Arch laptop (KDE on Wayland, RTX 3060, system
+FFmpeg 9.0.2) over the home network. The numbers are the guest's own status line, logged every
+five seconds. Glass-to-glass delay across two machines has not been measured.
+
+| Host | Guest | Frame rate | Ping | Decode to screen | Frames lost |
+|---|---|---|---|---|---|
+| Windows, `gfxcapture` + NVENC | Arch, system avcodec 63 | 45 to 49 fps | 2 to 3 ms | 7 to 10 ms | 0 |
+| Arch, `x11grab` + NVENC | Windows, Blender's avcodec 62 | 55 to 60 fps | 1 to 3 ms | 3 to 4 ms | 0 |
+
+The Windows host delivered under 50 fps from a 60 fps source here and in the same-PC test. The
+cause was the capture's frame-rate cap; see "The capture cap must sit well above the target"
+below. The Arch host captured an XWayland window by
+id (`--stream-host=x11:0x2e00037`) and the guest's picture was confirmed to carry the changing
+counter.
+
+A process started over SSH has to find the session's X display. The login manager keeps its own X
+server on `:0`, owned by root, and the session's XWayland was `:1`. `remote-run.sh` now picks the
+socket in `/tmp/.X11-unix` that the user owns.
+
+### The capture cap must sit well above the target
+
+The stream targets 60 fps always. `gfxcapture=max_framerate=60` delivered 45 to 50. Windows drops
+any captured frame that follows the previous one by less than the cap's interval, and a 60 fps
+window shows its frames at gaps that wobble around 16.7 ms: on a 59.94 Hz monitor some gaps fall
+just short, and on a 165 Hz monitor they alternate between 12 and 18 ms. Each short gap loses a
+frame.
+
+Measured 2026-11-11, frames encoded in 6 seconds from a test window on the 59.94 Hz monitor:
+
+| Capture setting | Window drawing 60 fps | Window drawing 50 fps |
+|---|---|---|
+| `max_framerate=60` | 290 to 300 | 267 to 274 |
+| `max_framerate=240` | 360 | 301 |
+| `max_framerate=240` and the limiter | 357 | 298 |
+
+The host now captures with the cap at four times the target and limits the rate afterwards with a
+`select` filter that works as a store of passes: each second adds 62, the store holds at most two,
+and a frame goes through when a pass is available. A steady 60 fps game keeps every frame at its
+own timing with no added delay, and the two spare passes a second cover consoles that run slightly
+above 60. ffmpeg's `fps` filter was not used because it holds each frame until the next arrives.
+End to end the guest then showed 59 to 60 fps. The limiter has not been run against a window
+drawing faster than 60, and the 18 ms delay figure above was measured before this change.
+
+No part of this needed faster code: at 60 fps the C# side spends about 3 ms a frame decoding and
+well under 1 ms packing and sending. If a measured stage ever misses 60 fps the plan is to move
+that stage to native code (the encoder moving in-process is the likely first candidate, which
+would also allow keyframes on request).
+
+### A window wider than 16:9 loses its sides
+
+A console game on an ultrawide monitor sits in the middle of its window with empty space either
+side. Streaming the whole 5120x2160 window sent that space too, and a guest on a 16:10 laptop saw
+the game small, with bars on all four sides. The host now cuts the window to its middle 16:9
+before scaling (`StreamEncoderSettings.WidestAspect`, through `gfxcapture`'s `crop_left` and
+`crop_right`). A 1200x300 test window streamed as its middle 534x300 at 60 fps. A game that really
+draws across an ultrawide window loses its edges; set `WidestAspect` to 0 to keep them.
+
+### FFmpeg on Windows comes from tools/ffmpeg/windows
+
+`build.sh` copies `tools/ffmpeg/windows` into the Windows build when the folder exists, and the
+folder is ignored by git because it is about 155 MB (`avcodec-63.dll` alone is 91 MB).
+`tools/ffmpeg/README.md` says which build to fetch. Bundling it roughly adds 60 MB to the Windows
+zip; fetching it on first use, the way emulators are installed, is the alternative and has not
+been built.
+
+### Guest controllers
+
+The guest reads its controllers through Godot every frame (`StreamGuestPads`) and sends each one's
+whole state in a 22-byte packet: on every change, and again every 100 ms. A lost packet is
+corrected by the next one, so input needs no acknowledgements. Each packet carries a sequence
+number and the host drops any that arrive out of order. The host hands the state to a virtual
+Xbox 360 controller on its receive thread (`StreamHostPads`), without waiting for a frame.
+
+| Host | How the controller is made | What the player needs |
+|---|---|---|
+| Windows | ViGEmBus through `Nefarius.ViGEm.Client` | the ViGEmBus driver, installed once |
+| Linux | `/dev/uinput`, reporting the xpad driver's name, ids, buttons and axes | write access to `/dev/uinput`, which Steam's udev rule grants |
+
+A controller appears on the host when its first packet arrives and goes when the guest unplugs
+it, leaves, or times out. At most four exist at once. A controller keeps its slot on the guest for
+as long as it stays plugged in, so unplugging one never moves another player.
+
+Measured 2026-11-11 with `--stream-test-input`, which sends a made-up controller pressing A twice a
+second and swinging the left stick. Windows host, read through XInput: 13 changes of A in 6
+seconds and the stick from -32764 to 32764. Arch host, read through evdev: 12 changes and -32761
+to 32761, on a device reporting `045e:028e` version `0114`. Real controllers on the guest, and how
+long a press takes to reach the host's game, have not been tested.
+
+Three rules came out of testing:
+
+- A guest that stops sending has its controller let go after 400 ms. Without this, a guest whose
+  connection dropped while holding a direction kept holding it for the five seconds until the host
+  timed the guest out.
+- While the stream view is open the rest of RomBox ignores the controller
+  (`AppInstance.IsControllerInUseElsewhere`), and only the keyboard's Escape closes the view. Every
+  controller button belongs to the host's game.
+- The guest sends a resting controller while its window is unfocused, because Godot keeps reading
+  controllers in the background.
+
+`ViGEmPadBackend` is created through a separate non-inlined method so the ViGEm assembly loads on
+Windows only, the rule the earlier input layer learned on Linux. Host and guest on one PC is a
+test-only setup: the guest would see the host's virtual controller as one of its own and send it
+back, up to the four-controller limit. `--stream-test-input` avoids that by reading no real
+controllers.
+
+Host Session checks first whether this computer can plug in controllers
+(`StreamVirtualPadBackends.FindMissingRequirement`). On Windows without ViGEmBus the player is told
+what the driver is for and chooses between installing it, hosting without guest controllers, and
+cancelling; nothing is downloaded before that choice. The install is `VirtualPadDriverInstaller`,
+brought back from the input layer removed on 2026-11-01: it downloads ViGEmBus 1.22.0, checks the
+file's size and publisher and runs it with one Windows permission prompt. On Linux without access
+to `/dev/uinput` the notice names Steam or the steam-devices package and offers to host anyway.
+Neither notice has been seen on a real machine: the test PC has the driver and the Arch laptop has
+access. A `pkexec` install of the udev rule for Linux is not written.
+
+### Sound
+
+Sound is always 48 kHz stereo Opus in 10 ms frames at 128 kbit/s, one frame per UDP packet with a
+sequence number, so it needs no format packet. Opus runs through Concentus, a C# port, on both
+ends; neither side needs a native Opus library. The decoder fills gaps of up to five packets with
+Opus's own concealment and drops a packet that arrives after a later one.
+
+| Host | What is captured | How |
+|---|---|---|
+| Windows | the captured program and the programs it starts | WASAPI process loopback (`WindowsProcessAudioCapture`), Windows 10 version 2004 and later |
+| Linux | everything the default output plays | `ffmpeg -f pulse -i @DEFAULT_MONITOR@` with 10 ms fragments (`PulseAudioCapture`) |
+
+Process loopback keeps the host's voice chat and notifications out of the stream, which matters
+because a guest in the same call would otherwise hear themselves. The Linux host does not have
+that yet; per-program capture there means PipeWire directly.
+
+The guest plays through an `AudioStreamGenerator`. Godot's output takes sound in pieces of about
+20 ms and a frame lasts 16 ms, so the generator is topped up to 50 ms each frame. Sound beyond
+that waits outside the generator, where it can still be skipped: more than four frames waiting
+means the guest has fallen behind, and all but the newest are dropped. Pushing everything into
+the generator as it arrived left 100 ms waiting with no way to take it back.
+
+Measured 2026-11-11 with a 440 Hz tone at a peak of 0.004, all three ways (same PC, Windows to
+Arch, Arch to Windows): 100 frames a second played, the tone's level arriving intact, no packets
+lost, 30 to 60 ms waiting on the guest, and no skips or dry runs after startup. Nobody listened to
+it, and the delay from the host's speaker to the guest's has not been measured; sound and picture
+are not yet aligned with each other.
+
+### The lobby streams; guests need only RomBox
+
+Decided 2026-11-11 after a hand-run test where Dolphin gave the guest's controller no player: the
+controller was plugged in after Dolphin had started, and nothing had told Dolphin about a second
+player. The lobby (Start menu, Host Session and Join Session) now arranges the whole session, and
+emulator netplay is no longer offered. The netplay code is still in the project and is due for
+removal once streaming has proven itself.
+
+What the lobby does when the host presses Start (`MainSceneNetplayHandler.StartHostedGame`):
+
+1. Opens the stream's UDP port and reserves one virtual controller for each controller a guest
+   reported (`StreamHostNode.ReservePads`). Each guest's reservation is keyed by its lobby peer id.
+2. Waits up to three seconds for Godot to list the new controllers. Emulator controller settings
+   are written from the controllers Godot can see.
+3. Sets `InputLayer.IsStreamSessionRequested` and launches the game. The flag forces a controller
+   session, so every player is written into the emulator's settings on Windows outside Steam too,
+   which the 2026-11-01 decision otherwise leaves alone. The host's own controllers come first and
+   the guests' follow in the order they were plugged in.
+4. Waits for the emulator's window, starts capturing it and its sound, and tells the guests the
+   address and port.
+
+Each guest then opens the stream view and says hello with its lobby peer id, which is how the host
+matches it to its reserved controllers. A reserved controller stays plugged in when its guest
+unplugs or drops, so the other players keep their numbers. When the game closes the host stops the
+stream and the guests return to the lobby.
+
+A guest is ready as soon as the host has picked a game. The checks netplay needed (owning the
+game, the emulator, its version, a matching file, the same RomM server) are skipped for guests,
+and Host and Join are offered for every library source. The join code now carries the stream's
+port, which UPnP maps alongside the lobby's.
+
+Confirmed by the owner on 2026-11-11 with a Windows host and the Arch laptop as guest. Not covered:
+a Linux host from the lobby (it captures the whole X display and has not been run), more than one
+guest, and a guest joining after the game has started.
+
+Open problems from that day:
+
+- An ultrawide game was streamed in its own shape, so a guest with a 16:10 screen saw bars above
+  and below. Fixed the same day; see "A window wider than 16:9 loses its sides" below.
+- The Arch guest crashed with a segmentation fault when it was stopped during a stream. This is
+  older than streaming: the same crash is in the laptop's log from 2026-10-06, the stack is in the
+  NVIDIA driver on the main thread during shutdown, and it happens whenever `remote-run.sh stop`
+  ends the app.
+- Windows capture stops at 4096 pixels wide with H.264, so large windows are scaled to fit
+  1920x1080 before encoding (`StreamEncoderSettings.MaximumWidth`).
+- On Windows, a game that is not the foreground window may ignore controllers (Dolphin does unless
+  Background Input is on).
+- The startup offer to reopen through Steam drops command-line switches, `--netplay-host` among
+  them.
+
+### FLV carries frame sizes
+
+A raw H.264 stream only shows where a frame ends when the next frame begins, which costs a frame
+of delay on whichever side splits it. FLV states every tag's size before its data, so the host
+sends a frame as soon as ffmpeg writes it.
+
+### The ffmpeg program holds frames back when decoding
+
+Fed one FLV frame at a time, `ffmpeg -f flv -i pipe:0 ... -f rawvideo pipe:1` gave each picture
+back only after the next frame arrived: one frame late with software decoding and two with
+`-hwaccel d3d11va` or `dxva2`. Baseline profile and a filler tag after each frame changed
+nothing. libavcodec called directly returns each picture from the call that sent its frame, so the
+guest decodes in-process. The host still runs the ffmpeg program; whether it adds a frame of its
+own has not been measured separately.
+
+`-fflags nobuffer` throws away the packets read while ffmpeg probes the input. With a keyframe
+every second that discarded the first second of video, and the decoder then appeared to lag by
+61 frames. Matching pictures to frames by order hides this, so count frames in and out.
+
+### Libraries
+
+The guest loads avcodec and avutil 60 to 63 (FFmpeg 6 to 9) at run time and reads only the leading
+fields of `AVPacket` and `AVFrame`, which have kept their offsets across those versions. Shipping
+needs an LGPL build in `tools/ffmpeg/<os>/`. PCSX2's bundled FFmpeg 9.0.1 has encoders only and no
+H.264 decoder, so it cannot serve as the guest's decoder.
+
+### Not done yet
+
+- Keyframes on request. The ffmpeg program cannot be told to send one, so the host sends a keyframe
+  every second and a guest that loses packets waits for the next one.
+- Linux capture under Wayland. Arch's FFmpeg 9.0.2 has `x11grab` and `kmsgrab` but no PipeWire
+  source, so the prototype captures X11 windows only (XWayland apps included). PipeWire through the
+  screen-cast portal is a separate piece of work.
+- The driver notice and install for hosts, which wait for the hosting screen.
+- Telling emulators which controller is which player. A guest's controller takes the next free
+  slot after the host's own.
+- Aligning sound with picture, and per-program sound capture on Linux.
+- Error correction and connections across the internet.

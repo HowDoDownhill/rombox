@@ -692,11 +692,8 @@ public partial class MainScene : Control
             return candidateSystems;
         }
 
-        var netplaySystems = candidateSystems
-            .Where(system => appInstance.netplayManager.SupportsNetplay(appInstance.emulatorManager.GetMappedEmulator(system.Slug), system.Slug))
-            .ToList();
-
-        return netplaySystems.Count > 0 ? netplaySystems : candidateSystems;
+        // A lobby streams the host's screen, so every system can be played in one.
+        return candidateSystems;
     }
 
     public void SelectSystemFromCarousel(int systemIndex)
@@ -1066,7 +1063,8 @@ public partial class MainScene : Control
             return;
         }
 
-        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamShortcutOutcome)
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamShortcutOutcome
+            || changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.Notice)
         {
             changelogPanel.Close();
             return;
@@ -1088,6 +1086,13 @@ public partial class MainScene : Control
         {
             changelogPanel.Close();
             SteamHandler.OnOfferChoiceMade(choiceIndex);
+            return;
+        }
+
+        if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.GuestControllerSetup)
+        {
+            changelogPanel.Close();
+            PopupHandler.OnGuestControllerSetupChosen(choiceIndex);
         }
     }
 
@@ -1130,7 +1135,9 @@ public partial class MainScene : Control
         }
 
         if (changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamRestart
-            || changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamShortcutOutcome)
+            || changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.SteamShortcutOutcome
+            || changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.GuestControllerSetup
+            || changelogPanel.ActiveSubject == ChangelogPanel.PromptSubject.Notice)
         {
             changelogPanel.Close();
             return;

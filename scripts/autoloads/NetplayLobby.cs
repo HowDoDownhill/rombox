@@ -34,6 +34,8 @@ public partial class NetplayLobby : Node
         public string Status;
         public string EmulatorVersion;
         public string RemoteAddress;
+        // How many controllers the member has plugged in. The host plugs in that many for them.
+        public int ControllerCount;
     }
 
     public string ResolveFirstRemoteMemberAddress()
@@ -94,6 +96,12 @@ public partial class NetplayLobby : Node
         Multiplayer.ConnectionFailed += OnConnectionFailed;
         Multiplayer.ServerDisconnected += OnServerDisconnected;
     }
+
+    // This copy's id in the lobby, which is also the id it joins the host's stream with.
+    public long LocalPeerId => lobbyPeer != null ? Multiplayer.GetUniqueId() : 0;
+
+    [Signal]
+    public delegate void StopRequestedEventHandler();
 
     public IReadOnlyList<LobbyMember> Members => membersByPeerId.Values.OrderBy(member => member.PeerId).ToList();
 
@@ -302,8 +310,9 @@ public partial class NetplayLobby : Node
         var readyFlags = orderedMembers.Select(member => member.IsReady ? 1 : 0).ToArray();
         var statuses = orderedMembers.Select(member => member.Status ?? "").ToArray();
         var emulatorVersions = orderedMembers.Select(member => member.EmulatorVersion ?? "").ToArray();
+        var controllerCounts = orderedMembers.Select(member => member.ControllerCount).ToArray();
 
-        Rpc(MethodName.ReceiveMemberRoster, peerIds, usernames, rommHosts, hasGameFlags, readyFlags, statuses, emulatorVersions);
+        Rpc(MethodName.ReceiveMemberRoster, peerIds, usernames, rommHosts, hasGameFlags, readyFlags, statuses, emulatorVersions, controllerCounts);
         EmitSignal(SignalName.MembersChanged);
     }
 
@@ -320,13 +329,7 @@ public partial class NetplayLobby : Node
 
         GD.Print($"[Lobby] identity from peer {senderPeerId}: user={username} host=\"{rommHost}\" localHost=\"{appInstance?.rommApi?.ApiHost}\"");
 
-        if (!IsSameRommServer(rommHost))
-        {
-            GD.PrintErr($"[Lobby] rejecting peer {senderPeerId} ({username}): different RomM server \"{rommHost}\" vs \"{appInstance?.rommApi?.ApiHost}\".");
-            lobbyPeer.DisconnectPeer((int)senderPeerId);
-            return;
-        }
-
+        // Guests watch the host's stream, so they need neither the host's server nor its games.
         membersByPeerId[senderPeerId] = new LobbyMember
         {
             PeerId = senderPeerId,
@@ -343,20 +346,8 @@ public partial class NetplayLobby : Node
         SendGameSelectionTo(senderPeerId);
     }
 
-    private bool IsSameRommServer(string rommHost)
-    {
-        string localRommHost = appInstance?.rommApi?.ApiHost;
-
-        if (string.IsNullOrEmpty(localRommHost) || string.IsNullOrEmpty(rommHost))
-        {
-            return false;
-        }
-
-        return string.Equals(localRommHost.TrimEnd('/'), rommHost.TrimEnd('/'), System.StringComparison.OrdinalIgnoreCase);
-    }
-
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void ReceiveMemberRoster(int[] peerIds, string[] usernames, string[] rommHosts, int[] hasGameFlags, int[] readyFlags, string[] statuses, string[] emulatorVersions)
+    private void ReceiveMemberRoster(int[] peerIds, string[] usernames, string[] rommHosts, int[] hasGameFlags, int[] readyFlags, string[] statuses, string[] emulatorVersions, int[] controllerCounts)
     {
         membersByPeerId.Clear();
 
@@ -370,7 +361,8 @@ public partial class NetplayLobby : Node
                 HasGame = hasGameFlags[memberIndex] != 0,
                 IsReady = readyFlags[memberIndex] != 0,
                 Status = memberIndex < statuses.Length ? statuses[memberIndex] : "",
-                EmulatorVersion = memberIndex < emulatorVersions.Length ? emulatorVersions[memberIndex] : ""
+                EmulatorVersion = memberIndex < emulatorVersions.Length ? emulatorVersions[memberIndex] : "",
+                ControllerCount = memberIndex < controllerCounts.Length ? controllerCounts[memberIndex] : 0
             };
         }
 
@@ -451,7 +443,7 @@ public partial class NetplayLobby : Node
         EmitSignal(SignalName.RequiredRomHashChanged);
     }
 
-    public void ReportLocalReadiness(bool hasGame, bool isReady, string status, string emulatorVersion)
+    public void ReportLocalReadiness(bool hasGame, bool isReady, string status, string emulatorVersion, int controllerCount)
     {
         if (IsHosting)
         {
@@ -461,17 +453,18 @@ public partial class NetplayLobby : Node
                 hostMember.IsReady = isReady;
                 hostMember.Status = status;
                 hostMember.EmulatorVersion = emulatorVersion ?? "";
+                hostMember.ControllerCount = controllerCount;
                 BroadcastMembers();
             }
 
             return;
         }
 
-        RpcId(HostPeerId, MethodName.ReceiveMemberReadiness, hasGame, isReady, status ?? "", emulatorVersion ?? "");
+        RpcId(HostPeerId, MethodName.ReceiveMemberReadiness, hasGame, isReady, status ?? "", emulatorVersion ?? "", controllerCount);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void ReceiveMemberReadiness(bool hasGame, bool isReady, string status, string emulatorVersion)
+    private void ReceiveMemberReadiness(bool hasGame, bool isReady, string status, string emulatorVersion, int controllerCount)
     {
         if (!IsHosting)
         {
@@ -489,10 +482,12 @@ public partial class NetplayLobby : Node
         member.IsReady = isReady;
         member.Status = status;
         member.EmulatorVersion = emulatorVersion;
+        member.ControllerCount = System.Math.Clamp(controllerCount, 0, StreamProtocol.MaxPadsPerGuest);
 
         BroadcastMembers();
     }
 
+    // Tells every guest to open the host's stream at this address and UDP port.
     public void ReleaseMembersToStart(string hostAddress, int netplayPort)
     {
         if (!IsHosting)
@@ -539,8 +534,8 @@ public partial class NetplayLobby : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void ReceiveStopRequest()
     {
-        GD.Print("[Lobby] host ended the game, closing the emulator.");
-        appInstance?.emulatorManager?.CloseEmulator();
+        GD.Print("[Lobby] host ended the game, closing the stream.");
+        EmitSignal(SignalName.StopRequested);
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

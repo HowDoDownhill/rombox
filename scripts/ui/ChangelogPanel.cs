@@ -45,7 +45,11 @@ public partial class ChangelogPanel : UiPanel
         AndroidExitHint,
         SteamRestart,
         SteamShortcutOutcome,
-        SteamLaunchOffer
+        SteamLaunchOffer,
+        // Before hosting: guests' controllers need something this computer lacks.
+        GuestControllerSetup,
+        // A message with nothing to decide.
+        Notice
     }
 
     public PromptSubject ActiveSubject { get; private set; } = PromptSubject.ApplicationUpdate;

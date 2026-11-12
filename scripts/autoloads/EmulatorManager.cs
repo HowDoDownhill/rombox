@@ -2680,6 +2680,9 @@ public partial class EmulatorManager : Node
         return "";
     }
 
+    // The running emulator, for capturing its window and sound. Null when none is running.
+    public Process ActiveEmulatorProcess => IsEmulatorRunning ? activeEmulatorProcess : null;
+
     public bool IsEmulatorRunning
     {
         get
