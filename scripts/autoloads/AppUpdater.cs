@@ -54,6 +54,8 @@ public partial class AppUpdater : Node
             GithubReleaseInfo releaseInfo = appInstance.configManager.PreReleaseBuilds
                 ? await FindNewestReleaseIncludingPreReleasesAsync()
                 : await FindLatestFullReleaseAsync();
+
+            GD.Print($"[Update] installed {CurrentVersion}; newest {(appInstance.configManager.PreReleaseBuilds ? "release or test build" : "full release")} is {releaseInfo?.TagName ?? "unknown"}.");
             
             if (releaseInfo != null && !string.IsNullOrEmpty(releaseInfo.TagName))
             {
