@@ -1,3 +1,29 @@
+RomBox - Version 1.3.90 Changelog (test build)
+
+This is a test build of play-together by streaming. Expect rough edges, and please say what you find.
+
+✨ New Features
+
+    Play Together by Streaming: Host Session now streams the host's game to everyone who joins. Guests need only RomBox: no game files, no emulator, and it works for every console. The host picks a game and presses Start Game, and each guest sees and hears the game and plays with their own controller.
+    Guests' Controllers: The host's computer plugs in a controller for each guest before the game starts, so the game sees every player. A guest's row in the lobby shows how many controllers they have.
+    Picture and Sound That Adapt: The picture is sent at 60 frames a second. On an uneven connection the guest holds picture and sound for a few extra milliseconds so motion stays smooth.
+
+🔧 Changes
+
+    Sessions Stream Now: Host Session and Join Session no longer use the emulators' own netplay. Hosting and joining also work with games in your own folders.
+    Hosting on Windows Needs a Driver: The first time you host, RomBox explains the ViGEmBus driver and asks before installing it. Without it guests can watch and listen but can't play. Guests don't need it.
+    Wide Screens: A game shown on an ultrawide monitor is streamed as its middle 16:9, so guests don't get bars on every side.
+
+⚠️ Known Limits
+
+    Hosting is tested on Windows. Hosting on Linux streams the whole screen and has not been tested. macOS can't host or join yet.
+    Joining on Linux needs FFmpeg installed (the ffmpeg package).
+    Playing across the internet needs the host's router to open ports 55440 and 55450. RomBox asks the router to do it; if the router refuses, forward both ports (UDP) to the host.
+    A lost connection can freeze or smear the picture for up to a second.
+    The host's bitrate is 10 Mbit/s. To change it, set BitrateKbps under [Streaming] in config.cfg.
+
+---
+
 RomBox - Version 1.3.1 Changelog
 
 ✨ New Features
