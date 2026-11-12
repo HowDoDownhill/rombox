@@ -301,4 +301,10 @@ public class GithubReleaseInfo
 
     [JsonPropertyName("assets")]
     public List<GithubReleaseAsset> Assets { get; set; }
+
+    [JsonPropertyName("prerelease")]
+    public bool IsPrerelease { get; set; }
+
+    [JsonPropertyName("draft")]
+    public bool IsDraft { get; set; }
 }
