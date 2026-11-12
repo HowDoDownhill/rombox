@@ -42,6 +42,9 @@ public sealed class StreamHostSession : IDisposable
     public int Port { get; }
     public int GuestCount { get { lock (guestLock) return guests.Count; } }
     public long BytesSent { get; private set; }
+    public long FramesSent { get; private set; }
+    public long KeyframesSent { get; private set; }
+    public long AudioFramesSent { get; private set; }
 
     public event Action<IPEndPoint> GuestJoined;
     public event Action<IPEndPoint> GuestLeft;
@@ -85,6 +88,13 @@ public sealed class StreamHostSession : IDisposable
     {
         Guest[] targets = SnapshotGuests();
         uint frameId = nextFrameId++;
+        // Counted with or without guests, so the log shows what the capture delivers.
+        FramesSent++;
+
+        if (isKeyframe)
+        {
+            KeyframesSent++;
+        }
 
         if (targets.Length == 0)
         {
@@ -126,6 +136,7 @@ public sealed class StreamHostSession : IDisposable
             return;
         }
 
+        AudioFramesSent++;
         StreamProtocol.WriteHeader(audioBuffer, StreamPacketType.Audio);
         BinaryPrimitives.WriteUInt32LittleEndian(audioBuffer.AsSpan(4), sequence);
         BinaryPrimitives.WriteUInt32LittleEndian(audioBuffer.AsSpan(8), ClockMs);

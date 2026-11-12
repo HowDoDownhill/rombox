@@ -27,6 +27,8 @@ public sealed class StreamGuestPads
     // second and swings the left stick from side to side.
     public bool SendsTestPattern { get; set; }
 
+    public long StatesSent { get; private set; }
+
     public StreamGuestPads(StreamGuestSession session)
     {
         this.session = session;
@@ -94,6 +96,7 @@ public sealed class StreamGuestPads
         slot.SentConnected = isConnected;
         slot.State = state;
         slot.LastSentMs = now;
+        StatesSent++;
         session.SendPadState(index, isConnected, state);
     }
 

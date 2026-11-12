@@ -236,6 +236,13 @@ public partial class ConfigManager : Node
 
     public int EmulatorCloseHotkeyCount { get; private set; }
     public float EmulatorCloseHoldSeconds { get; private set; }
+
+    // How much data a host sends guests each second for the picture, in kbit/s. 10,000 suits
+    // 1080p at 60 fps and fits most home upload speeds; a host on a slow connection lowers it.
+    public const int DefaultStreamBitrateKbps = 10000;
+    public const int LowestStreamBitrateKbps = 1000;
+    public const int HighestStreamBitrateKbps = 50000;
+    public int StreamBitrateKbps { get; private set; } = DefaultStreamBitrateKbps;
     public string ControllerMappingConsent { get; private set; }
 
     // False once the user picks Don't Ask Again on the offer to start RomBox through Steam.
@@ -539,6 +546,7 @@ public partial class ConfigManager : Node
         var defaultHotkeyButtons = BuildDefaultEmulatorCloseHotkeys();
         EmulatorCloseHotkeys = (Godot.Collections.Array)configurationFile.GetValue("Input", "EmulatorCloseHotkeys", defaultHotkeyButtons);
         EmulatorCloseHoldSeconds = (float)configurationFile.GetValue("Input", "EmulatorCloseHoldSeconds", DefaultEmulatorCloseHoldSeconds);
+        StreamBitrateKbps = System.Math.Clamp((int)configurationFile.GetValue("Streaming", "BitrateKbps", DefaultStreamBitrateKbps), LowestStreamBitrateKbps, HighestStreamBitrateKbps);
         ControllerMappingConsent = (string)configurationFile.GetValue("Input", "ControllerMappingConsent", ControllerMappingConsentUnasked);
         OfferSteamLaunch = (bool)configurationFile.GetValue("Steam", "OfferSteamLaunch", true);
         LibrarySource = (string)configurationFile.GetValue("Library", "Source", LibrarySources.RomM);
@@ -624,6 +632,7 @@ public partial class ConfigManager : Node
         EmulatorCloseHotkeyCount = DefaultEmulatorCloseHotkeyCount;
         EmulatorCloseHotkeys = BuildDefaultEmulatorCloseHotkeys();
         EmulatorCloseHoldSeconds = DefaultEmulatorCloseHoldSeconds;
+        StreamBitrateKbps = DefaultStreamBitrateKbps;
         ControllerMappingConsent = ControllerMappingConsentUnasked;
         OfferSteamLaunch = true;
         LibrarySource = LibrarySources.RomM;
@@ -671,6 +680,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("Input", "EmulatorCloseHotkeyCount", EmulatorCloseHotkeyCount);
         configurationFile.SetValue("Input", "EmulatorCloseHotkeys", EmulatorCloseHotkeys);
         configurationFile.SetValue("Input", "EmulatorCloseHoldSeconds", EmulatorCloseHoldSeconds);
+        configurationFile.SetValue("Streaming", "BitrateKbps", StreamBitrateKbps);
         configurationFile.SetValue("Input", "ControllerMappingConsent", ControllerMappingConsent ?? ControllerMappingConsentUnasked);
         configurationFile.SetValue("Steam", "OfferSteamLaunch", OfferSteamLaunch);
         configurationFile.SetValue("Library", "Source", LibrarySource);

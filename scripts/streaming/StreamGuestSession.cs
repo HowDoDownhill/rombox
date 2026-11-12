@@ -136,9 +136,27 @@ public sealed class StreamGuestSession : IDisposable
             }
 
             BytesReceived += length;
+            StallForTest();
             Interlocked.Exchange(ref lastHeardMs, clock.ElapsedMilliseconds);
             HandlePacket(type, buffer, length);
         }
+    }
+
+    // For tests of an uneven connection: when ROMBOX_TEST_STALL_MS is set, the receive thread
+    // stops for up to that long about five times a second, so packets pile up and then arrive
+    // together, the way they do over a phone's hotspot.
+    private static readonly int TestStallMs = int.TryParse(Environment.GetEnvironmentVariable("ROMBOX_TEST_STALL_MS"), out int stall) ? stall : 0;
+    private long nextTestStallMs;
+
+    private void StallForTest()
+    {
+        if (TestStallMs <= 0 || clock.ElapsedMilliseconds < nextTestStallMs)
+        {
+            return;
+        }
+
+        Thread.Sleep(Random.Shared.Next(TestStallMs / 3, TestStallMs + 1));
+        nextTestStallMs = clock.ElapsedMilliseconds + Random.Shared.Next(100, 300);
     }
 
     private void HandlePacket(StreamPacketType type, byte[] buffer, int length)

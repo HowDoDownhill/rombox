@@ -6,19 +6,30 @@ using System;
 // when the node is freed.
 public partial class StreamHostNode : Node
 {
+    private const double StatsEverySeconds = 5.0;
+
     private readonly int port;
     private readonly StreamCaptureTarget initialTarget;
+    private readonly int bitrateKbps;
 
     private StreamHostSession session;
     private StreamEncoderProcess encoder;
     private StreamHostPads pads;
     private IStreamAudioCapture audio;
 
+    private double secondsSinceStats;
+    private long framesAtLastStats;
+    private long keyframesAtLastStats;
+    private long bytesAtLastStats;
+    private long audioFramesAtLastStats;
+
     // With a target the capture starts straight away; without one, call StartCapture later.
-    public StreamHostNode(int port, StreamCaptureTarget target = null)
+    // bitrateKbps: the picture's bitrate, or 0 for the default.
+    public StreamHostNode(int port, StreamCaptureTarget target = null, int bitrateKbps = 0)
     {
         this.port = port;
         initialTarget = target;
+        this.bitrateKbps = bitrateKbps;
     }
 
     public int Port => session?.Port ?? port;
@@ -73,7 +84,14 @@ public partial class StreamHostNode : Node
             return false;
         }
 
-        encoder = new StreamEncoderProcess(ffmpegPath, target, new StreamEncoderSettings(), Log);
+        var settings = new StreamEncoderSettings();
+
+        if (bitrateKbps > 0)
+        {
+            settings.BitrateKbps = bitrateKbps;
+        }
+
+        encoder = new StreamEncoderProcess(ffmpegPath, target, settings, Log);
         encoder.FormatReady += format => session?.SetVideoFormat(format);
         encoder.FrameEncoded += (frame, isKeyframe) => session?.SendFrame(frame, isKeyframe);
 
@@ -94,6 +112,36 @@ public partial class StreamHostNode : Node
         }
 
         return true;
+    }
+
+    // Every few seconds the log says what the host sent, so a guest's dip in frame rate can be
+    // traced to the host or to the network between them.
+    public override void _Process(double delta)
+    {
+        secondsSinceStats += delta;
+
+        if (session == null || encoder == null || secondsSinceStats < StatsEverySeconds)
+        {
+            return;
+        }
+
+        long frames = session.FramesSent;
+        long keyframes = session.KeyframesSent;
+        long bytes = session.BytesSent;
+        long audioFrames = session.AudioFramesSent;
+        int guests = session.GuestCount;
+
+        // Frames are counted whether or not a guest is there to receive them; bytes only when sent.
+        double framesPerSecond = (frames - framesAtLastStats) / secondsSinceStats;
+        double megabitsPerSecond = (bytes - bytesAtLastStats) * 8 / 1_000_000.0 / secondsSinceStats;
+        double megabitsPerGuest = guests > 0 ? megabitsPerSecond / guests : 0;
+        GD.Print($"[Stream] host: {framesPerSecond:0.0} fps captured, {keyframes - keyframesAtLastStats} keyframes, {(audioFrames - audioFramesAtLastStats) / secondsSinceStats:0} sound frames/s, {megabitsPerGuest:0.0} Mbit/s to each of {guests} guest(s), {pads?.PadCount ?? 0} guest controller(s).");
+
+        framesAtLastStats = frames;
+        keyframesAtLastStats = keyframes;
+        bytesAtLastStats = bytes;
+        audioFramesAtLastStats = audioFrames;
+        secondsSinceStats = 0;
     }
 
     private static void Log(string line)

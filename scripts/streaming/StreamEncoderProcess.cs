@@ -44,7 +44,7 @@ public sealed class StreamCaptureTarget
 public sealed class StreamEncoderSettings
 {
     public int FrameRate = 60;
-    public int BitrateKbps = 20000;
+    public int BitrateKbps = 10000;
     // The stream is scaled down to fit inside this size. H.264 hardware encoders stop at 4096
     // pixels wide, and the guest decodes on one processor thread.
     public int MaximumWidth = 1920;
@@ -130,6 +130,7 @@ public sealed class StreamEncoderProcess : IDisposable
         bool capturesGpuFrames = OperatingSystem.IsWindows();
         string input;
         string limiter = "";
+        int declaredFrameRate = settings.FrameRate;
 
         if (OperatingSystem.IsWindows())
         {
@@ -140,7 +141,8 @@ public sealed class StreamEncoderProcess : IDisposable
             // The capture's own cap drops any frame that follows the last one too closely. A game
             // at 60 fps shows its frames at slightly uneven gaps, so a cap of 60 lost about one
             // frame in six. The cap is set high and the limiter below keeps the rate instead.
-            input = $"-f lavfi -i \"gfxcapture={source}:max_framerate={settings.FrameRate * 4}:capture_cursor=0:{WindowsOutputSize()}\"";
+            declaredFrameRate = settings.FrameRate * 4;
+            input = $"-f lavfi -i \"gfxcapture={source}:max_framerate={declaredFrameRate}:capture_cursor=0:{WindowsOutputSize()}\"";
             limiter = RateLimiter(settings.FrameRate);
         }
         else
@@ -155,7 +157,7 @@ public sealed class StreamEncoderProcess : IDisposable
         string filterArgument = string.IsNullOrEmpty(filter) ? "" : $"-vf \"{filter}\" ";
 
         return $"-hide_banner -loglevel warning -nostats {StreamEncoderArguments.DeviceOptions(Encoder)} {input} {filterArgument}-fps_mode passthrough "
-            + $"{StreamEncoderArguments.EncoderOptions(Encoder, settings.BitrateKbps, settings.FrameRate)} -an -f flv -flush_packets 1 pipe:1";
+            + $"{StreamEncoderArguments.EncoderOptions(Encoder, settings.BitrateKbps, settings.FrameRate, declaredFrameRate)} -an -f flv -flush_packets 1 pipe:1";
     }
 
     // A window wider than the widest shape loses its sides, and one larger than the limit is

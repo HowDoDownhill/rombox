@@ -1372,7 +1372,7 @@ public class MainSceneNetplayHandler
         hasHostedGameRunning = true;
         StopStreaming();
 
-        streamHost = new StreamHostNode(StreamProtocol.DefaultPort);
+        streamHost = new StreamHostNode(StreamProtocol.DefaultPort, null, appInstance.configManager?.StreamBitrateKbps ?? 0);
         mainScene.AddChild(streamHost);
 
         int controllersBefore = Input.GetConnectedJoypads().Count;

@@ -159,10 +159,17 @@ public static class StreamEncoderArguments
         return string.Join(",", steps);
     }
 
-    public static string EncoderOptions(string encoder, int bitrateKbps, int frameRate)
+    // declaredFrameRate: the rate the capture source announces to the encoder, when it differs
+    // from the rate frames really arrive at. An encoder shares its bitrate out per announced
+    // frame, so a source announcing 240 fps and delivering 60 gets a quarter of the bitrate.
+    // The figures given to the encoder are scaled up by that ratio to make up for it.
+    public static string EncoderOptions(string encoder, int bitrateKbps, int frameRate, int declaredFrameRate = 0)
     {
-        int bufferKbits = Math.Max(bitrateKbps * 2 / Math.Max(frameRate, 1), 100);
-        string rate = $"-b:v {bitrateKbps}k -maxrate {bitrateKbps}k -bufsize {bufferKbits}k";
+        int realFrameRate = Math.Max(frameRate, 1);
+        int announcedKbps = declaredFrameRate > realFrameRate ? (int)((long)bitrateKbps * declaredFrameRate / realFrameRate) : bitrateKbps;
+        // Room for two real frames, which keeps one large frame from delaying the ones after it.
+        int bufferKbits = Math.Max(bitrateKbps * 2 / realFrameRate, 100);
+        string rate = $"-b:v {announcedKbps}k -maxrate {announcedKbps}k -bufsize {bufferKbits}k";
         int gop = frameRate;
 
         return encoder switch

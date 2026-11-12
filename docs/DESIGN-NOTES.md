@@ -4305,6 +4305,91 @@ well under 1 ms packing and sending. If a measured stage ever misses 60 fps the 
 that stage to native code (the encoder moving in-process is the likely first candidate, which
 would also allow keyframes on request).
 
+### Getting ready for the internet
+
+Three changes on 2026-11-11, ahead of the first test across the internet:
+
+- The picture's bitrate is `[Streaming] BitrateKbps` in `config.cfg`, 10,000 by default and held
+  between 1,000 and 50,000. It was fixed at 20,000, more than many home connections can upload.
+  There is no row for it in Settings yet, and nothing adapts it to the connection.
+- The host logs what it sent every five seconds: frames captured, keyframes, sound frames, Mbit/s
+  to each guest and guest controllers. A guest's dip in frame rate can then be set against the
+  host's own rate. On the test window the host logged 60 fps and 2.7 Mbit/s.
+- The guest's "ran dry" count for sound now rises only while sound packets are still arriving. A
+  Windows host sends nothing while the game is silent, and the count used to treat every silence
+  as a fault.
+
+### The capture cap also divided the bitrate by four
+
+Found 2026-11-11 from the host's log of the first run over a phone hotspot: the picture used
+2.7 Mbit/s of a 10 Mbit/s setting, moving exactly in step with the frame count. An encoder shares
+its bitrate out per announced frame. `gfxcapture=max_framerate=240` announces 240 fps, the game
+delivers 60, so each frame got a 240th of a second's worth of data and the stream ran at a quarter
+of its setting. Every stream since the 60 fps fix was affected, the lobby tests included.
+
+Measured on a detailed 1280x720 test window with `-b:v 10000k`: 2.2 to 2.5 Mbit/s. Declaring the
+real rate with `-r 60` is refused alongside `-fps_mode passthrough`, and the other frame-rate
+modes bring back the dropped frames. `StreamEncoderArguments.EncoderOptions` now multiplies the
+bitrate and maximum rate it gives the encoder by announced rate over real rate (40,000k for a
+10,000k setting) and leaves the buffer at two real frames. The same window then encoded at 9.4 to
+9.7 Mbit/s. Linux is unaffected: `x11grab` announces the rate it delivers.
+
+### Where the picture's delay comes from
+
+On 2026-11-11 the owner reported a clear delay on the Arch guest while the same controller's input
+looked prompt on the host's own screen. So the path from guest to host was fine and the picture's
+way back was slow. Measured that evening:
+
+| Stage | Result |
+|---|---|
+| Host: window to encoded frame, plus decode, same PC, 800x450 window | 6 to 8 ms (270 samples) |
+| The same with a 3840x2160 window scaled to 1920x1080 | 7 ms (120 samples), decode 1.3 ms |
+| Network, home Wi-Fi | ping 1 to 4 ms |
+| Network, laptop tethered to a phone | ping 25 to 80 ms, one-way delay 12 to 48 ms, uneven |
+| Arch guest, decoded frame to upload | 4 to 15 ms |
+| Arch guest, frames shown over the phone | 40 to 58 a second of 60 sent, none lost |
+
+The host is not the problem, at any window size. Over the phone the network is the largest part,
+and frames arrive in bursts, so the guest, which shows only the newest, skips about ten a second.
+The guest's own display path had not been measured and had two avoidable costs, both changed:
+
+- The library behind the stream view was still drawn every frame. The view now hides the current
+  scene while open and gives the focus back when it closes.
+- The view waited for the screen's refresh, which also set how often controllers were read. While
+  open it now turns V-Sync off, runs the loop at 240 a second and turns low-processor mode off,
+  then puts all three back.
+
+The guest logs a line every five seconds with frames arrived, decoded and shown, the longest wait
+between frames, decode time, loop rate, ping and controller states sent. On the desktop the loop
+held 240 a second with a longest pass of 4 to 5 ms. The Arch guest has not been run with these
+changes yet.
+
+The measuring method changed too. The test guest writes the clock's frame counter, read from each
+decoded picture, to the file named by `ROMBOX_TEST_CLOCK_FILE`, and a script compares it with the
+counter read off the clock window. Reading the guest window off the screen failed that day: the
+test clock was 800x100, and the new 16:9 crop cut it to its middle 178 pixels. Use a 16:9 clock.
+
+### Frames are shown on the host's spacing, after a short adaptive wait
+
+Over a phone's hotspot the guest lost no packets and still showed 40 to 58 frames a second of 60.
+Frames arrived in clumps, and the view showed only the newest each loop, so a clump became a
+pause followed by skipped frames. `StreamPlayout` now holds each decoded frame until the host's
+own spacing is restored. It measures how much each frame's travel time exceeded the shortest
+recent one, over about five seconds, and waits long enough to cover 95% of them, up to 80 ms. The
+wait changes by at most 1 ms per quarter second so it never shows as a jump.
+
+Measured on one PC with `ROMBOX_TEST_STALL_MS`, which stops the guest's receive thread for a random
+time about five times a second:
+
+| Arrival | Longest gap between frames | Wait chosen | Shown of 60 |
+|---|---|---|---|
+| Steady | 35 ms | 1 ms | all that arrived |
+| Stalls of up to 40 ms | 52 to 57 ms | 17 to 21 ms | 59.4 to 59.8 |
+
+The wait is delay added on purpose: smoothness is bought with it. On a steady connection it costs
+about 1 ms. Not yet run on the Arch guest or over a real phone connection. Packet loss is a
+separate problem and still unhandled; no session so far has lost a packet.
+
 ### A window wider than 16:9 loses its sides
 
 A console game on an ultrawide monitor sits in the middle of its window with empty space either

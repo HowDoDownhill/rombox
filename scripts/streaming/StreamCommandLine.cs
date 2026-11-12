@@ -7,15 +7,19 @@ using System.Net;
 //                            title:<regular expression>, hwnd:<handle>, x11:<window id>
 //   --stream-join=<address>  show a host's stream, as host or host:port
 //   --stream-port=<port>     the UDP port to host on (default 55450)
+//   --stream-bitrate=<kbps>  with --stream-host: picture bitrate in kbit/s (default 10000)
 //   --stream-test-input      with --stream-join: send a made-up controller that presses A twice
 //                            a second and swings the left stick
+//   --stream-no-input        with --stream-join: send no controllers, for tests beside a real session
 //   --stream-window=<x,y,w,h> put the RomBox window there instead of full screen, for tests
 public static class StreamCommandLine
 {
     private const string HostPrefix = "--stream-host=";
     private const string JoinPrefix = "--stream-join=";
     private const string PortPrefix = "--stream-port=";
+    private const string BitratePrefix = "--stream-bitrate=";
     private const string TestInputSwitch = "--stream-test-input";
+    private const string NoInputSwitch = "--stream-no-input";
     private const string WindowPrefix = "--stream-window=";
 
     public static void StartIfRequested(Node parent)
@@ -28,7 +32,7 @@ public static class StreamCommandLine
 
         if (!string.IsNullOrEmpty(hostTarget))
         {
-            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget)));
+            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget), int.TryParse(Read(arguments, BitratePrefix), out int bitrate) ? bitrate : 0));
         }
 
         if (!string.IsNullOrEmpty(joinAddress))
@@ -40,7 +44,7 @@ public static class StreamCommandLine
                     endPoint.Port = StreamProtocol.DefaultPort;
                 }
 
-                parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamGuestView(endPoint) { SendsTestInput = arguments.Contains(TestInputSwitch) });
+                parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamGuestView(endPoint) { SendsTestInput = arguments.Contains(TestInputSwitch), SendsNoInput = arguments.Contains(NoInputSwitch) });
             }
             else
             {
@@ -61,6 +65,9 @@ public static class StreamCommandLine
         DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
         DisplayServer.WindowSetSize(new Vector2I(parts[2], parts[3]));
         DisplayServer.WindowSetPosition(new Vector2I(parts[0], parts[1]));
+        // Test windows stay in front, so a measurement that reads them off the screen still works
+        // when another window is in the way.
+        DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.AlwaysOnTop, true);
     }
 
     private static string Read(string[] arguments, string prefix)
