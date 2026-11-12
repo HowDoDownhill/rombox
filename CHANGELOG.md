@@ -2,7 +2,7 @@ RomBox - Version 1.3.1 Changelog
 
 ✨ New Features
 
-    Get Test Builds Early: A new switch in Settings > General Settings. Turn it on and RomBox also offers test builds, which have new features before they are finished and may have problems. It is off unless you turn it on. Turn it off again and RomBox goes back to offering finished releases only.
+    Get Test Builds Early: A new switch in Settings > General Settings. Turn it on and RomBox also offers test builds, which have new features before they are finished and may have problems. It is off unless you turn it on. Turn it off while you have a test build and RomBox offers to put back the latest finished release.
 
 ---
 

@@ -26,7 +26,7 @@ public partial class AppUpdater : Node
     private float lastEmittedDownloadProgress = -1.0f;
 
     [Signal]
-    public delegate void UpdateAvailableEventHandler(string version, string releaseNotes);
+    public delegate void UpdateAvailableEventHandler(string version, string releaseNotes, bool goesBackToFullRelease);
 
     [Signal]
     public delegate void UpdateDownloadProgressEventHandler(float progress);
@@ -61,7 +61,16 @@ public partial class AppUpdater : Node
             {
                 if (IsNewerVersion(releaseInfo.TagName, CurrentVersion))
                 {
-                    CallDeferred(MethodName.EmitSignal, SignalName.UpdateAvailable, releaseInfo.TagName, releaseInfo.Body ?? "");
+                    CallDeferred(MethodName.EmitSignal, SignalName.UpdateAvailable, releaseInfo.TagName, releaseInfo.Body ?? "", false);
+                }
+                // A player who turned test builds off while on one is offered the latest full
+                // release, which is an older version than the one installed.
+                else if (!appInstance.configManager.PreReleaseBuilds
+                    && IsNewerVersion(CurrentVersion, releaseInfo.TagName)
+                    && await IsInstalledBuildATestBuildAsync())
+                {
+                    GD.Print($"[Update] test builds are off and {CurrentVersion} is a test build; offering {releaseInfo.TagName}.");
+                    CallDeferred(MethodName.EmitSignal, SignalName.UpdateAvailable, releaseInfo.TagName, releaseInfo.Body ?? "", true);
                 }
             }
         }
@@ -70,6 +79,22 @@ public partial class AppUpdater : Node
         {
             GD.PrintErr($"Exception checking for updates: {ex.Message}");
         }
+    }
+
+    // True when the installed version was published on GitHub as a pre-release. A build made
+    // from source with a version nobody has published is left alone.
+    private async Task<bool> IsInstalledBuildATestBuildAsync()
+    {
+        string url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/tags/{CurrentVersion.TrimStart('v', 'V')}";
+        var response = await httpClient.GetAsync(url);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return false;
+        }
+
+        string json = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize(json, RommJsonContext.Default.GithubReleaseInfo)?.IsPrerelease == true;
     }
 
     // GitHub's "latest" is the newest full release; pre-releases are never it.

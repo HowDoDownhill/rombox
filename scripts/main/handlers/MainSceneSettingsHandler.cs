@@ -429,11 +429,9 @@ public class MainSceneSettingsHandler
         {
             appInstance.configManager.SavePreReleaseBuilds(toggledOn);
 
-            // Turning it on looks for a test build straight away, so there is no need to restart.
-            if (toggledOn)
-            {
-                _ = mainScene.GetNodeOrNull<AppUpdater>("/root/AppUpdater")?.CheckForUpdatesAsync();
-            }
+            // Either way RomBox looks again straight away: on, for a test build to install;
+            // off, to offer the latest finished release in place of a test build.
+            _ = mainScene.GetNodeOrNull<AppUpdater>("/root/AppUpdater")?.CheckForUpdatesAsync();
         };
 
         preReleaseFieldBox.AddChild(preReleaseCheckbox);
