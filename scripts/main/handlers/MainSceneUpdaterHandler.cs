@@ -40,11 +40,11 @@ public class MainSceneUpdaterHandler
         appUpdater.UpdateDownloadCompleted -= OnUpdateDownloadCompleted;
     }
 
-    private void OnUpdateAvailable(string version, string releaseNotes)
+    private void OnUpdateAvailable(string version, string releaseNotes, bool goesBackToFullRelease)
     {
         pendingUpdateVersion = version;
 
-        mainScene.changelogPanel?.ShowUpdate(version, releaseNotes);
+        mainScene.changelogPanel?.ShowUpdate(version, releaseNotes, goesBackToFullRelease);
     }
 
     private void OnUpdateDownloadProgress(float progress)

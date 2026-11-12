@@ -54,14 +54,18 @@ public partial class ChangelogPanel : UiPanel
 
     public PromptSubject ActiveSubject { get; private set; } = PromptSubject.ApplicationUpdate;
 
-    public void ShowUpdate(string version, string releaseNotes)
+    // goesBackToFullRelease: the player turned test builds off while on one, and version is the
+    // latest full release, older than what is installed.
+    public void ShowUpdate(string version, string releaseNotes, bool goesBackToFullRelease = false)
     {
         ActiveSubject = PromptSubject.ApplicationUpdate;
 
         if (notesLabel != null)
         {
             string sanitizedNotes = EscapeMarkup(releaseNotes.Replace("\r", "").Replace("\b", ""));
-            notesLabel.Text = $"[b]A new version ({version}) of RomBox is available.[/b]\n\nRelease Notes:\n{sanitizedNotes}";
+            notesLabel.Text = goesBackToFullRelease
+                ? $"[b]Go back to version {version}?[/b]\n\nYou turned off test builds, and this copy of RomBox is one. Installing puts back the latest finished release. Your games, saves and settings stay as they are."
+                : $"[b]A new version ({version}) of RomBox is available.[/b]\n\nRelease Notes:\n{sanitizedNotes}";
         }
 
         if (acceptButton != null) acceptButton.Text = "Install";
