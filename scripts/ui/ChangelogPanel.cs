@@ -59,6 +59,8 @@ public partial class ChangelogPanel : UiPanel
     public void ShowUpdate(string version, string releaseNotes, bool goesBackToFullRelease = false)
     {
         ActiveSubject = PromptSubject.ApplicationUpdate;
+        // An earlier prompt in this session may have left its list of choices in the panel.
+        RemoveChoices();
 
         if (notesLabel != null)
         {
