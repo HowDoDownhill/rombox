@@ -1,3 +1,11 @@
+RomBox - Version 1.3.92 Changelog (test build)
+
+✨ New Features
+
+    Session Settings: A new section in Settings for playing together. When you host, choose the Picture Quality (5 to 50 Mbit/s), the Picture Size (720p, 1080p or 1440p) and whether a game wider than 16:9 is sent whole or as its middle. When you join, you can turn off the smoothing that evens out an uneven connection, and hide the connection details at the top of the picture. Higher quality needs more upload speed from the host.
+
+---
+
 RomBox - Version 1.3.91 Changelog (test build)
 
 🔧 Changes
