@@ -1,3 +1,13 @@
+RomBox - Version 1.3.94 Changelog (test build)
+
+🐛 Fixes
+
+    Starting With Only Browser Guests: Start Game stayed on "Waiting For Players" when everyone who joined was in a browser. A browser guest counts as ready as soon as they join, and the host can now start.
+    Browser Link on Your Own Network: The link now carries both your internet address and your home address, and the join page tries both. A guest in your own home, or a browser on the hosting PC, connects without the link being edited by hand.
+    Allowing Local Network Access: When a browser asked to let the join page reach devices on the local network, the page gave up before you could answer. It now keeps trying, and connects a moment after you allow it.
+
+---
+
 RomBox - Version 1.3.93 Changelog (test build)
 
 ✨ New Features
