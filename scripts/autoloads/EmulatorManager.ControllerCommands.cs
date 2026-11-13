@@ -37,6 +37,31 @@ public class ControllerCommands
 
     [JsonPropertyName("enabled_json_path")]
     public string EnabledJsonPath { get; set; }
+
+    [JsonPropertyName("profile")]
+    public ControllerProfile Profile { get; set; }
+}
+
+// A button layout RomBox adds to an emulator that keeps named layouts in its config. Each player's
+// port is switched to it only while that port still uses the layout named in Replaces, so a
+// layout the player made and chose themselves is left alone. The layout is written once: if one
+// with this name is already there, edits made to it inside the emulator are kept.
+public class ControllerProfile
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; }
+
+    [JsonPropertyName("replaces")]
+    public string Replaces { get; set; }
+
+    [JsonPropertyName("profiles_json_path")]
+    public string ProfilesJsonPath { get; set; }
+
+    [JsonPropertyName("binding_json_path")]
+    public string BindingJsonPath { get; set; }
+
+    [JsonPropertyName("value")]
+    public System.Text.Json.JsonElement Value { get; set; }
 }
 
 public partial class EmulatorManager
@@ -190,11 +215,56 @@ public partial class EmulatorManager
             }
         }
 
+        ApplyControllerProfile(configRoot, commands, playerCount);
+
         File.WriteAllText(configFilePath, configRoot.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
         GD.Print($"[InputLayer] enabled {playerCount} of {commands.PortCount} port(s) in {Path.GetFileName(configFilePath)}");
     }
 
+    private static void ApplyControllerProfile(JsonNode configRoot, ControllerCommands commands, int playerCount)
+    {
+        ControllerProfile profile = commands.Profile;
+
+        if (profile == null || string.IsNullOrEmpty(profile.Name) || profile.Value.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return;
+        }
+
+        if (ResolveJsonNode(configRoot, profile.ProfilesJsonPath) is not JsonObject profiles)
+        {
+            return;
+        }
+
+        if (!profiles.ContainsKey(profile.Name))
+        {
+            profiles[profile.Name] = JsonNode.Parse(profile.Value.GetRawText());
+            GD.Print($"[InputLayer] added the {profile.Name} button layout.");
+        }
+
+        JsonArray bindings = ResolveJsonArray(configRoot, profile.BindingJsonPath);
+        int switchedPorts = 0;
+
+        for (int portIndex = 0; bindings != null && portIndex < playerCount && portIndex < bindings.Count; portIndex++)
+        {
+            if (bindings[portIndex]?.GetValue<string>() == profile.Replaces)
+            {
+                bindings[portIndex] = profile.Name;
+                switchedPorts++;
+            }
+        }
+
+        if (switchedPorts > 0)
+        {
+            GD.Print($"[InputLayer] switched {switchedPorts} port(s) from the {profile.Replaces} layout to {profile.Name}.");
+        }
+    }
+
     private static JsonArray ResolveJsonArray(JsonNode root, string dottedPath)
+    {
+        return ResolveJsonNode(root, dottedPath) as JsonArray;
+    }
+
+    private static JsonNode ResolveJsonNode(JsonNode root, string dottedPath)
     {
         JsonNode node = root;
 
@@ -203,6 +273,6 @@ public partial class EmulatorManager
             node = node?[segment];
         }
 
-        return node as JsonArray;
+        return node;
     }
 }

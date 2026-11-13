@@ -23,7 +23,38 @@
     "port_count": 4,
     "config_file_relative_path": "portable_data/config/config.json",
     "assignment_json_path": "input.controller_assignment",
-    "enabled_json_path": "input.controller_enabled"
+    "enabled_json_path": "input.controller_enabled",
+    "profile": {
+      "name": "RomBox",
+      "replaces": "default",
+      "profiles_json_path": "input.input_profiles",
+      "binding_json_path": "input.input_profile_binding",
+      "value": {
+        "inputs": [
+          [{"Key": {"id": 7}}, {"ControllerButton": {"id": 14}}],
+          [{"Key": {"id": 4}}, {"ControllerButton": {"id": 13}}],
+          [{"Key": {"id": 22}}, {"ControllerButton": {"id": 12}}],
+          [{"Key": {"id": 26}}, {"ControllerButton": {"id": 11}}],
+          [{"Key": {"id": 40}}, {"ControllerButton": {"id": 6}}],
+          [{"Key": {"id": 29}}, {"ControllerAxis": {"id": 5, "axis": 1, "initial_state": 0}}],
+          [{"Key": {"id": 224}}, {"ControllerButton": {"id": 1}}],
+          [{"Key": {"id": 225}}, {"ControllerButton": {"id": 0}}],
+          [{"Key": {"id": 15}}, {"ControllerAxis": {"id": 2, "axis": 1, "initial_state": 0}}],
+          [{"Key": {"id": 13}}, {"ControllerAxis": {"id": 2, "axis": -1, "initial_state": 0}}],
+          [{"Key": {"id": 14}}, {"ControllerAxis": {"id": 3, "axis": 1, "initial_state": 0}}],
+          [{"Key": {"id": 12}}, {"ControllerAxis": {"id": 3, "axis": -1, "initial_state": 0}}],
+          [{"Key": {"id": 6}}, {"ControllerButton": {"id": 10}}],
+          [{"Key": {"id": 27}}, {"ControllerButton": {"id": 9}}],
+          [{"Key": {"id": 79}}, {"ControllerAxis": {"id": 0, "axis": 1, "initial_state": 0}}],
+          [{"Key": {"id": 80}}, {"ControllerAxis": {"id": 0, "axis": -1, "initial_state": 0}}],
+          [{"Key": {"id": 81}}, {"ControllerAxis": {"id": 1, "axis": 1, "initial_state": 0}}],
+          [{"Key": {"id": 82}}, {"ControllerAxis": {"id": 1, "axis": -1, "initial_state": 0}}],
+          [{"Key": {"id": 54}}, {"ControllerButton": {"id": 4}}]
+        ],
+        "dinput": false,
+        "deadzone": 5
+      }
+    }
   },
   "launch_env": {
     "macos": {
