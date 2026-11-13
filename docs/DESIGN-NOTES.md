@@ -4600,6 +4600,10 @@ and the version 3 form, which .NET only writes when the certificate has an exten
 attempt had no extension and Chromium answered with the TLS alert "certificate unknown".
 
 **The link.** `https://howdodownhill.github.io/rombox/join/#<address>:<port>/<fingerprint>`.
+The address is the host's internet address and its home-network address, separated by a comma,
+and the page tries both at once. The user's first test opened the link on the hosting PC itself
+and never connected: the link held only the internet address, and the router did not pass the
+connection back inside.
 Everything after `#` stays in the browser and is never sent to the server that serves the page.
 The link is long because the fingerprint is 43 characters. A short code would need a service
 that looks codes up, and RomBox has none.
@@ -4661,11 +4665,14 @@ page's test controller reached the host as an Xbox pad in both.
 - The page needs WebTransport and WebCodecs: current Chrome, Edge and Firefox. Safari is untried.
 - The host's router must let UDP 55451 in, as with the other ports. There is no relay.
 - Phones connect but have no on-screen buttons.
-- A guest on the host's own network: Chromium asks the person before it lets a page from the
-  internet reach a local address, and refuses without asking when it runs headless. The page
-  says so when the connection fails. A guest across the internet is not asked.
-- A browser that joins after the game has started watches and listens. It has no controller,
-  because games read their controllers at launch.
+- A guest on the host's own network, or on the host's own PC: browsers ask the person before a
+  page from the internet may reach a local address (Chromium: `loopbackNetwork` and
+  `localNetwork`; Firefox the same idea). The attempt in flight while the question is on screen
+  fails with `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS`, which sent the user's first try back
+  to "Join again". The page now repeats the attempt every 1.5 s for 45 s when the link holds a
+  local address, so the one after "Allow" connects. Headless browsers refuse without asking;
+  `scratchpad/cdp` grants the permission over the debugging port for tests. A guest across the
+  internet is not asked.
 - Anyone who reaches the port can connect, as with the UDP stream. The host sees browser players
   in the lobby before starting.
 

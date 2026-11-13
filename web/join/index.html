@@ -47,6 +47,9 @@
 'use strict';
 
 // The join link ends in  #<host address>:<port>/<certificate fingerprint>
+// The address can be several, separated by commas: the host's internet address and its address
+// on the home network. A guest in the host's own home usually cannot reach the internet address,
+// because many routers do not pass such a connection back inside. All are tried at once.
 // The page connects straight to the host's RomBox with WebTransport. Messages are the packets
 // RomBox guests exchange with a host by UDP (see StreamProtocol.cs), one message per stream.
 
@@ -73,13 +76,18 @@ function readLink() {
   let fingerprint;
   try { fingerprint = Uint8Array.from(atob(main.slice(slash + 1).replace(/-/g, '+').replace(/_/g, '/')), letter => letter.charCodeAt(0)); } catch { return null; }
   if (fingerprint.length !== 32) return null;
-  return { address: main.slice(0, slash), fingerprint, joinsAtOnce: options.includes('auto'), sendsTestInput: options.includes('test-input'), readsTestClock: options.includes('test-clock'),
+  const hosts = main.slice(0, slash);
+  const colon = hosts.lastIndexOf(':');
+  if (colon <= 0) return null;
+  const addresses = hosts.slice(0, colon).split(',').filter(host => host).map(host => host + hosts.slice(colon));
+  if (addresses.length === 0) return null;
+  return { addresses, fingerprint, joinsAtOnce: options.includes('auto'), sendsTestInput: options.includes('test-input'), readsTestClock: options.includes('test-clock'),
     // For tests with a page served from the same machine: the log lines are also requested from that server, so they show in its log.
     reportsToLocalServer: options.includes('test-report') && ['localhost', '127.0.0.1'].includes(location.hostname) };
 }
 
-function hostIsOnLocalNetwork() {
-  return /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[(::1|f[cd]|fe80))/i.test(link.address);
+function isOnLocalNetwork(address) {
+  return /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[(::1|f[cd]|fe80))/i.test(address);
 }
 
 function notice(text) { element('notice').textContent = text; }
@@ -132,19 +140,40 @@ async function join() {
   notice('Connecting to the host…');
   startSound();
 
-  try {
-    transport = new WebTransport(`https://${link.address}/rombox`, {
-      serverCertificateHashes: [{ algorithm: 'sha-256', value: link.fingerprint }],
-      congestionControl: 'low-latency'
+  // Every address is tried at once and the first to answer is used. A browser asks the person
+  // before a page from the internet may reach an address on the home network, and the attempt
+  // made while it asks fails. So attempts are repeated for a while: the one after "Allow" works.
+  const hasLocalAddress = link.addresses.some(isOnLocalNetwork);
+  const giveUpAt = performance.now() + (hasLocalAddress ? 45000 : 15000);
+
+  for (;;) {
+    const opened = [];
+    const attempts = link.addresses.map(async address => {
+      const attempt = new WebTransport(`https://${address}/rombox`, {
+        serverCertificateHashes: [{ algorithm: 'sha-256', value: link.fingerprint }],
+        congestionControl: 'low-latency'
+      });
+      opened.push(attempt);
+      await attempt.ready;
+      return attempt;
     });
-    await transport.ready;
-  } catch (failure) {
-    log('could not connect: ' + failure);
-    // A browser asks before it lets a page from the internet reach an address on the home network.
-    leave(hostIsOnLocalNetwork()
-      ? 'Could not reach the host. If your browser asked to let this page reach devices on your local network, allow it, then join again.'
-      : 'Could not reach the host. The game may have ended, or the host\'s router may be blocking the connection.');
-    return;
+
+    let failure = null;
+    try { transport = await Promise.any(attempts); } catch (caught) { failure = caught; }
+    for (const attempt of opened) {
+      if (attempt !== transport) { try { attempt.close(); } catch { /* never opened */ } }
+    }
+    if (transport) break;
+
+    log('could not connect: ' + (failure.errors || [failure]).join('; '));
+    if (performance.now() > giveUpAt) {
+      leave(hasLocalAddress
+        ? 'Could not reach the host. If your browser asks to let this page reach devices on your local network, allow it, then join again. Otherwise the game may have ended, or the host\'s router may be blocking the connection.'
+        : 'Could not reach the host. The game may have ended, or the host\'s router may be blocking the connection.');
+      return;
+    }
+    if (hasLocalAddress) notice('Connecting to the host… If your browser asks to let this page reach devices on your local network, allow it.');
+    await new Promise(resolve => setTimeout(resolve, 1500));
   }
 
   const connected = transport;

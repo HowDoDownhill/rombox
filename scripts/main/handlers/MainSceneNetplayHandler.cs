@@ -549,7 +549,10 @@ public class MainSceneNetplayHandler
         browserGuests = null;
     }
 
-    // The link a guest opens in a browser. It names the host's address, as the join code does.
+    // The link a guest opens in a browser. It names the host's internet address when the router
+    // opened the port, and always its address on the home network: a guest in the same home
+    // usually cannot reach the internet address, because many routers do not pass such a
+    // connection back inside. The page tries both.
     private string BuildBrowserLink()
     {
         if (browserGuests == null)
@@ -558,18 +561,28 @@ public class MainSceneNetplayHandler
         }
 
         var portMapper = appInstance.netplayPortMapper;
-        string address = portMapper != null && portMapper.IsPortMapped(browserGuests.Port) && !string.IsNullOrEmpty(portMapper.ExternalAddress)
-            ? portMapper.ExternalAddress
-            : appInstance.netplayManager?.ResolveLocalHostAddress();
+        var addresses = new System.Collections.Generic.List<string>();
 
-        if (string.IsNullOrEmpty(address))
+        if (portMapper != null && portMapper.IsPortMapped(browserGuests.Port) && !string.IsNullOrEmpty(portMapper.ExternalAddress))
+        {
+            addresses.Add(portMapper.ExternalAddress);
+        }
+
+        string localAddress = appInstance.netplayManager?.ResolveLocalHostAddress();
+
+        if (!string.IsNullOrEmpty(localAddress) && !addresses.Contains(localAddress))
+        {
+            addresses.Add(localAddress);
+        }
+
+        if (addresses.Count == 0)
         {
             return null;
         }
 
         // An IPv6 address goes in brackets, as in any web address.
-        string hostPart = address.Contains(':') ? $"[{address}]" : address;
-        return $"{BrowserJoinPage}#{hostPart}:{browserGuests.JoinCode}";
+        string hosts = string.Join(",", addresses.Select(address => address.Contains(':') ? $"[{address}]" : address));
+        return $"{BrowserJoinPage}#{hosts}:{browserGuests.JoinCode}";
     }
 
     private void CopyBrowserLinkToClipboard()
@@ -1406,8 +1419,20 @@ public class MainSceneNetplayHandler
             return;
         }
 
-        mainScene.lobbyActionButton.Disabled = !lobby.AllMembersReady;
-        mainScene.lobbyActionButton.Text = lobby.AllMembersReady ? "Start Game" : "Waiting For Players";
+        mainScene.lobbyActionButton.Disabled = !CanStartHostedGame;
+        mainScene.lobbyActionButton.Text = CanStartHostedGame ? "Start Game" : "Waiting For Players";
+    }
+
+    // The host can start once every guest with RomBox is ready. Guests in a browser have nothing
+    // to get ready, so a lobby with only browser guests can start as soon as one has joined.
+    private bool CanStartHostedGame
+    {
+        get
+        {
+            var lobby = appInstance.netplayLobby;
+            bool hasBrowserGuests = browserGuests != null && browserGuests.Snapshot().Length > 0;
+            return lobby.AllMembersReady || (hasBrowserGuests && lobby.Members.Count <= 1);
+        }
     }
 
     private void OnLobbyActionPressed()
@@ -1463,7 +1488,7 @@ public class MainSceneNetplayHandler
             return;
         }
 
-        if (lobbyGameAction.Kind != GameActionKind.LaunchGame)
+        if (lobbyGameAction.Kind != GameActionKind.LaunchGame || !CanStartHostedGame)
         {
             return;
         }
