@@ -660,8 +660,19 @@ public class MainSceneNetplayHandler
         return game?.Files == null || game.Files.Count == 0 ? null : game.Files[0].Md5Hash;
     }
 
+    // Rules from when a session ran each player's own emulator against the others': everyone
+    // needed the same emulator version and the same game file. A streamed session runs one copy
+    // of the game, on the host, so neither is checked. The code for them stays until the old
+    // netplay is removed as a whole.
+    private static readonly bool AppliesEmulatorNetplayRules = false;
+
     private async void PublishHostRomHashWhenComputed(Game game)
     {
+        if (!AppliesEmulatorNetplayRules)
+        {
+            return;
+        }
+
         string localRomPath = ResolveLocalRomPath(game);
 
         if (localRomPath == null || !System.IO.File.Exists(localRomPath))
@@ -705,6 +716,11 @@ public class MainSceneNetplayHandler
 
     private async void VerifyLocalRomAgainstHost()
     {
+        if (!AppliesEmulatorNetplayRules)
+        {
+            return;
+        }
+
         string expectedRomHash = appInstance.netplayLobby?.RequiredRomHash;
         string localRomPath = ResolveLocalRomPath(ResolveSelectedLobbyGame());
 
@@ -841,6 +857,11 @@ public class MainSceneNetplayHandler
 
     private bool NeedsEmulatorVersionChange()
     {
+        if (!AppliesEmulatorNetplayRules)
+        {
+            return false;
+        }
+
         string targetVersion = ResolveTargetEmulatorVersion();
         string requiredEmulatorName = ResolveRequiredEmulatorName();
 
@@ -901,6 +922,11 @@ public class MainSceneNetplayHandler
 
     public async void WarmRomHashForNetplay(Game downloadedGame)
     {
+        if (!AppliesEmulatorNetplayRules)
+        {
+            return;
+        }
+
         if (appInstance.netplayManager == null || !appInstance.netplayManager.SupportsNetplayForGame(downloadedGame))
         {
             return;

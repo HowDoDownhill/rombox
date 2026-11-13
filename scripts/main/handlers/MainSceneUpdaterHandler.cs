@@ -43,6 +43,7 @@ public class MainSceneUpdaterHandler
     private void OnUpdateAvailable(string version, string releaseNotes, bool goesBackToFullRelease)
     {
         pendingUpdateVersion = version;
+        pendingUpdateGoesBack = goesBackToFullRelease;
 
         mainScene.changelogPanel?.ShowUpdate(version, releaseNotes, goesBackToFullRelease);
     }
@@ -83,8 +84,19 @@ public class MainSceneUpdaterHandler
         }
     }
 
+    // Set while the offer on screen is to go back from a test build to the latest full release.
+    private bool pendingUpdateGoesBack;
+
     public void OnCancelUpdatePressed()
     {
         mainScene.changelogPanel?.Close();
+
+        // The offer to go back is made once per test build. Turning the test builds switch on
+        // and off again brings it back.
+        if (pendingUpdateGoesBack)
+        {
+            pendingUpdateGoesBack = false;
+            appInstance?.configManager?.SaveDeclinedGoBackFrom(AppUpdater.CurrentVersion);
+        }
     }
 }

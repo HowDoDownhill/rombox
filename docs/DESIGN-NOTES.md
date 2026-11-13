@@ -4579,6 +4579,15 @@ Open problems from that day:
 - The startup offer to reopen through Steam drops command-line switches, `--netplay-host` among
   them.
 
+### What the lobby no longer checks
+
+The lobby was built for emulator netplay, where every player ran the game and so needed the
+same emulator version and the same game file. A streamed session runs one copy, on the host.
+`AppliesEmulatorNetplayRules` in `MainSceneNetplayHandler` is false, which turns off the
+version rule that could ask a host to change their emulator before Start Game unlocked, and
+the hashing and comparing of game files. The code stays until the old netplay is removed as a
+whole.
+
 ### Guests in a web browser
 
 A guest can join from a web page with nothing installed. The page is `web/join/index.html`: one

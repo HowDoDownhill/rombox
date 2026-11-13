@@ -64,7 +64,7 @@ public partial class ChangelogPanel : UiPanel
         {
             string sanitizedNotes = EscapeMarkup(releaseNotes.Replace("\r", "").Replace("\b", ""));
             notesLabel.Text = goesBackToFullRelease
-                ? $"[b]Go back to version {version}?[/b]\n\nYou turned off test builds, and this copy of RomBox is one. Installing puts back the latest finished release. Your games, saves and settings stay as they are."
+                ? $"[b]Go back to version {version}?[/b]\n\nYou turned off test builds, and this copy of RomBox is one. Installing puts back the latest finished release. Your games, saves and settings stay as they are.\n\nRomBox asks this once. To be asked again, turn Get Test Builds Early on and back off."
                 : $"[b]A new version ({version}) of RomBox is available.[/b]\n\nRelease Notes:\n{sanitizedNotes}";
         }
 

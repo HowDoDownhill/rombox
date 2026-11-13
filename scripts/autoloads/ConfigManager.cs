@@ -58,6 +58,9 @@ public partial class ConfigManager : Node
     // Off by default. When on, the updater also offers test builds, which GitHub marks as
     // pre-releases.
     public bool PreReleaseBuilds { get; private set; }
+    // The test build on which the player was offered the latest full release and said no. They
+    // are not asked again on that build.
+    public string DeclinedGoBackFrom { get; private set; } = "";
     public string InterfaceSize { get; private set; }
     public string GameListView { get; private set; }
     public string DetailsLayout { get; private set; } = GameDetailsLayout.Hero;
@@ -557,6 +560,7 @@ public partial class ConfigManager : Node
         AppStyle = (string)configurationFile.GetValue("UI", "AppStyle", Appearance.GlassStyle);
         UiSoundsEnabled = (bool)configurationFile.GetValue("UI", "UiSounds", true);
         PreReleaseBuilds = (bool)configurationFile.GetValue("Updates", "PreReleaseBuilds", false);
+        DeclinedGoBackFrom = (string)configurationFile.GetValue("Updates", "DeclinedGoBackFrom", "");
         InterfaceSize = (string)configurationFile.GetValue("UI", "InterfaceSize", "Auto");
         GameListView = (string)configurationFile.GetValue("UI", "GameListView", DefaultGameListView);
         DetailsLayout = (string)configurationFile.GetValue("UI", "DetailsLayout", GameDetailsLayout.Hero);
@@ -702,6 +706,7 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("UI", "AppStyle", AppStyle);
         configurationFile.SetValue("UI", "UiSounds", UiSoundsEnabled);
         configurationFile.SetValue("Updates", "PreReleaseBuilds", PreReleaseBuilds);
+        configurationFile.SetValue("Updates", "DeclinedGoBackFrom", DeclinedGoBackFrom);
         configurationFile.SetValue("UI", "InterfaceSize", InterfaceSize);
         configurationFile.SetValue("UI", "GameListView", GameListView);
         configurationFile.SetValue("UI", "DetailsLayout", DetailsLayout);
@@ -821,6 +826,14 @@ public partial class ConfigManager : Node
     public void SavePreReleaseBuilds(bool enabled)
     {
         PreReleaseBuilds = enabled;
+        // Changing the switch is a fresh choice, so the offer to go back may be made again.
+        DeclinedGoBackFrom = "";
+        SaveConfig();
+    }
+
+    public void SaveDeclinedGoBackFrom(string version)
+    {
+        DeclinedGoBackFrom = version ?? "";
         SaveConfig();
     }
 

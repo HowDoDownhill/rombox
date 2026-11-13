@@ -66,6 +66,7 @@ public partial class AppUpdater : Node
                 // A player who turned test builds off while on one is offered the latest full
                 // release, which is an older version than the one installed.
                 else if (!appInstance.configManager.PreReleaseBuilds
+                    && appInstance.configManager.DeclinedGoBackFrom != CurrentVersion
                     && IsNewerVersion(CurrentVersion, releaseInfo.TagName)
                     && await IsInstalledBuildATestBuildAsync())
                 {
