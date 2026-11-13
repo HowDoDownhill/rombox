@@ -1,3 +1,24 @@
+RomBox - Version 1.3.95 Changelog (test build)
+
+✨ New Features
+
+    Hosting on Linux: A Linux host now sends only the game's window and only the game's sound. Before, guests saw the whole desktop and heard everything it played. On a Wayland desktop RomBox opens the hosted game in a way it can capture.
+    Browser Guests on Linux Hosts: Copy Browser Link now works when you host on Linux. What it needs comes with RomBox, so there is nothing to install.
+
+🔧 Changes
+
+    Smoother Linux Hosting: A game filling a 4K screen was sent at about 40 frames a second, and the host's own sound stuttered. With an NVIDIA graphics card it is now sent at 60, and hosting no longer disturbs the game's sound.
+
+🐛 Fixes
+
+    Browser Guests: The picture goes black when the game ends. The last frame used to stay on screen, sometimes upside down.
+
+⚠️ Good to Know
+
+    On Linux with an AMD or Intel graphics card, hosting a game larger than 1080p may still fall short of 60 frames a second.
+
+---
+
 RomBox - Version 1.3.94 Changelog (test build)
 
 🐛 Fixes
