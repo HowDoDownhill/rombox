@@ -8,6 +8,8 @@ using System.Net;
 //   --stream-join=<address>  show a host's stream, as host or host:port
 //   --stream-port=<port>     the UDP port to host on (default 55450)
 //   --stream-bitrate=<kbps>  with --stream-host: picture bitrate in kbit/s (default 10000)
+//   --stream-height=<lines>  with --stream-host: the tallest picture to send, such as 2160
+//                            (default 1080); width follows at 16:9
 //   --stream-encoder=<name>  with --stream-host: use this ffmpeg encoder, such as h264_vaapi or
 //                            libx264, in place of the one RomBox would pick
 //   --stream-test-input      with --stream-join: send a made-up controller that presses A twice
@@ -21,6 +23,7 @@ public static class StreamCommandLine
     private const string PortPrefix = "--stream-port=";
     private const string BitratePrefix = "--stream-bitrate=";
     private const string EncoderPrefix = "--stream-encoder=";
+    private const string HeightPrefix = "--stream-height=";
     private const string TestInputSwitch = "--stream-test-input";
     private const string NoInputSwitch = "--stream-no-input";
     private const string WindowPrefix = "--stream-window=";
@@ -35,7 +38,14 @@ public static class StreamCommandLine
 
         if (!string.IsNullOrEmpty(hostTarget))
         {
-            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget), new StreamEncoderSettings { BitrateKbps = int.TryParse(Read(arguments, BitratePrefix), out int bitrate) ? bitrate : new StreamEncoderSettings().BitrateKbps, Encoder = Read(arguments, EncoderPrefix) }));
+            int height = int.TryParse(Read(arguments, HeightPrefix), out int parsedHeight) ? parsedHeight : new StreamEncoderSettings().MaximumHeight;
+            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget), new StreamEncoderSettings
+            {
+                BitrateKbps = int.TryParse(Read(arguments, BitratePrefix), out int bitrate) ? bitrate : new StreamEncoderSettings().BitrateKbps,
+                MaximumHeight = height,
+                MaximumWidth = height * 16 / 9,
+                Encoder = Read(arguments, EncoderPrefix)
+            }));
         }
 
         if (!string.IsNullOrEmpty(joinAddress))

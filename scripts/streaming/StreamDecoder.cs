@@ -64,8 +64,17 @@ public sealed class StreamDecoder : IDisposable
         }
 
         context = Libav.AllocContext(codec);
-        // One thread: frame threading holds back a frame per extra thread.
-        Libav.OptSet(context, "threads", "1", 0);
+        // Frame threading holds back a frame per extra thread, so it stays off. A host cuts
+        // pictures taller than 1440p into strips, and those are decoded side by side within one
+        // frame, which holds nothing back.
+        bool usesStrips = format.Height > StreamEncoderSettings.TallestSingleStripHeight;
+        Libav.OptSet(context, "threads", usesStrips ? StreamEncoderSettings.StripsForTallPictures.ToString() : "1", 0);
+
+        if (usesStrips)
+        {
+            Libav.OptSet(context, "thread_type", "slice", 0);
+        }
+
         Libav.OptSet(context, "flags", "+low_delay", 0);
 
         int result = Libav.Open(context, codec, IntPtr.Zero);

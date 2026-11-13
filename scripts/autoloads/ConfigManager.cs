@@ -251,9 +251,9 @@ public partial class ConfigManager : Node
     public const int HighestStreamBitrateKbps = 50000;
     public int StreamBitrateKbps { get; private set; } = DefaultStreamBitrateKbps;
 
-    // The largest picture a host sends, by height: 720, 1080 or 1440. Width follows at 16:9.
+    // The largest picture a host sends, by height: 720, 1080, 1440 or 2160 (4K). Width follows at 16:9.
     public const int DefaultStreamPictureHeight = 1080;
-    public static readonly int[] StreamPictureHeights = { 720, 1080, 1440 };
+    public static readonly int[] StreamPictureHeights = { 720, 1080, 1440, 2160 };
     public int StreamPictureHeight { get; private set; } = DefaultStreamPictureHeight;
 
     // A game window wider than 16:9 is sent as its middle 16:9 when this is on.

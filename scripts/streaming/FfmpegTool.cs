@@ -163,7 +163,9 @@ public static class StreamEncoderArguments
     // from the rate frames really arrive at. An encoder shares its bitrate out per announced
     // frame, so a source announcing 240 fps and delivering 60 gets a quarter of the bitrate.
     // The figures given to the encoder are scaled up by that ratio to make up for it.
-    public static string EncoderOptions(string encoder, int bitrateKbps, int frameRate, int declaredFrameRate = 0)
+    // slices: how many strips each frame is cut into. A guest decodes the strips of one frame
+    // on separate processor threads, which a picture larger than 1440p needs to hold 60 fps.
+    public static string EncoderOptions(string encoder, int bitrateKbps, int frameRate, int declaredFrameRate = 0, int slices = 1)
     {
         int realFrameRate = Math.Max(frameRate, 1);
         int announcedKbps = declaredFrameRate > realFrameRate ? (int)((long)bitrateKbps * declaredFrameRate / realFrameRate) : bitrateKbps;
@@ -171,7 +173,14 @@ public static class StreamEncoderArguments
         int bufferKbits = Math.Max(bitrateKbps * 2 / realFrameRate, 100);
         string rate = $"-b:v {announcedKbps}k -maxrate {announcedKbps}k -bufsize {bufferKbits}k";
         int gop = frameRate;
+        // -slices is an option every ffmpeg encoder accepts; one that cannot cut strips sends whole frames.
+        string strips = slices > 1 ? $" -slices {slices}" : "";
 
+        return EncoderOptionsFor(encoder, rate, gop) + strips;
+    }
+
+    private static string EncoderOptionsFor(string encoder, string rate, int gop)
+    {
         return encoder switch
         {
             "h264_nvenc" => $"-c:v h264_nvenc -preset p1 -tune ull -zerolatency 1 -delay 0 -rc-lookahead 0 -bf 0 -rc cbr {rate} -g {gop} -forced-idr 1",

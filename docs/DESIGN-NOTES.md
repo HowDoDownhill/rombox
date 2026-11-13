@@ -4573,11 +4573,30 @@ Open problems from that day:
   NVIDIA driver on the main thread during shutdown, and it happens whenever `remote-run.sh stop`
   ends the app.
 - Windows capture stops at 4096 pixels wide with H.264, so large windows are scaled to fit
-  1920x1080 before encoding (`StreamEncoderSettings.MaximumWidth`).
+  the host's Picture Size before encoding (`StreamEncoderSettings.MaximumWidth`). The sizes
+  offered are 720p, 1080p (the default), 1440p and 2160p. See "Streaming at 4K" below.
 - On Windows, a game that is not the foreground window may ignore controllers (Dolphin does unless
   Background Input is on).
 - The startup offer to reopen through Steam drops command-line switches, `--netplay-host` among
   them.
+
+### Streaming at 4K
+
+Picture Size in Session Settings offers 2160p (3840x2160) since 2026-11-13. A host that picks
+it has each frame cut into four strips (`-slices 4`), and a guest's decoder works on the strips
+of one frame on four threads. Frame threading stays off because it holds frames back.
+
+Measured with a 3840x2160 test window on the owner's PC (NVIDIA encoder) at 30 Mbit/s:
+
+- The host captured and encoded at the same rate as at 1080p and 1440p.
+- A RomBox guest on the same PC decoded a frame in 4.9 ms on one thread.
+- The Arch laptop (i7-11800H) decoded a frame in 8.5 ms on one thread and 7.2 ms with strips.
+  It showed about 53.5 of 56 frames a second, against 55 of 56 at 1080p.
+- Edge as a browser guest showed every frame, 10 ms after the host sent it.
+
+The test window only drew 56 frames a second, so a full 60 has not been seen at 4K. 4K at
+30 Mbit/s and above has only run over the home network; whether it holds over the internet
+depends on the host's upload speed.
 
 ### What the lobby no longer checks
 

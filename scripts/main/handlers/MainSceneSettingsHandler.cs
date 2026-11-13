@@ -524,7 +524,7 @@ public class MainSceneSettingsHandler
         AddSettingsChoice(vbox, "Picture Quality", StreamQualityChoices.Select(choice => choice.Label).ToArray(), qualityIndex,
             index => config.SaveStreamBitrateKbps(StreamQualityChoices[index].Kbps));
 
-        AddSettingsChoice(vbox, "Picture Size", ConfigManager.StreamPictureHeights.Select(height => $"{height}p").ToArray(),
+        AddSettingsChoice(vbox, "Picture Size", ConfigManager.StreamPictureHeights.Select(height => height == 2160 ? "2160p (4K)" : $"{height}p").ToArray(),
             System.Math.Max(System.Array.IndexOf(ConfigManager.StreamPictureHeights, config.StreamPictureHeight), 0),
             index => config.SaveStreamPictureHeight(ConfigManager.StreamPictureHeights[index]));
 

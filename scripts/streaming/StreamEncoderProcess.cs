@@ -65,7 +65,7 @@ public sealed class StreamEncoderSettings
     public int FrameRate = 60;
     public int BitrateKbps = 10000;
     // The stream is scaled down to fit inside this size. H.264 hardware encoders stop at 4096
-    // pixels wide, and the guest decodes on one processor thread.
+    // pixels wide, so 3840x2160 is the largest size offered.
     public int MaximumWidth = 1920;
     public int MaximumHeight = 1080;
     // A window wider than this shape has its sides cut off evenly. A console game on an ultrawide
@@ -73,6 +73,10 @@ public sealed class StreamEncoderSettings
     // leave the guest with bars on all four sides. 0 keeps the window's own shape.
     public double WidestAspect = 16.0 / 9.0;
     public string Encoder;
+
+    // Pictures taller than this are cut into strips so guests can decode them on several threads.
+    public const int TallestSingleStripHeight = 1440;
+    public const int StripsForTallPictures = 4;
 }
 
 // Runs ffmpeg to capture and encode, and reports each encoded frame as soon as ffmpeg writes it.
@@ -177,7 +181,7 @@ public sealed class StreamEncoderProcess : IDisposable
         string filterArgument = string.IsNullOrEmpty(filter) ? "" : $"-vf \"{filter}\" ";
 
         return $"-hide_banner -loglevel warning -nostats {StreamEncoderArguments.DeviceOptions(Encoder)} {input} {filterArgument}-fps_mode passthrough "
-            + $"{StreamEncoderArguments.EncoderOptions(Encoder, settings.BitrateKbps, settings.FrameRate, declaredFrameRate)} -an -f flv -flush_packets 1 pipe:1";
+            + $"{StreamEncoderArguments.EncoderOptions(Encoder, settings.BitrateKbps, settings.FrameRate, declaredFrameRate, settings.MaximumHeight > StreamEncoderSettings.TallestSingleStripHeight ? StreamEncoderSettings.StripsForTallPictures : 1)} -an -f flv -flush_packets 1 pipe:1";
     }
 
     // Linux: the picture is shrunk to fit the size limit, never enlarged, with even sides.
