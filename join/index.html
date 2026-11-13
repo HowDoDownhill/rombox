@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>RomBox</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; color: #e8e8ec; font: 16px/1.5 system-ui, "Segoe UI", sans-serif; overflow: hidden; }
+  #picture { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  #start { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: #101014; }
+  #card { max-width: 420px; text-align: center; }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; font-weight: 600; }
+  p { margin: 0 0 20px; color: #b4b4c0; }
+  button { font: inherit; color: #fff; background: #3d5afe; border: 0; border-radius: 8px; padding: 12px 28px; cursor: pointer; }
+  button:hover, button:focus-visible { background: #536dfe; }
+  button[hidden] { display: none; }
+  #keys { margin-top: 24px; font-size: 0.85rem; color: #8c8c9a; }
+  #bar { position: fixed; top: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity 0.2s; }
+  #bar.shown { opacity: 1; }
+  #bar button { padding: 6px 12px; font-size: 0.85rem; background: rgba(40, 40, 52, 0.85); }
+  #notice { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: 90%; padding: 8px 16px; border-radius: 8px; background: rgba(20, 20, 28, 0.85); }
+  #notice:empty { display: none; }
+  #details { position: fixed; left: 8px; top: 8px; margin: 0; padding: 8px 12px; border-radius: 8px; background: rgba(20, 20, 28, 0.85); font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre; }
+  #details[hidden] { display: none; }
+</style>
+</head>
+<body>
+<canvas id="picture"></canvas>
+<div id="start">
+  <div id="card">
+    <h1>Join a RomBox game</h1>
+    <p id="startNote">Plug in a controller, then join.</p>
+    <button id="join">Join</button>
+    <div id="keys">No controller? Arrow keys are the D-pad, I J K L the left stick,<br>Z X A S the face buttons, Q W the shoulders, Enter is Start, Backspace is Select.</div>
+  </div>
+</div>
+<div id="bar">
+  <button id="detailsButton">Details</button>
+  <button id="fullButton">Full screen</button>
+</div>
+<div id="notice"></div>
+<pre id="details" hidden></pre>
+
+<script>
+'use strict';
+
+// The join link ends in  #<host address>:<port>/<certificate fingerprint>
+// The page connects straight to the host's RomBox with WebTransport. Messages are the packets
+// RomBox guests exchange with a host by UDP (see StreamProtocol.cs), one message per stream.
+
+const Type = { Hello: 1, Welcome: 2, VideoFormat: 3, VideoChunk: 4, KeyframeRequest: 5, Ping: 6, Pong: 7, Bye: 8, GuestInput: 9, Audio: 10 };
+const HeaderSize = 4;
+const Pad = { Up: 0x0001, Down: 0x0002, Left: 0x0004, Right: 0x0008, Start: 0x0010, Back: 0x0020, LeftStick: 0x0040, RightStick: 0x0080,
+  LeftShoulder: 0x0100, RightShoulder: 0x0200, Guide: 0x0400, A: 0x1000, B: 0x2000, X: 0x4000, Y: 0x8000 };
+
+const element = id => document.getElementById(id);
+const canvas = element('picture');
+const context2d = canvas.getContext('2d', { alpha: false, desynchronized: true });
+const link = readLink();
+const guestId = crypto.getRandomValues(new Uint32Array(1))[0] || 1;
+
+let transport = null;
+let isJoined = false;
+
+function readLink() {
+  let text;
+  try { text = decodeURIComponent(location.hash.slice(1)); } catch { return null; }
+  const [main, ...options] = text.split('&');
+  const slash = main.lastIndexOf('/');
+  if (slash <= 0) return null;
+  let fingerprint;
+  try { fingerprint = Uint8Array.from(atob(main.slice(slash + 1).replace(/-/g, '+').replace(/_/g, '/')), letter => letter.charCodeAt(0)); } catch { return null; }
+  if (fingerprint.length !== 32) return null;
+  return { address: main.slice(0, slash), fingerprint, joinsAtOnce: options.includes('auto'), sendsTestInput: options.includes('test-input'), readsTestClock: options.includes('test-clock'),
+    // For tests with a page served from the same machine: the log lines are also requested from that server, so they show in its log.
+    reportsToLocalServer: options.includes('test-report') && ['localhost', '127.0.0.1'].includes(location.hostname) };
+}
+
+function notice(text) { element('notice').textContent = text; }
+
+function log(text) {
+  console.log('[RomBox] ' + text);
+  if (link && link.reportsToLocalServer) fetch('report?' + encodeURIComponent(text)).catch(() => {});
+}
+
+function showStart(note, canJoin) {
+  element('start').style.display = 'flex';
+  element('startNote').textContent = note;
+  element('join').hidden = !canJoin;
+}
+
+// ---------------------------------------------------------------- connection
+
+function newMessage(type, bodyLength) {
+  const bytes = new Uint8Array(HeaderSize + bodyLength);
+  bytes[0] = 82; bytes[1] = 66; bytes[2] = 1; bytes[3] = type;
+  return bytes;
+}
+
+async function send(bytes) {
+  if (!transport) return;
+  try {
+    const stream = await transport.createUnidirectionalStream();
+    const writer = stream.getWriter();
+    writer.write(bytes).catch(() => {});
+    await writer.close();
+  } catch { /* the connection is closing */ }
+}
+
+function sendHello() {
+  const bytes = newMessage(Type.Hello, 4);
+  new DataView(bytes.buffer).setUint32(4, guestId, true);
+  send(bytes);
+}
+
+function sendPing() {
+  const bytes = newMessage(Type.Ping, 8);
+  new DataView(bytes.buffer).setFloat64(4, performance.now(), true);
+  send(bytes);
+}
+
+async function join() {
+  if (isJoined) return;
+  isJoined = true;
+  element('start').style.display = 'none';
+  notice('Connecting to the host…');
+  startSound();
+
+  try {
+    transport = new WebTransport(`https://${link.address}/rombox`, {
+      serverCertificateHashes: [{ algorithm: 'sha-256', value: link.fingerprint }],
+      congestionControl: 'low-latency'
+    });
+    await transport.ready;
+  } catch (failure) {
+    log('could not connect: ' + failure);
+    leave('Could not reach the host. The game may have ended, or the host\'s router may be blocking the connection.');
+    return;
+  }
+
+  const connected = transport;
+  connected.closed.then(() => { if (transport === connected) leave('The host closed the lobby.'); },
+    () => { if (transport === connected) leave('The connection to the host was lost.'); });
+
+  notice('Connected. Waiting for the host to start the game…');
+  log('connected');
+  sendHello();
+  receive(connected);
+}
+
+// The host's game closed. The lobby may start another, so the page stays connected and waits.
+function onGameEnded() {
+  resetPicture();
+  lastSoundSequence = null;
+  hostClockOffsetMs = null;
+  quickestPingMs = Infinity;
+  notice('The game has ended. Waiting for the host to start another…');
+  log('the game ended');
+}
+
+function leave(note) {
+  if (transport) { try { transport.close(); } catch { /* already closed */ } }
+  transport = null;
+  isJoined = false;
+  resetPicture();
+  notice('');
+  showStart(note, true);
+  element('join').textContent = 'Join again';
+}
+
+async function receive(from) {
+  const streams = from.incomingUnidirectionalStreams.getReader();
+  try {
+    for (;;) {
+      const { value, done } = await streams.read();
+      if (done) break;
+      readMessage(value);
+    }
+  } catch { /* closed; the closed promise reports it */ }
+}
+
+async function readMessage(stream) {
+  const reader = stream.getReader();
+  const parts = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      parts.push(value);
+      size += value.length;
+    }
+  } catch { return; }
+
+  let bytes = parts[0];
+  if (parts.length !== 1) {
+    bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const part of parts) { bytes.set(part, offset); offset += part.length; }
+  }
+  if (size < HeaderSize || bytes[0] !== 82 || bytes[1] !== 66 || bytes[2] !== 1) return;
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  stats.bytes += size;
+  switch (bytes[3]) {
+    case Type.VideoFormat: onVideoFormat(bytes, view); break;
+    case Type.VideoChunk: onVideoFrame(bytes, view); break;
+    case Type.Audio: onSound(bytes, view); break;
+    case Type.Pong: if (size >= 16) onPong(view); break;
+    case Type.Bye: onGameEnded(); break;
+  }
+}
+
+// The host's clock minus this page's, in ms, from the quickest ping so far. With it the page can
+// say how long ago the host sent the frame it is showing.
+let hostClockOffsetMs = null;
+let quickestPingMs = Infinity;
+
+function onPong(view) {
+  const now = performance.now();
+  const sentAt = view.getFloat64(4, true);
+  stats.pingMs = now - sentAt;
+  if (stats.pingMs <= quickestPingMs + 2) {
+    quickestPingMs = Math.min(quickestPingMs, stats.pingMs);
+    hostClockOffsetMs = view.getUint32(12, true) - (sentAt + stats.pingMs / 2);
+  }
+}
+
+// ---------------------------------------------------------------- picture
+
+let decoder = null;
+let format = null;
+// Frames are decoded strictly in order. They can arrive out of order, so they wait here.
+const waitingFrames = new Map();
+// The id of the frame to decode next, or null when only a keyframe can restart the picture.
+let nextFrameId = null;
+
+function hex(byte) { return byte.toString(16).padStart(2, '0'); }
+
+function onVideoFormat(bytes, view) {
+  if (bytes.length < 17) return;
+  const id = view.getUint32(4, true);
+  if (format && format.id === id) return;
+  const setupLength = view.getUint16(15, true);
+  const setup = bytes.slice(17, 17 + setupLength);
+  format = {
+    id, width: view.getUint16(9, true), height: view.getUint16(11, true), frameRate: view.getUint16(13, true),
+    config: { codec: `avc1.${hex(setup[1])}${hex(setup[2])}${hex(setup[3])}`, description: setup, optimizeForLatency: true }
+  };
+  log(`picture is ${format.width}x${format.height} at ${format.frameRate} fps, ${format.config.codec}`);
+  startDecoder();
+}
+
+function startDecoder() {
+  if (decoder && decoder.state !== 'closed') decoder.close();
+  waitingFrames.clear();
+  nextFrameId = null;
+  playout.reset();
+  decoder = new VideoDecoder({
+    output: frame => { stats.decoded++; playout.add(frame, performance.now()); },
+    error: failure => {
+      log('the decoder stopped: ' + failure);
+      stats.decoderRestarts++;
+      if (transport && format) { startDecoder(); send(newMessage(Type.KeyframeRequest, 0)); }
+    }
+  });
+  try { decoder.configure(format.config); }
+  catch (failure) { log(String(failure)); leave('This browser cannot show the game\'s picture. Use a current version of Chrome or Edge.'); }
+}
+
+function onVideoFrame(bytes, view) {
+  if (bytes.length <= 17) return;
+  const id = view.getUint32(4, true);
+  stats.received++;
+  if (nextFrameId !== null && id < nextFrameId) return;
+  waitingFrames.set(id, { isKey: (bytes[12] & 1) !== 0, hostTimeMs: view.getUint32(13, true), data: bytes.subarray(17) });
+  decodeWaiting();
+}
+
+function decodeWaiting() {
+  if (!decoder || decoder.state !== 'configured') return;
+
+  for (;;) {
+    const next = nextFrameId === null ? undefined : waitingFrames.get(nextFrameId);
+
+    if (next) {
+      waitingFrames.delete(nextFrameId);
+      nextFrameId++;
+      decoder.decode(new EncodedVideoChunk({ type: next.isKey ? 'key' : 'delta', timestamp: next.hostTimeMs * 1000, data: next.data }));
+      continue;
+    }
+
+    // The next frame is missing. A keyframe further on restarts the picture from there: the
+    // host skips ahead like this when the connection cannot keep up.
+    let keyframeId = null;
+    for (const [id, frame] of waitingFrames) {
+      if (frame.isKey && (keyframeId === null || id < keyframeId)) keyframeId = id;
+    }
+    if (keyframeId === null) break;
+    for (const id of [...waitingFrames.keys()]) {
+      if (id < keyframeId) { waitingFrames.delete(id); stats.skippedBeforeDecode++; }
+    }
+    nextFrameId = keyframeId;
+  }
+
+  while (waitingFrames.size > 90) waitingFrames.delete(waitingFrames.keys().next().value);
+}
+
+// Decides when each decoded frame is shown; the same method as StreamPlayout.cs. A network
+// delivers frames unevenly. Each frame is held until the host's own spacing is restored, for as
+// long as the network has recently been uneven.
+class Playout {
+  constructor() {
+    this.windowFrames = 300;
+    this.transit = new Float64Array(this.windowFrames);
+    this.isSmoothing = true;
+    this.skipped = 0;
+    this.reset();
+  }
+  reset() {
+    for (const held of this.held || []) held.frame.close();
+    this.held = [];
+    this.samples = 0;
+    this.nextSample = 0;
+    this.sinceAdjust = 0;
+    this.shortestTransit = 0;
+    this.waitMs = 0;
+  }
+  add(frame, arrivedMs) {
+    const hostMs = frame.timestamp / 1000;
+    this.transit[this.nextSample] = arrivedMs - hostMs;
+    this.nextSample = (this.nextSample + 1) % this.windowFrames;
+    this.samples = Math.min(this.samples + 1, this.windowFrames);
+    if (++this.sinceAdjust >= 15 || this.samples < 15) { this.sinceAdjust = 0; this.adjust(); }
+    this.held.push({ frame, dueMs: this.isSmoothing ? hostMs + this.shortestTransit + this.waitMs : 0 });
+    while (this.held.length > 8) { this.held.shift().frame.close(); this.skipped++; }
+  }
+  // The frame to draw for this screen refresh, or null. A screen that refreshes about as often
+  // as the game does will often find two frames due in one refresh and none in the next. The
+  // second one is kept for the next refresh. Only with three or more due is the page behind,
+  // and then the oldest are passed over.
+  takeDue(byMs) {
+    let dueCount = 0;
+    while (dueCount < this.held.length && this.held[dueCount].dueMs <= byMs) dueCount++;
+    if (dueCount === 0) return null;
+    for (; dueCount > 2; dueCount--) { this.held.shift().frame.close(); this.skipped++; }
+    return this.held.shift().frame;
+  }
+  adjust() {
+    const sorted = this.transit.slice(0, this.samples).sort();
+    this.shortestTransit = sorted[0];
+    const target = this.isSmoothing ? Math.min(sorted[Math.floor((this.samples - 1) * 0.95)] - this.shortestTransit, 80) : 0;
+    this.waitMs += Math.max(-1, Math.min(1, target - this.waitMs));
+  }
+}
+
+const playout = new Playout();
+let lastDrawAt = 0;
+let refreshMs = 16.7;
+
+function draw(now) {
+  requestAnimationFrame(draw);
+  if (lastDrawAt) refreshMs += (Math.min(now - lastDrawAt, 50) - refreshMs) * 0.05;
+  lastDrawAt = now;
+
+  // What is drawn now reaches the screen at its next refresh, so a frame due before then is
+  // drawn now.
+  const frame = playout.takeDue(performance.now() + refreshMs);
+  if (frame) {
+    if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
+      canvas.width = frame.displayWidth;
+      canvas.height = frame.displayHeight;
+    }
+    context2d.drawImage(frame, 0, 0);
+    if (hostClockOffsetMs !== null) {
+      // Until the next refresh puts it on the screen.
+      stats.delaySumMs += performance.now() + refreshMs + hostClockOffsetMs - frame.timestamp / 1000;
+      stats.delayFrames++;
+    }
+    if (link.readsTestClock) readTestClock();
+    frame.close();
+    if (stats.shown++ === 0) notice('');
+  }
+  pollPads();
+}
+
+// For tests: the host shows a window of sixteen stripes that count frames in binary. Reading the
+// number back from the canvas proves the picture is the host's, whole and in order.
+let lastClockValue = null;
+
+function readTestClock() {
+  const row = context2d.getImageData(0, canvas.height >> 1, canvas.width, 1).data;
+  let value = 0;
+  for (let bit = 0; bit < 16; bit++) {
+    if (row[Math.floor((bit + 0.5) * canvas.width / 16) * 4] > 127) value |= 1 << bit;
+  }
+  if (lastClockValue !== null) {
+    const step = (value - lastClockValue) & 0xffff;
+    if (step === 1) stats.clockInOrder++;
+    else if (step !== 0) stats.clockJumps++;
+  }
+  lastClockValue = value;
+}
+
+function resetPicture() {
+  if (decoder && decoder.state !== 'closed') decoder.close();
+  decoder = null;
+  format = null;
+  waitingFrames.clear();
+  nextFrameId = null;
+  playout.reset();
+  stats.shown = 0;
+}
+
+// ---------------------------------------------------------------- sound
+
+// Runs on the browser's sound thread. Keeps a little sound in hand, plays silence while it
+// refills after running dry, and skips ahead when too much has piled up.
+const soundWorklet = `
+class RomBoxSound extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.capacity = sampleRate;
+    this.left = new Float32Array(this.capacity);
+    this.right = new Float32Array(this.capacity);
+    this.readAt = 0;
+    this.count = 0;
+    this.level = Math.round(sampleRate * 0.04);
+    this.isFilling = true;
+    this.sinceReport = 0;
+    this.lowestCount = Infinity;
+    this.sinceLowest = 0;
+    this.port.onmessage = event => {
+      if (event.data.level) this.level = event.data.level;
+      if (event.data.left) this.add(event.data.left, event.data.right);
+    };
+  }
+  skip(samples) {
+    this.readAt = (this.readAt + samples) % this.capacity;
+    this.count -= samples;
+  }
+  add(left, right) {
+    if (this.count + left.length > this.capacity) this.skip(this.count + left.length - this.capacity);
+    let writeAt = (this.readAt + this.count) % this.capacity;
+    for (let index = 0; index < left.length; index++) {
+      this.left[writeAt] = left[index];
+      this.right[writeAt] = right[index];
+      writeAt = writeAt + 1 === this.capacity ? 0 : writeAt + 1;
+    }
+    this.count += left.length;
+    if (this.count > Math.max(this.level * 2, this.level + sampleRate * 0.06)) {
+      const extra = this.count - this.level;
+      this.skip(extra);
+      this.port.postMessage({ skipped: extra });
+    }
+  }
+  process(inputs, outputs) {
+    const left = outputs[0][0], right = outputs[0][1] || outputs[0][0];
+    if (this.isFilling && this.count >= this.level * 0.75) this.isFilling = false;
+    if (!this.isFilling && this.count < left.length) {
+      this.isFilling = true;
+      this.port.postMessage({ ranDry: true });
+    }
+    if (!this.isFilling) {
+      for (let index = 0; index < left.length; index++) {
+        left[index] = this.left[this.readAt];
+        right[index] = this.right[this.readAt];
+        this.readAt = this.readAt + 1 === this.capacity ? 0 : this.readAt + 1;
+      }
+      this.count -= left.length;
+    }
+    // The least that was in hand over two seconds is sound that was never needed. Anything in
+    // it beyond the level is delay with no purpose, so that much is skipped.
+    this.lowestCount = Math.min(this.lowestCount, this.count);
+    this.sinceLowest += left.length;
+    if (this.sinceLowest >= sampleRate * 2) {
+      const extra = this.lowestCount - this.level;
+      if (!this.isFilling && extra > sampleRate * 0.01) {
+        this.skip(extra);
+        this.port.postMessage({ skipped: extra });
+      }
+      this.lowestCount = Infinity;
+      this.sinceLowest = 0;
+    }
+    this.sinceReport += left.length;
+    if (this.sinceReport >= sampleRate / 4) {
+      this.sinceReport = 0;
+      this.port.postMessage({ buffered: this.count });
+    }
+    return true;
+  }
+}
+registerProcessor('rombox-sound', RomBoxSound);
+`;
+
+const SoundRate = 48000;
+const LowestLevelMs = 25, HighestLevelMs = 160;
+let soundContext = null;
+let soundNode = null;
+let soundDecoder = null;
+let lastSoundSequence = null;
+let lastSoundAt = 0;
+let soundLevelMs = 40;
+const soundGaps = [];
+let soundSinceAdjust = 0;
+
+async function startSound() {
+  if (soundContext || !('AudioDecoder' in window)) return;
+  try {
+    soundContext = new AudioContext({ sampleRate: SoundRate, latencyHint: 'interactive' });
+    try {
+      await soundContext.audioWorklet.addModule(URL.createObjectURL(new Blob([soundWorklet], { type: 'text/javascript' })));
+    } catch {
+      // A page opened from a file cannot load the first form.
+      await soundContext.audioWorklet.addModule('data:text/javascript,' + encodeURIComponent(soundWorklet));
+    }
+    soundNode = new AudioWorkletNode(soundContext, 'rombox-sound', { numberOfInputs: 0, outputChannelCount: [2] });
+    soundNode.port.onmessage = event => {
+      if (event.data.buffered !== undefined) stats.soundBufferedMs = event.data.buffered * 1000 / soundContext.sampleRate;
+      if (event.data.skipped) stats.soundSkippedMs += event.data.skipped * 1000 / soundContext.sampleRate;
+      // Running out because the game went quiet does not count.
+      if (event.data.ranDry && performance.now() - lastSoundAt < 150) stats.soundRanDry++;
+    };
+    soundNode.connect(soundContext.destination);
+    soundDecoder = new AudioDecoder({ output: playSound, error: failure => log('sound decoder: ' + failure) });
+    soundDecoder.configure({ codec: 'opus', sampleRate: SoundRate, numberOfChannels: 2 });
+    soundContext.resume().catch(() => {});
+  } catch (failure) {
+    log('no sound: ' + failure);
+    soundDecoder = null;
+  }
+}
+
+function playSound(data) {
+  const left = new Float32Array(data.numberOfFrames);
+  const right = new Float32Array(data.numberOfFrames);
+  data.copyTo(left, { planeIndex: 0, format: 'f32-planar' });
+  data.copyTo(right, { planeIndex: data.numberOfChannels > 1 ? 1 : 0, format: 'f32-planar' });
+  data.close();
+  for (let index = 0; index < left.length; index += 16) stats.soundPeak = Math.max(stats.soundPeak, Math.abs(left[index]));
+  soundNode.port.postMessage({ left, right }, [left.buffer, right.buffer]);
+}
+
+function onSound(bytes, view) {
+  if (!soundDecoder || soundDecoder.state !== 'configured' || bytes.length <= 12) return;
+  const sequence = view.getUint32(4, true);
+  if (lastSoundSequence !== null && sequence <= lastSoundSequence) return;
+  lastSoundSequence = sequence;
+  stats.soundFrames++;
+
+  // The level kept in hand follows how unevenly sound has been arriving, as in StreamGuestAudio.cs.
+  const now = performance.now();
+  const gap = now - lastSoundAt;
+  lastSoundAt = now;
+  if (gap < 250) {
+    soundGaps.push(gap);
+    if (soundGaps.length > 500) soundGaps.shift();
+    if (++soundSinceAdjust >= 50) {
+      soundSinceAdjust = 0;
+      const sorted = [...soundGaps].sort((a, b) => a - b);
+      const longPause = sorted[Math.floor((sorted.length - 1) * 0.98)];
+      const target = Math.max(LowestLevelMs, Math.min(HighestLevelMs, LowestLevelMs + longPause - 10));
+      soundLevelMs += Math.max(-5, Math.min(5, target - soundLevelMs));
+      soundNode.port.postMessage({ level: Math.round(soundLevelMs * soundContext.sampleRate / 1000) });
+    }
+  }
+
+  soundDecoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: sequence * 10000, data: bytes.subarray(12) }));
+}
+
+// ---------------------------------------------------------------- controllers
+
+// Up to four controllers. Each keeps its slot while it stays plugged in. A state is sent when it
+// changes and again every 100 ms; the host lets go of everything after 400 ms without one.
+// The first slot is always in use: it is the keyboard, joined by the first controller plugged
+// in. States go out from the moment the page connects, which is how the host's lobby knows how
+// many controllers to plug in before the game starts.
+const slots = [0, 1, 2, 3].map(() => ({ padIndex: -1, isConnected: false, sentConnected: false, sent: null, lastSentAt: -1000, unpluggedAt: 0 }));
+const keysDown = new Set();
+let inputSequence = 1;
+
+const keyButtons = { ArrowUp: Pad.Up, ArrowDown: Pad.Down, ArrowLeft: Pad.Left, ArrowRight: Pad.Right, KeyZ: Pad.A, KeyX: Pad.B, KeyA: Pad.X, KeyS: Pad.Y,
+  KeyQ: Pad.LeftShoulder, KeyW: Pad.RightShoulder, Enter: Pad.Start, Backspace: Pad.Back };
+const keySticks = { KeyI: [0, 1], KeyK: [0, -1], KeyJ: [-1, 0], KeyL: [1, 0] };
+
+addEventListener('keydown', event => {
+  if (!isJoined || !(event.code in keyButtons || event.code in keySticks)) return;
+  keysDown.add(event.code);
+  event.preventDefault();
+});
+addEventListener('keyup', event => keysDown.delete(event.code));
+addEventListener('blur', () => keysDown.clear());
+
+const toStick = value => Math.max(-32767, Math.min(32767, Math.round(value * 32767)));
+const toTrigger = value => Math.max(0, Math.min(255, Math.round(value * 255)));
+const neutral = () => ({ buttons: 0, leftTrigger: 0, rightTrigger: 0, leftX: 0, leftY: 0, rightX: 0, rightY: 0 });
+
+function readPad(pad) {
+  const state = neutral();
+  if (!pad) return state;
+  const pressed = index => pad.buttons[index] && pad.buttons[index].pressed;
+  const order = [Pad.A, Pad.B, Pad.X, Pad.Y, Pad.LeftShoulder, Pad.RightShoulder, 0, 0, Pad.Back, Pad.Start, Pad.LeftStick, Pad.RightStick, Pad.Up, Pad.Down, Pad.Left, Pad.Right, Pad.Guide];
+  order.forEach((flag, index) => { if (flag && pressed(index)) state.buttons |= flag; });
+  state.leftTrigger = toTrigger(pad.buttons[6] ? pad.buttons[6].value : 0);
+  state.rightTrigger = toTrigger(pad.buttons[7] ? pad.buttons[7].value : 0);
+  // A browser's vertical axes grow downward; an Xbox controller's grow upward.
+  state.leftX = toStick(pad.axes[0] || 0);
+  state.leftY = toStick(-(pad.axes[1] || 0));
+  state.rightX = toStick(pad.axes[2] || 0);
+  state.rightY = toStick(-(pad.axes[3] || 0));
+  return state;
+}
+
+function addKeys(state) {
+  for (const code of keysDown) {
+    state.buttons |= keyButtons[code] || 0;
+    const stick = keySticks[code];
+    if (stick) {
+      state.leftX = toStick(Math.max(-1, Math.min(1, state.leftX / 32767 + stick[0])));
+      state.leftY = toStick(Math.max(-1, Math.min(1, state.leftY / 32767 + stick[1])));
+    }
+  }
+}
+
+function sendPad(slot, index, isConnected, state, now) {
+  const same = slot.sent && isConnected === slot.sentConnected && Object.keys(state).every(key => state[key] === slot.sent[key]);
+  if (same && now - slot.lastSentAt < 100) return;
+  slot.isConnected = isConnected || slot.isConnected;
+  slot.sentConnected = isConnected;
+  slot.sent = state;
+  slot.lastSentAt = now;
+  stats.padStates++;
+
+  const bytes = newMessage(Type.GuestInput, 18);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(4, inputSequence++, true);
+  bytes[8] = index;
+  bytes[9] = isConnected ? 1 : 0;
+  view.setUint16(10, state.buttons, true);
+  bytes[12] = state.leftTrigger;
+  bytes[13] = state.rightTrigger;
+  view.setInt16(14, state.leftX, true);
+  view.setInt16(16, state.leftY, true);
+  view.setInt16(18, state.rightX, true);
+  view.setInt16(20, state.rightY, true);
+  send(bytes);
+}
+
+function pollPads() {
+  if (!transport) return;
+  const now = performance.now();
+  const hasFocus = document.hasFocus();
+
+  if (link.sendsTestInput) {
+    const state = neutral();
+    state.buttons = Math.floor(now / 500) % 2 === 0 ? Pad.A : 0;
+    state.leftX = toStick(Math.sin(now / 1000 * Math.PI));
+    sendPad(slots[0], 0, true, state, now);
+    return;
+  }
+
+  const pads = [...navigator.getGamepads()].filter(pad => pad && pad.connected && pad.mapping === 'standard');
+  for (const pad of pads) {
+    if (!slots.some(slot => slot.padIndex === pad.index)) {
+      const free = slots.find(slot => slot.padIndex < 0 && (!slot.isConnected || slot === slots[0]));
+      if (free) free.padIndex = pad.index;
+    }
+  }
+
+  slots.forEach((slot, index) => {
+    const pad = pads.find(candidate => candidate.index === slot.padIndex);
+    if (slot.padIndex >= 0 && !pad) { slot.padIndex = -1; slot.unpluggedAt = now; }
+
+    if (pad || index === 0) {
+      const state = hasFocus ? readPad(pad) : neutral();
+      if (index === 0 && hasFocus) addKeys(state);
+      sendPad(slot, index, true, state, now);
+    } else if (slot.isConnected) {
+      // Said for a whole second: one lost message would leave the controller plugged in on the host.
+      sendPad(slot, index, false, neutral(), now);
+      slot.isConnected = now - slot.unpluggedAt < 1000;
+    }
+  });
+}
+
+// ---------------------------------------------------------------- details and housekeeping
+
+const stats = { bytes: 0, received: 0, decoded: 0, shown: 0, skippedBeforeDecode: 0, decoderRestarts: 0, pingMs: 0,
+  soundFrames: 0, soundBufferedMs: 0, soundSkippedMs: 0, soundRanDry: 0, soundPeak: 0, padStates: 0,
+  delaySumMs: 0, delayFrames: 0, clockInOrder: 0, clockJumps: 0 };
+let previous = { ...stats, at: performance.now() };
+
+function report() {
+  const now = performance.now();
+  const seconds = (now - previous.at) / 1000;
+  const per = key => ((stats[key] - previous[key]) / seconds).toFixed(1);
+  const delayFrames = stats.delayFrames - previous.delayFrames;
+  const lines = [
+    `picture  ${per('shown')} fps shown, ${per('received')} received, ${playout.skipped} skipped`,
+    `         ${((stats.bytes - previous.bytes) * 8 / 1e6 / seconds).toFixed(1)} Mbit/s, held ${playout.waitMs.toFixed(0)} ms for smoothness`,
+    `sound    ${stats.soundBufferedMs.toFixed(0)} ms in hand of ${soundLevelMs.toFixed(0)}, ran dry ${stats.soundRanDry} times, skipped ${stats.soundSkippedMs.toFixed(0)} ms, peak ${stats.soundPeak.toFixed(2)}`,
+    `network  ping ${stats.pingMs.toFixed(0)} ms, shown ${delayFrames > 0 ? ((stats.delaySumMs - previous.delaySumMs) / delayFrames).toFixed(0) : '?'} ms after the host sent it`,
+    `input    ${per('padStates')} controller states/s`
+  ];
+  if (link.readsTestClock) lines.push(`clock    ${stats.clockInOrder} frames in order, ${stats.clockJumps} jumps`);
+  element('details').textContent = lines.join('\n');
+  previous = { ...stats, at: now };
+  return lines;
+}
+
+let reportsSinceLog = 0;
+setInterval(() => {
+  if (!transport) return;
+  sendHello();
+  sendPing();
+  const lines = report();
+  if (++reportsSinceLog >= 5) {
+    reportsSinceLog = 0;
+    log(lines.map(line => line.trim().replace(/\s+/g, ' ')).join(' | '));
+    stats.soundPeak = 0;
+  }
+}, 1000);
+
+let barTimer = 0;
+addEventListener('mousemove', () => {
+  element('bar').classList.add('shown');
+  clearTimeout(barTimer);
+  barTimer = setTimeout(() => element('bar').classList.remove('shown'), 2500);
+});
+element('detailsButton').addEventListener('click', () => { element('details').hidden = !element('details').hidden; });
+element('fullButton').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+});
+element('join').addEventListener('click', join);
+// A browser lets a page play sound only after a click or a key press on it.
+for (const gesture of ['pointerdown', 'keydown']) {
+  addEventListener(gesture, () => { if (soundContext && soundContext.state === 'suspended') soundContext.resume().catch(() => {}); });
+}
+addEventListener('pagehide', () => { if (transport) { send(newMessage(Type.Bye, 0)); transport.close(); } });
+
+if (!link) {
+  showStart('This link is incomplete. Ask the host for a new one.', false);
+} else if (!('WebTransport' in window) || !('VideoDecoder' in window)) {
+  showStart('This browser cannot show the game. Use a current version of Chrome or Edge.', false);
+} else if (link.joinsAtOnce) {
+  join();
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
