@@ -8,6 +8,8 @@ using System.Net;
 //   --stream-join=<address>  show a host's stream, as host or host:port
 //   --stream-port=<port>     the UDP port to host on (default 55450)
 //   --stream-bitrate=<kbps>  with --stream-host: picture bitrate in kbit/s (default 10000)
+//   --stream-encoder=<name>  with --stream-host: use this ffmpeg encoder, such as h264_vaapi or
+//                            libx264, in place of the one RomBox would pick
 //   --stream-test-input      with --stream-join: send a made-up controller that presses A twice
 //                            a second and swings the left stick
 //   --stream-no-input        with --stream-join: send no controllers, for tests beside a real session
@@ -18,6 +20,7 @@ public static class StreamCommandLine
     private const string JoinPrefix = "--stream-join=";
     private const string PortPrefix = "--stream-port=";
     private const string BitratePrefix = "--stream-bitrate=";
+    private const string EncoderPrefix = "--stream-encoder=";
     private const string TestInputSwitch = "--stream-test-input";
     private const string NoInputSwitch = "--stream-no-input";
     private const string WindowPrefix = "--stream-window=";
@@ -32,7 +35,7 @@ public static class StreamCommandLine
 
         if (!string.IsNullOrEmpty(hostTarget))
         {
-            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget), int.TryParse(Read(arguments, BitratePrefix), out int bitrate) ? new StreamEncoderSettings { BitrateKbps = bitrate } : null));
+            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget), new StreamEncoderSettings { BitrateKbps = int.TryParse(Read(arguments, BitratePrefix), out int bitrate) ? bitrate : new StreamEncoderSettings().BitrateKbps, Encoder = Read(arguments, EncoderPrefix) }));
         }
 
         if (!string.IsNullOrEmpty(joinAddress))

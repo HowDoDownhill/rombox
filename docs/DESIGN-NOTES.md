@@ -4725,8 +4725,22 @@ package (`tools/msquic/README.md`), placed beside `System.Net.Quic.dll`, where .
 without anything installed. It needs the system's OpenSSL 3 and libnuma. Edge on the Windows PC
 joined the Arch host this way: 59 fps, sound, and its controller plugged in through uinput.
 
-**Not done.** The capture does not follow a window that changes size.
-Hardware shrinking exists for NVIDIA only. `--netplay-local-only` hosts without asking the
+**The window is followed.** An X11 capture is fixed to the window and size it started with.
+`StreamHostNode.FollowWindow` looks the game's window up again once a second, off the main
+thread. When two looks in a row agree on a new window or size, the capture starts over there.
+Resizing a test window from 800x450 to 1280x720 mid-stream left the guest without a picture for
+0.4 seconds. A game that opens its real window after a launcher is picked up the same way.
+
+**Other graphics cards (2026-11-13).** Hardware shrinking exists for NVIDIA only. On the Arch
+box, forcing `libx264` with `--stream-encoder` on a 3840x2160 window gave 44 fps, while ffmpeg
+by itself grabbed and shrank the whole 3840x2400 display at a full 60 with the same filters, so
+the shortfall is the window capture and RomBox competing for the processor, and it only shows
+above 1080p. VAAPI could not be tried there: the machine's two render devices are NVIDIA, which
+has no VAAPI encoder, and an Intel one that refused the encoder. `DeviceOptions` names
+`/dev/dri/renderD128` outright, which is wrong on a machine whose first device is another
+card; the encoder probe then fails and RomBox falls back to `libx264`.
+
+**Not done.** `--netplay-local-only` hosts without asking the
 router for ports, for tests on the home network.
 
 ### FLV carries frame sizes

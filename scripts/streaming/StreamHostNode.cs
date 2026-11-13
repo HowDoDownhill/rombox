@@ -19,6 +19,13 @@ public partial class StreamHostNode : Node
     private StreamBrowserGuests browserGuests;
     private bool ownsBrowserGuests;
 
+    private const double WindowLookupEverySeconds = 1.0;
+    private string ffmpegPath;
+    private StreamCaptureTarget captureTarget;
+    private System.Threading.Tasks.Task<X11Windows.Found?> windowLookup;
+    private double secondsSinceWindowLookup;
+    private X11Windows.Found? changedWindow;
+
     private double secondsSinceStats;
     private long framesAtLastStats;
     private long keyframesAtLastStats;
@@ -110,7 +117,7 @@ public partial class StreamHostNode : Node
         }
 
         string appDirectory = System.IO.Path.GetDirectoryName(OS.GetExecutablePath());
-        string ffmpegPath = FfmpegTool.FindExecutable(appDirectory);
+        ffmpegPath = FfmpegTool.FindExecutable(appDirectory);
 
         if (ffmpegPath == null)
         {
@@ -118,13 +125,8 @@ public partial class StreamHostNode : Node
             return false;
         }
 
-        encoder = new StreamEncoderProcess(ffmpegPath, target, encoderSettings, Log);
-        encoder.FormatReady += format => session?.SetVideoFormat(format);
-        encoder.FrameEncoded += (frame, isKeyframe) => session?.SendFrame(frame, isKeyframe);
-
-        if (!encoder.Start())
+        if (!StartVideo(target))
         {
-            GD.PrintErr("[Stream] capture did not start.");
             return false;
         }
 
@@ -141,10 +143,95 @@ public partial class StreamHostNode : Node
         return true;
     }
 
+    private bool StartVideo(StreamCaptureTarget target)
+    {
+        captureTarget = target;
+        encoder = new StreamEncoderProcess(ffmpegPath, target, encoderSettings, Log);
+        encoder.FormatReady += format => session?.SetVideoFormat(format);
+        encoder.FrameEncoded += (frame, isKeyframe) => session?.SendFrame(frame, isKeyframe);
+
+        if (!encoder.Start())
+        {
+            GD.PrintErr("[Stream] capture did not start.");
+            encoder.Dispose();
+            encoder = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    // Linux: an X11 capture is fixed to the window and size it started with. A game that goes
+    // full screen, is resized, or opens its real window after a launcher would leave guests with
+    // a frozen or cut-off picture. Once a second the game's window is looked up again, off the
+    // main thread, and when it has settled on something new the capture starts over there.
+    private void FollowWindow(double delta)
+    {
+        if (!OperatingSystem.IsLinux() || captureTarget == null || captureTarget.ProcessId <= 0 || session == null)
+        {
+            return;
+        }
+
+        if (windowLookup != null)
+        {
+            if (!windowLookup.IsCompleted)
+            {
+                return;
+            }
+
+            X11Windows.Found? found = windowLookup.IsCompletedSuccessfully ? windowLookup.Result : null;
+            windowLookup = null;
+            ApplyWindowLookup(found);
+        }
+
+        secondsSinceWindowLookup += delta;
+
+        if (secondsSinceWindowLookup >= WindowLookupEverySeconds)
+        {
+            secondsSinceWindowLookup = 0;
+            int processId = captureTarget.ProcessId;
+            windowLookup = System.Threading.Tasks.Task.Run(() => X11Windows.FindForProcess(processId));
+        }
+    }
+
+    private void ApplyWindowLookup(X11Windows.Found? found)
+    {
+        if (found == null)
+        {
+            changedWindow = null;
+            return;
+        }
+
+        X11Windows.Found now = found.Value;
+
+        if (now.WindowId == captureTarget.X11WindowId && now.Width == captureTarget.X11Width && now.Height == captureTarget.X11Height)
+        {
+            changedWindow = null;
+            return;
+        }
+
+        // Two looks in a row have to agree, so a window being dragged to a new size is not
+        // chased through every size on the way.
+        bool hasSettled = changedWindow is X11Windows.Found before && before.WindowId == now.WindowId && before.Width == now.Width && before.Height == now.Height;
+        changedWindow = now;
+
+        if (!hasSettled)
+        {
+            return;
+        }
+
+        changedWindow = null;
+        Log($"[Stream] the game's window is now {now.Width}x{now.Height}; starting the capture again.");
+        encoder?.Dispose();
+        encoder = null;
+        StartVideo(new StreamCaptureTarget { X11WindowId = now.WindowId, X11Width = now.Width, X11Height = now.Height, ProcessId = captureTarget.ProcessId });
+    }
+
     // Every few seconds the log says what the host sent, so a guest's dip in frame rate can be
     // traced to the host or to the network between them.
     public override void _Process(double delta)
     {
+        FollowWindow(delta);
         secondsSinceStats += delta;
 
         if (session == null || encoder == null || secondsSinceStats < StatsEverySeconds)
