@@ -12,6 +12,7 @@ RomBox - Version 1.3.95 Changelog (test build)
 🐛 Fixes
 
     Browser Guests: The picture goes black when the game ends. The last frame used to stay on screen, sometimes upside down.
+    Hosting and Joining Checks: Host Session and Join Session now say right away when this computer is missing something they need, such as FFmpeg on Linux. Before, a lobby could open and the game start with no picture reaching anyone.
 
 ⚠️ Good to Know
 

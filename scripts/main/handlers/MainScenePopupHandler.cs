@@ -189,6 +189,15 @@ public class MainScenePopupHandler
             return;
         }
 
+        string cannotHost = StreamSupport.WhyCannotHost(AppDirectory);
+
+        if (cannotHost != null)
+        {
+            GD.Print($"[Stream] cannot host: {cannotHost}");
+            mainScene.startMenuPanel?.ShowNetplayView("Can't Host", $"{cannotHost}\nPress Back to return.");
+            return;
+        }
+
         string missing = StreamVirtualPadBackends.FindMissingRequirement();
 
         if (missing == null || mainScene.changelogPanel == null)
@@ -325,10 +334,21 @@ public class MainScenePopupHandler
         GD.Print($"[Netplay] Lobby open with code {joinCode}. {reachabilityNote}");
     }
 
+    private static string AppDirectory => System.IO.Path.GetDirectoryName(OS.GetExecutablePath());
+
     public void OnJoinNetplayPressed()
     {
         if (appInstance.netplayManager == null || appInstance.netplayLobby == null)
         {
+            return;
+        }
+
+        string cannotJoin = StreamSupport.WhyCannotJoin(AppDirectory);
+
+        if (cannotJoin != null)
+        {
+            GD.Print($"[Stream] cannot join: {cannotJoin}");
+            mainScene.startMenuPanel?.ShowNetplayView("Can't Join", $"{cannotJoin}\nPress Back to return.");
             return;
         }
 
