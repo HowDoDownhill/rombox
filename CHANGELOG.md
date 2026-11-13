@@ -3,8 +3,6 @@ RomBox - Version 1.3.91 Changelog (test build)
 🔧 Changes
 
     Nintendo 64 Buttons (gopher64): The B button on your controller is now B in the game. It was on X, and B did nothing. RomBox adds its own button layout to gopher64 the next time you start or host an N64 game. If you made your own layout in gopher64, RomBox leaves it as it is.
-    Sharper Picture When Hosting: The picture now gets the full 10 Mbit/s. A fault had it running at about a quarter of that.
-    Smoother Over Uneven Connections: A guest now holds picture and sound for a few extra milliseconds when the connection delivers them in clumps, and stops drawing the library behind the game.
 
 ---
 
