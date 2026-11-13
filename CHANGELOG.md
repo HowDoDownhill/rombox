@@ -1,3 +1,23 @@
+RomBox - Version 1.3.93 Changelog (test build)
+
+✨ New Features
+
+    Join From a Web Browser: A guest can now play without installing RomBox. When you host, press Copy Browser Link in the lobby and send the link to your guest. They open it in Chrome, Edge or Firefox, press Join, and see, hear and play the game there. Browser guests show in your lobby as "Browser player" with their controllers.
+    Keyboard for Browser Guests: A browser guest with no controller can play on the keyboard. The join page lists the keys.
+
+🔧 Changes
+
+    One More Port for Hosts: Hosting now also uses UDP port 55451, for browser guests. RomBox asks your router to open it along with the others. If you forward ports by hand, add this one.
+
+⚠️ Good to Know
+
+    Hosting for browser guests needs Windows 11. On Windows 10 the link button is hidden, and guests with RomBox can still join as before.
+    A browser guest should join before you press Start Game. One who joins later can watch and listen but has no controller.
+    Phones and tablets can open the link, but there are no on-screen buttons yet.
+    A guest on your own home network may be asked by their browser to let the page reach devices on the local network. They need to allow it.
+
+---
+
 RomBox - Version 1.3.92 Changelog (test build)
 
 ✨ New Features
