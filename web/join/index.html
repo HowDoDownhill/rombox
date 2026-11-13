@@ -60,7 +60,9 @@ const Pad = { Up: 0x0001, Down: 0x0002, Left: 0x0004, Right: 0x0008, Start: 0x00
 
 const element = id => document.getElementById(id);
 const canvas = element('picture');
-const context2d = canvas.getContext('2d', { alpha: false, desynchronized: true });
+// The low-delay canvas mode is left off: Chromium on Windows showed the last frame upside down
+// once frames stopped arriving.
+const context2d = canvas.getContext('2d', { alpha: false });
 const link = readLink();
 const guestId = crypto.getRandomValues(new Uint32Array(1))[0] || 1;
 
@@ -448,6 +450,9 @@ function resetPicture() {
   nextFrameId = null;
   playout.reset();
   stats.shown = 0;
+  // The game's last frame is not left on the screen.
+  context2d.fillStyle = '#000';
+  context2d.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 // ---------------------------------------------------------------- sound
