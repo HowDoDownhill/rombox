@@ -4661,6 +4661,9 @@ page's test controller reached the host as an Xbox pad in both.
 - The page needs WebTransport and WebCodecs: current Chrome, Edge and Firefox. Safari is untried.
 - The host's router must let UDP 55451 in, as with the other ports. There is no relay.
 - Phones connect but have no on-screen buttons.
+- A guest on the host's own network: Chromium asks the person before it lets a page from the
+  internet reach a local address, and refuses without asking when it runs headless. The page
+  says so when the connection fails. A guest across the internet is not asked.
 - A browser that joins after the game has started watches and listens. It has no controller,
   because games read their controllers at launch.
 - Anyone who reaches the port can connect, as with the UDP stream. The host sees browser players

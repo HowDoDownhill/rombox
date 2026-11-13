@@ -78,6 +78,10 @@ function readLink() {
     reportsToLocalServer: options.includes('test-report') && ['localhost', '127.0.0.1'].includes(location.hostname) };
 }
 
+function hostIsOnLocalNetwork() {
+  return /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[(::1|f[cd]|fe80))/i.test(link.address);
+}
+
 function notice(text) { element('notice').textContent = text; }
 
 function log(text) {
@@ -136,7 +140,10 @@ async function join() {
     await transport.ready;
   } catch (failure) {
     log('could not connect: ' + failure);
-    leave('Could not reach the host. The game may have ended, or the host\'s router may be blocking the connection.');
+    // A browser asks before it lets a page from the internet reach an address on the home network.
+    leave(hostIsOnLocalNetwork()
+      ? 'Could not reach the host. If your browser asked to let this page reach devices on your local network, allow it, then join again.'
+      : 'Could not reach the host. The game may have ended, or the host\'s router may be blocking the connection.');
     return;
   }
 
