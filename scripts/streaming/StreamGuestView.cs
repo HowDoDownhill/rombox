@@ -87,6 +87,12 @@ void fragment() {
     public static bool IsOpen => openViews > 0;
     private static int openViews;
 
+    // Hold frames for a few milliseconds when the connection delivers them unevenly.
+    public bool SmoothsArrival { get; set; } = true;
+
+    // Show frame rate, ping and delay at the top of the stream. A lost connection is always shown.
+    public bool ShowsDetails { get; set; } = true;
+
     // For tests: send a made-up controller in place of the real ones.
     public bool SendsTestInput { get; set; }
 
@@ -146,6 +152,7 @@ void fragment() {
         status.AddThemeConstantOverride("outline_size", 6);
         AddChild(status);
 
+        playout.IsSmoothing = SmoothsArrival;
         audio = new StreamGuestAudio(this);
         session = new StreamGuestSession(host, Log, guestId);
         session.AudioReceived += audio.Receive;
@@ -362,6 +369,7 @@ void fragment() {
                 ? $"{fps} fps   ping {session.RoundTripMs:0} ms   network {session.LastNetworkDelayMs:0} ms   decode to screen {showDelay:0} ms   lost {session.FramesLost}   smoothing {playout.WaitMs:0} ms   sound {audio.BufferedMs} ms waiting"
                 : $"Connecting to {host}...");
 
+        status.Visible = ShowsDetails || disconnectReason != null || !session.IsConnected;
         lastStatusMs = now;
         framesShownAtLastStatus = framesShown;
         showDelayTotalMs = 0;

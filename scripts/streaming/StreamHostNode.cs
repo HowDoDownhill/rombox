@@ -10,7 +10,7 @@ public partial class StreamHostNode : Node
 
     private readonly int port;
     private readonly StreamCaptureTarget initialTarget;
-    private readonly int bitrateKbps;
+    private readonly StreamEncoderSettings encoderSettings;
 
     private StreamHostSession session;
     private StreamEncoderProcess encoder;
@@ -24,12 +24,12 @@ public partial class StreamHostNode : Node
     private long audioFramesAtLastStats;
 
     // With a target the capture starts straight away; without one, call StartCapture later.
-    // bitrateKbps: the picture's bitrate, or 0 for the default.
-    public StreamHostNode(int port, StreamCaptureTarget target = null, int bitrateKbps = 0)
+    // encoderSettings: bitrate, picture size and shape, or null for the defaults.
+    public StreamHostNode(int port, StreamCaptureTarget target = null, StreamEncoderSettings encoderSettings = null)
     {
         this.port = port;
         initialTarget = target;
-        this.bitrateKbps = bitrateKbps;
+        this.encoderSettings = encoderSettings ?? new StreamEncoderSettings();
     }
 
     public int Port => session?.Port ?? port;
@@ -84,14 +84,7 @@ public partial class StreamHostNode : Node
             return false;
         }
 
-        var settings = new StreamEncoderSettings();
-
-        if (bitrateKbps > 0)
-        {
-            settings.BitrateKbps = bitrateKbps;
-        }
-
-        encoder = new StreamEncoderProcess(ffmpegPath, target, settings, Log);
+        encoder = new StreamEncoderProcess(ffmpegPath, target, encoderSettings, Log);
         encoder.FormatReady += format => session?.SetVideoFormat(format);
         encoder.FrameEncoded += (frame, isKeyframe) => session?.SendFrame(frame, isKeyframe);
 

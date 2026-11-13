@@ -333,12 +333,20 @@ public partial class MainScene : Control
         {
             DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
             DisplayServer.WindowSetSize(new Vector2I(width, height));
-            DisplayServer.WindowSetPosition(Vector2I.Zero);
+
+            // --ui-capture-position=x,y puts the capture window somewhere other than the corner
+            // of the main screen, for captures taken while that screen is in use.
+            string[] positionParts = CaptureArgument(LayoutCapturePositionArgumentPrefix)?.Split(',');
+            bool hasPosition = positionParts != null && positionParts.Length == 2 && int.TryParse(positionParts[0], out int left) & int.TryParse(positionParts[1], out int top);
+            DisplayServer.WindowSetPosition(hasPosition ? new Vector2I(int.Parse(positionParts[0]), int.Parse(positionParts[1])) : Vector2I.Zero);
         }
     }
 
     private const string LayoutCaptureArgumentPrefix = "--ui-capture=";
     private const string LayoutCaptureSizeArgumentPrefix = "--ui-capture-size=";
+    private const string LayoutCapturePositionArgumentPrefix = "--ui-capture-position=";
+    // With --ui-capture-view=settings: the settings section to show, by its name in the list.
+    private const string LayoutCaptureSettingsSectionArgumentPrefix = "--ui-capture-settings=";
     private const string LayoutCaptureViewArgumentPrefix = "--ui-capture-view=";
     private const string LayoutCaptureSystemArgumentPrefix = "--ui-capture-system=";
     private const string LayoutCaptureThemeArgumentPrefix = "--ui-capture-theme=";
@@ -421,7 +429,15 @@ public partial class MainScene : Control
 
         switch (viewArgument?.Substring(LayoutCaptureViewArgumentPrefix.Length))
         {
-            case "settings": SectionHandler.ShowSection(MainSceneSectionHandler.Section.Settings, false); break;
+            case "settings":
+                SectionHandler.ShowSection(MainSceneSectionHandler.Section.Settings, false);
+
+                if (CaptureArgument(LayoutCaptureSettingsSectionArgumentPrefix) is string settingsSection)
+                {
+                    SettingsHandler.ShowSettingsSection(settingsSection);
+                }
+
+                break;
             case "downloads": SectionHandler.ShowSection(MainSceneSectionHandler.Section.Downloads, false); break;
             case "start": ToggleStartMenu(); break;
             case "jump": OpenSystemJumpPopup(); break;

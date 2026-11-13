@@ -4390,6 +4390,50 @@ The wait is delay added on purpose: smoothness is bought with it. On a steady co
 about 1 ms. Not yet run on the Arch guest or over a real phone connection. Packet loss is a
 separate problem and still unhandled; no session so far has lost a packet.
 
+### Bitrate is the lever; preset and gradual refresh are not
+
+Measured 2026-11-12 with the bundled FFmpeg 9.0 on an RTX 5080, encoding five seconds of a
+1920x1080 60 fps Mandelbrot zoom (detailed, always moving) and comparing each result with the
+source. PSNR in dB, higher is better. All runs used `-tune ull`, no B-frames and a two-frame buffer.
+
+| Change from today's settings (H.264, `p1`, keyframe each second, 10 Mbit/s) | Average PSNR |
+|---|---|
+| Today | 28.19 |
+| Preset `p4` | 28.23 |
+| Gradual refresh every 0.5 s (`-intra-refresh 1 -g 30`), `p1` | 27.98 |
+| Buffer of four or eight frames | 28.26 |
+| 20 Mbit/s | 30.52 |
+| 30 Mbit/s | 32.45 |
+| HEVC at 10 Mbit/s (different container, compare with H.264 at 30.41 in that run) | 31.07 |
+| AV1 at 10 Mbit/s (same run) | 31.58 |
+
+At 5 Mbit/s `p4` gained 0.8 dB over `p1`; at 10 it gained nothing. Gradual refresh was expected to
+remove a once-a-second dip at each keyframe. There is no such dip to remove: the two-frame buffer
+already holds a keyframe to nearly the size of any other frame, and the worst frames were the same
+in every run. So the encoder settings stay as they are, and the bitrate became a setting.
+
+Gradual refresh does work with the guest's decoder: a stream cut at an arbitrary frame and given
+the parameter sets produced a clean picture after 44 to 59 frames with a 0.5 s refresh (69 to 114
+with 1 s), against 10 to 55 with keyframes. Its real use is healing after packet loss in half a
+second with no keyframe. It needs the guest to stop waiting for a keyframe and to send parameter
+sets with the first packet, which older guests do not do, so it waits until a session has
+actually lost packets. Roughly doubling the bitrate is worth more than switching codec.
+
+### Session Settings
+
+Settings > Session Settings, added 2026-11-12. For hosts: Picture Quality (5, 10, 20, 30 or
+50 Mbit/s; a value typed into `config.cfg` shows as the nearest), Picture Size (720p, 1080p,
+1440p) and Games Wider Than 16:9 (send the middle, or the whole window). For guests: Smooth Out an
+Uneven Connection (the playout's hold) and Show Connection Details (the line at the top of the
+stream; a lost connection is shown either way). All are stored under `[Streaming]`. Host choices
+are read when a game starts (`ConfigManager.BuildStreamEncoderSettings`). The page was captured
+with `--ui-capture-view=settings --ui-capture-settings="Session Settings"`; it has not been used
+with a controller, and 1440p has not been streamed.
+
+A copy of a published test build with Get Test Builds Early off is offered the latest full release
+at every start. That is the intended go-back offer, and it also meets anyone who installs a test
+build by hand from GitHub without turning the switch on.
+
 ### A window wider than 16:9 loses its sides
 
 A console game on an ultrawide monitor sits in the middle of its window with empty space either

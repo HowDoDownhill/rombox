@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public class MainSceneSettingsHandler
 {
@@ -55,6 +56,7 @@ public class MainSceneSettingsHandler
         AddNavEntry("General Settings", GenerateGeneralSettingsForm);
         AddNavEntry("Game List Settings", GenerateGameListSettingsForm);
         AddNavEntry("Input Settings", GenerateInputSettingsForm);
+        AddNavEntry(SessionSettingsSectionName, GenerateSessionSettingsForm);
 
         AddNavHeader("Platform Settings");
 
@@ -459,6 +461,143 @@ public class MainSceneSettingsHandler
         discreteGpuEntry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(discreteGpuFieldBox);
         discreteGpuEntry.Visible = OS.HasFeature("windows");
         vbox.AddChild(discreteGpuEntry);
+    }
+
+    private const string SessionSettingsSectionName = "Session Settings";
+
+    private static readonly (string Label, int Kbps)[] StreamQualityChoices =
+    {
+        ("Low (5 Mbit/s)", 5000),
+        ("Standard (10 Mbit/s)", 10000),
+        ("High (20 Mbit/s)", 20000),
+        ("Very High (30 Mbit/s)", 30000),
+        ("Highest (50 Mbit/s)", 50000)
+    };
+
+    // Choices for Host Session and Join Session: what a host sends, and how a guest shows it.
+    private void GenerateSessionSettingsForm()
+    {
+        if (mainScene.sectionOptionsContainer == null)
+        {
+            return;
+        }
+
+        string nodeName = BuildSectionNodeName(SessionSettingsSectionName);
+
+        if (mainScene.sectionOptionsContainer.HasNode(nodeName))
+        {
+            return;
+        }
+
+        MarginContainer formContainer = new MarginContainer();
+        formContainer.Name = nodeName;
+        formContainer.Visible = false;
+        formContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+
+        ScrollContainer scrollContainer = new ScrollContainer();
+        scrollContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        scrollContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scrollContainer.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        scrollContainer.FollowFocus = true;
+        formContainer.AddChild(scrollContainer);
+
+        VBoxContainer vbox = new VBoxContainer();
+        vbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        scrollContainer.AddChild(vbox);
+        mainScene.sectionOptionsContainer.AddChild(formContainer);
+
+        ConfigManager config = appInstance.configManager;
+
+        AddSettingsNote(vbox, "When you host. Changes apply to the next game you start.");
+
+        // A bitrate set by hand in config.cfg shows as the nearest choice.
+        int qualityIndex = 0;
+
+        for (int index = 0; index < StreamQualityChoices.Length; index++)
+        {
+            if (System.Math.Abs(StreamQualityChoices[index].Kbps - config.StreamBitrateKbps) < System.Math.Abs(StreamQualityChoices[qualityIndex].Kbps - config.StreamBitrateKbps))
+            {
+                qualityIndex = index;
+            }
+        }
+
+        AddSettingsChoice(vbox, "Picture Quality", StreamQualityChoices.Select(choice => choice.Label).ToArray(), qualityIndex,
+            index => config.SaveStreamBitrateKbps(StreamQualityChoices[index].Kbps));
+
+        AddSettingsChoice(vbox, "Picture Size", ConfigManager.StreamPictureHeights.Select(height => $"{height}p").ToArray(),
+            System.Math.Max(System.Array.IndexOf(ConfigManager.StreamPictureHeights, config.StreamPictureHeight), 0),
+            index => config.SaveStreamPictureHeight(ConfigManager.StreamPictureHeights[index]));
+
+        AddSettingsChoice(vbox, "Games Wider Than 16:9", new[] { "Send the Middle", "Send the Whole Window" }, config.StreamSendsMiddleOfWideGames ? 0 : 1,
+            index => config.SaveStreamSendsMiddleOfWideGames(index == 0));
+
+        AddSettingsNote(vbox, "Higher quality and larger sizes need more upload speed. If guests see stutter, choose a lower quality.");
+
+        AddSettingsNote(vbox, "When you join.");
+
+        AddSettingsSwitch(vbox, "Smooth Out an Uneven Connection", config.StreamSmoothsArrival, config.SaveStreamSmoothsArrival);
+        AddSettingsSwitch(vbox, "Show Connection Details", config.StreamShowsDetails, config.SaveStreamShowsDetails);
+
+        AddSettingsNote(vbox, "Smoothing holds the picture a few milliseconds longer so motion stays even. Turn it off for the shortest delay.");
+    }
+
+    private void AddSettingsChoice(VBoxContainer vbox, string labelText, string[] choices, int selectedIndex, Action<int> onChosen)
+    {
+        HBoxContainer fieldBox = new HBoxContainer();
+        Label label = new Label();
+        label.Text = labelText;
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        fieldBox.AddChild(label);
+
+        CarouselButton choiceButton = new CarouselButton();
+
+        for (int index = 0; index < choices.Length; index++)
+        {
+            choiceButton.AddItem(choices[index], index);
+        }
+
+        choiceButton.Select(selectedIndex);
+        choiceButton.ItemSelected += (long index) => onChosen((int)index);
+        fieldBox.AddChild(choiceButton);
+
+        var entry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        entry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(fieldBox);
+        vbox.AddChild(entry);
+    }
+
+    private void AddSettingsSwitch(VBoxContainer vbox, string labelText, bool isOn, Action<bool> onToggled)
+    {
+        HBoxContainer fieldBox = new HBoxContainer();
+        Label label = new Label();
+        label.Text = labelText;
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        fieldBox.AddChild(label);
+
+        CheckButton checkbox = new CheckButton();
+        checkbox.ButtonPressed = isOn;
+        checkbox.Toggled += (bool toggledOn) => onToggled(toggledOn);
+        fieldBox.AddChild(checkbox);
+
+        var entry = settingsListEntryScene.Instantiate<SettingsListEntry>();
+        entry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(fieldBox);
+        vbox.AddChild(entry);
+    }
+
+    private static void AddSettingsNote(VBoxContainer vbox, string noteText)
+    {
+        Label note = new Label();
+        note.Text = noteText;
+        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        note.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        note.Modulate = new Color(1, 1, 1, 0.7f);
+
+        MarginContainer margin = new MarginContainer();
+        margin.AddThemeConstantOverride("margin_left", 12);
+        margin.AddThemeConstantOverride("margin_right", 12);
+        margin.AddThemeConstantOverride("margin_top", 8);
+        margin.AddThemeConstantOverride("margin_bottom", 4);
+        margin.AddChild(note);
+        vbox.AddChild(margin);
     }
 
     private void GenerateGameListSettingsForm()
@@ -1108,6 +1247,12 @@ public class MainSceneSettingsHandler
         }
 
         return nodeNameBuilder.Length == 0 ? "Section" : nodeNameBuilder.ToString();
+    }
+
+    // Shows one section's options, as choosing it in the list does.
+    public void ShowSettingsSection(string sectionName)
+    {
+        OnSettingsTreeItemSelected(sectionName);
     }
 
     private void OnSettingsTreeItemSelected(string sectionName)

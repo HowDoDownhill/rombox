@@ -32,7 +32,7 @@ public static class StreamCommandLine
 
         if (!string.IsNullOrEmpty(hostTarget))
         {
-            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget), int.TryParse(Read(arguments, BitratePrefix), out int bitrate) ? bitrate : 0));
+            parent.GetTree().Root.CallDeferred(Node.MethodName.AddChild, new StreamHostNode(port, StreamCaptureTarget.Parse(hostTarget), int.TryParse(Read(arguments, BitratePrefix), out int bitrate) ? new StreamEncoderSettings { BitrateKbps = bitrate } : null));
         }
 
         if (!string.IsNullOrEmpty(joinAddress))

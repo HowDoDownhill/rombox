@@ -247,6 +247,20 @@ public partial class ConfigManager : Node
     public const int LowestStreamBitrateKbps = 1000;
     public const int HighestStreamBitrateKbps = 50000;
     public int StreamBitrateKbps { get; private set; } = DefaultStreamBitrateKbps;
+
+    // The largest picture a host sends, by height: 720, 1080 or 1440. Width follows at 16:9.
+    public const int DefaultStreamPictureHeight = 1080;
+    public static readonly int[] StreamPictureHeights = { 720, 1080, 1440 };
+    public int StreamPictureHeight { get; private set; } = DefaultStreamPictureHeight;
+
+    // A game window wider than 16:9 is sent as its middle 16:9 when this is on.
+    public bool StreamSendsMiddleOfWideGames { get; private set; } = true;
+
+    // Guest: hold picture for a few milliseconds when the connection delivers frames unevenly.
+    public bool StreamSmoothsArrival { get; private set; } = true;
+
+    // Guest: show frame rate, ping and delay at the top of the stream.
+    public bool StreamShowsDetails { get; private set; } = true;
     public string ControllerMappingConsent { get; private set; }
 
     // False once the user picks Don't Ask Again on the offer to start RomBox through Steam.
@@ -552,6 +566,11 @@ public partial class ConfigManager : Node
         EmulatorCloseHotkeys = (Godot.Collections.Array)configurationFile.GetValue("Input", "EmulatorCloseHotkeys", defaultHotkeyButtons);
         EmulatorCloseHoldSeconds = (float)configurationFile.GetValue("Input", "EmulatorCloseHoldSeconds", DefaultEmulatorCloseHoldSeconds);
         StreamBitrateKbps = System.Math.Clamp((int)configurationFile.GetValue("Streaming", "BitrateKbps", DefaultStreamBitrateKbps), LowestStreamBitrateKbps, HighestStreamBitrateKbps);
+        int savedPictureHeight = (int)configurationFile.GetValue("Streaming", "PictureHeight", DefaultStreamPictureHeight);
+        StreamPictureHeight = System.Array.IndexOf(StreamPictureHeights, savedPictureHeight) >= 0 ? savedPictureHeight : DefaultStreamPictureHeight;
+        StreamSendsMiddleOfWideGames = (bool)configurationFile.GetValue("Streaming", "SendsMiddleOfWideGames", true);
+        StreamSmoothsArrival = (bool)configurationFile.GetValue("Streaming", "SmoothsArrival", true);
+        StreamShowsDetails = (bool)configurationFile.GetValue("Streaming", "ShowsDetails", true);
         ControllerMappingConsent = (string)configurationFile.GetValue("Input", "ControllerMappingConsent", ControllerMappingConsentUnasked);
         OfferSteamLaunch = (bool)configurationFile.GetValue("Steam", "OfferSteamLaunch", true);
         LibrarySource = (string)configurationFile.GetValue("Library", "Source", LibrarySources.RomM);
@@ -639,6 +658,10 @@ public partial class ConfigManager : Node
         EmulatorCloseHotkeys = BuildDefaultEmulatorCloseHotkeys();
         EmulatorCloseHoldSeconds = DefaultEmulatorCloseHoldSeconds;
         StreamBitrateKbps = DefaultStreamBitrateKbps;
+        StreamPictureHeight = DefaultStreamPictureHeight;
+        StreamSendsMiddleOfWideGames = true;
+        StreamSmoothsArrival = true;
+        StreamShowsDetails = true;
         ControllerMappingConsent = ControllerMappingConsentUnasked;
         OfferSteamLaunch = true;
         LibrarySource = LibrarySources.RomM;
@@ -688,6 +711,10 @@ public partial class ConfigManager : Node
         configurationFile.SetValue("Input", "EmulatorCloseHotkeys", EmulatorCloseHotkeys);
         configurationFile.SetValue("Input", "EmulatorCloseHoldSeconds", EmulatorCloseHoldSeconds);
         configurationFile.SetValue("Streaming", "BitrateKbps", StreamBitrateKbps);
+        configurationFile.SetValue("Streaming", "PictureHeight", StreamPictureHeight);
+        configurationFile.SetValue("Streaming", "SendsMiddleOfWideGames", StreamSendsMiddleOfWideGames);
+        configurationFile.SetValue("Streaming", "SmoothsArrival", StreamSmoothsArrival);
+        configurationFile.SetValue("Streaming", "ShowsDetails", StreamShowsDetails);
         configurationFile.SetValue("Input", "ControllerMappingConsent", ControllerMappingConsent ?? ControllerMappingConsentUnasked);
         configurationFile.SetValue("Steam", "OfferSteamLaunch", OfferSteamLaunch);
         configurationFile.SetValue("Library", "Source", LibrarySource);
@@ -795,6 +822,48 @@ public partial class ConfigManager : Node
     {
         PreReleaseBuilds = enabled;
         SaveConfig();
+    }
+
+    public void SaveStreamBitrateKbps(int kbps)
+    {
+        StreamBitrateKbps = System.Math.Clamp(kbps, LowestStreamBitrateKbps, HighestStreamBitrateKbps);
+        SaveConfig();
+    }
+
+    public void SaveStreamPictureHeight(int height)
+    {
+        StreamPictureHeight = height;
+        SaveConfig();
+    }
+
+    public void SaveStreamSendsMiddleOfWideGames(bool enabled)
+    {
+        StreamSendsMiddleOfWideGames = enabled;
+        SaveConfig();
+    }
+
+    public void SaveStreamSmoothsArrival(bool enabled)
+    {
+        StreamSmoothsArrival = enabled;
+        SaveConfig();
+    }
+
+    public void SaveStreamShowsDetails(bool enabled)
+    {
+        StreamShowsDetails = enabled;
+        SaveConfig();
+    }
+
+    // What a host sends, as chosen in Session Settings.
+    public StreamEncoderSettings BuildStreamEncoderSettings()
+    {
+        return new StreamEncoderSettings
+        {
+            BitrateKbps = StreamBitrateKbps,
+            MaximumHeight = StreamPictureHeight,
+            MaximumWidth = StreamPictureHeight * 16 / 9,
+            WidestAspect = StreamSendsMiddleOfWideGames ? 16.0 / 9.0 : 0
+        };
     }
 
     private System.Collections.Generic.HashSet<string> androidCoresSetUp = new System.Collections.Generic.HashSet<string>();

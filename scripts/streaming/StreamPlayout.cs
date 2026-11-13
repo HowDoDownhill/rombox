@@ -27,6 +27,9 @@ public sealed class StreamPlayout
     private double shortestTransitMs;
     private int framesSinceAdjust;
 
+    // Off: every frame is shown as soon as it arrives, with no wait added.
+    public bool IsSmoothing { get; set; } = true;
+
     // The wait currently added to every frame, in ms.
     public double WaitMs { get; private set; }
     // Frames passed over because a newer one was already due.
@@ -61,7 +64,7 @@ public sealed class StreamPlayout
                 Adjust();
             }
 
-            held.Enqueue((frame, frame.HostTimeMs + shortestTransitMs + WaitMs));
+            held.Enqueue((frame, IsSmoothing ? frame.HostTimeMs + shortestTransitMs + WaitMs : 0));
 
             // Falling this far behind means the estimate is off; catch up instead of lagging.
             while (held.Count > MostFramesHeld)
@@ -99,7 +102,7 @@ public sealed class StreamPlayout
         Array.Copy(transitMs, sorted, samples);
         Array.Sort(sorted, 0, samples);
         shortestTransitMs = sorted[0];
-        double target = Math.Min(sorted[(int)((samples - 1) * CoveredShare)] - shortestTransitMs, LongestWaitMs);
+        double target = IsSmoothing ? Math.Min(sorted[(int)((samples - 1) * CoveredShare)] - shortestTransitMs, LongestWaitMs) : 0;
         WaitMs += Math.Clamp(target - WaitMs, -WaitStepMs, WaitStepMs);
     }
 }

@@ -1372,7 +1372,7 @@ public class MainSceneNetplayHandler
         hasHostedGameRunning = true;
         StopStreaming();
 
-        streamHost = new StreamHostNode(StreamProtocol.DefaultPort, null, appInstance.configManager?.StreamBitrateKbps ?? 0);
+        streamHost = new StreamHostNode(StreamProtocol.DefaultPort, null, appInstance.configManager?.BuildStreamEncoderSettings());
         mainScene.AddChild(streamHost);
 
         int controllersBefore = Input.GetConnectedJoypads().Count;
@@ -1565,7 +1565,11 @@ public class MainSceneNetplayHandler
         GD.Print($"[Stream] opening the host's stream at {address}:{streamPort} (host advertised {hostAddress}).");
 
         CloseStreamView();
-        streamView = new StreamGuestView(new IPEndPoint(address, streamPort), (uint)appInstance.netplayLobby.LocalPeerId);
+        streamView = new StreamGuestView(new IPEndPoint(address, streamPort), (uint)appInstance.netplayLobby.LocalPeerId)
+        {
+            SmoothsArrival = appInstance.configManager.StreamSmoothsArrival,
+            ShowsDetails = appInstance.configManager.StreamShowsDetails
+        };
         streamView.TreeExited += OnStreamViewClosed;
         mainScene.GetTree().Root.AddChild(streamView);
     }
