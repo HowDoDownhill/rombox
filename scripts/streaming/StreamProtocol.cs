@@ -6,6 +6,8 @@ using System.Buffers.Binary;
 public static class StreamProtocol
 {
     public const int DefaultPort = 55450;
+    // Guests in a web browser connect to the UDP port this far above the host's port.
+    public const int BrowserPortOffset = 1;
     public const byte Version = 1;
     public const int HeaderSize = 4;
 

@@ -286,7 +286,7 @@ public class MainScenePopupHandler
 
         int lobbyPort = appInstance.netplayLobby.ResolveLobbyPort();
 
-        bool portsMapped = appInstance.netplayPortMapper != null && await appInstance.netplayPortMapper.TryMapPortsAsync(hostPort, lobbyPort);
+        bool portsMapped = appInstance.netplayPortMapper != null && await appInstance.netplayPortMapper.TryMapPortsAsync(hostPort, lobbyPort, hostPort + StreamProtocol.BrowserPortOffset);
         string externalAddress = portsMapped ? appInstance.netplayPortMapper.ExternalAddress : null;
         bool isInternetReachable = portsMapped
             && !string.IsNullOrEmpty(externalAddress)
@@ -306,7 +306,7 @@ public class MainScenePopupHandler
 
         string reachabilityNote = isInternetReachable
             ? $"Reachable from the internet at {externalAddress}:{hostPort}."
-            : $"Local network only. For internet play, forward ports {lobbyPort} and {hostPort} (UDP and TCP) to {localAddress}. {appInstance.netplayPortMapper?.LastFailureReason}";
+            : $"Local network only. For internet play, forward ports {lobbyPort}, {hostPort} and {hostPort + StreamProtocol.BrowserPortOffset} (UDP and TCP) to {localAddress}. {appInstance.netplayPortMapper?.LastFailureReason}";
 
         if (mainScene.NetplayHandler == null || !mainScene.NetplayHandler.HostLobby(joinCode))
         {

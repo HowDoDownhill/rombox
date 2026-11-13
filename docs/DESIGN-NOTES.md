@@ -4579,6 +4579,93 @@ Open problems from that day:
 - The startup offer to reopen through Steam drops command-line switches, `--netplay-host` among
   them.
 
+### Guests in a web browser
+
+A guest can join from a web page with nothing installed. The page is `web/join/index.html`: one
+file with no dependencies, which connects straight to the host's RomBox. The host shares a link
+from the lobby with "Copy Browser Link".
+
+**How the browser reaches the host.** The connection is WebTransport, which is HTTP/3 over QUIC,
+which is UDP. `WebTransportListener` opens it with .NET's `System.Net.Quic` and speaks only the
+part of HTTP/3 a browser needs: the settings exchange and the CONNECT request that opens a
+session. It listens on the UDP port one above the stream's (55451), which the lobby asks the
+router to open along with the others.
+
+**How the browser trusts the host.** A browser refuses a server whose certificate no authority
+signed, and a home PC cannot get a signed one. WebTransport has an exception made for this case:
+the page names the certificate's SHA-256 fingerprint when it connects, and the browser accepts
+exactly that certificate. Browsers attach conditions, all met in `MakeCertificate`: an ECDSA P-256
+key, a life of at most 14 days (RomBox makes a new certificate for every lobby and gives it 10),
+and the version 3 form, which .NET only writes when the certificate has an extension. The first
+attempt had no extension and Chromium answered with the TLS alert "certificate unknown".
+
+**The link.** `https://howdodownhill.github.io/rombox/join/#<address>:<port>/<fingerprint>`.
+Everything after `#` stays in the browser and is never sent to the server that serves the page.
+The link is long because the fingerprint is 43 characters. A short code would need a service
+that looks codes up, and RomBox has none.
+
+**Why the page must be served over HTTPS.** Browsers only offer WebTransport and the decoders to
+pages from a secure address. That rules out the host's own PC serving the page, for the same
+certificate reason. A page on `localhost` or opened from a file also counts as secure, which is
+how the tests run.
+
+**One stream per message.** .NET's QUIC has no datagrams, so each frame, sound packet and
+controller state travels on a short stream of its own. A lost packet is resent and delays only
+its own message. Frames can then finish out of order, so the page decodes strictly by frame id
+and waits for a missing one. When a browser's connection cannot keep up, more than six frames
+are waiting to leave, and `WebTransportSession` drops frames until the next keyframe. The page
+sees the gap and restarts from that keyframe.
+
+**The messages are the UDP packets.** A browser guest sends and receives the packets in
+`StreamProtocol`, unchanged, so `StreamHostSession` treats it as a guest like any other:
+`AddLink` registers a way to reach it, `Receive` hands its packets to the same handler as UDP,
+and controllers, reserved pads and the five-second timeout all work as they do for a RomBox
+guest. The one difference is the frame, sent whole as a single chunk.
+
+**Firefox needs one MsQuic setting.** Firefox opens a session only if the server's QUIC
+handshake says it accepts datagrams (`transport_prereqs.datagrams` in neqo's
+`extended_connect`). Chromium does not check. .NET has no switch for it, so
+`TryAnnounceDatagrams` sets `DatagramReceiveEnabled` in MsQuic's global settings through the
+library's own function table. Nothing reads the datagrams a browser might then send.
+
+**In the lobby.** `StreamBrowserGuests` opens when hosting starts, so browsers connect while the
+lobby is still choosing a game. Each appears as "Browser player N" with its controller count and
+is always ready. The page counts the keyboard as the first controller, joined by the first
+gamepad plugged in, so every browser guest brings at least one. At Start the lobby reserves
+their controllers with the others and hands the browsers to the stream. When the game ends the
+page stays connected and waits for the next.
+
+**The page.** WebCodecs decodes the picture (`VideoDecoder`, given the avcC record as its
+description) and the sound (`AudioDecoder` for Opus, played by an `AudioWorklet`). Frame timing
+is `StreamPlayout`'s method, and the sound level follows `StreamGuestAudio`'s. Two things differ
+from the RomBox guest:
+
+- A browser draws once per screen refresh. On a 60 Hz screen two frames often come due in one
+  refresh and none in the next. Passing over the older one lost about six frames a second in the
+  test, so the second frame is kept for the next refresh, and frames are passed over only when
+  three or more are due.
+- The sound thread tracks the least it had in hand over each two seconds. Sound beyond the level
+  in that minimum was never needed and is skipped, which stops delay building up after a stall.
+
+**Measured (2026-11-13).** Edge on the host's own PC, 165 Hz screen: frames shown 10 ms after
+the host sent them, every frame shown, sound never ran dry. Firefox 159 on the Arch box over
+Wi-Fi, headless at 60 Hz with software decoding: every frame shown, about 40 ms from the host
+sending to the screen, sound steady apart from one Wi-Fi stall that it recovered from. The
+page's test controller reached the host as an Xbox pad in both.
+
+**Limits.**
+
+- Hosting for browsers needs Windows 11, or Linux with libmsquic installed. .NET's QUIC does not
+  run on Windows 10. Such a host still serves RomBox guests, and the lobby hides the link button.
+  A Linux host has not been tried.
+- The page needs WebTransport and WebCodecs: current Chrome, Edge and Firefox. Safari is untried.
+- The host's router must let UDP 55451 in, as with the other ports. There is no relay.
+- Phones connect but have no on-screen buttons.
+- A browser that joins after the game has started watches and listens. It has no controller,
+  because games read their controllers at launch.
+- Anyone who reaches the port can connect, as with the UDP stream. The host sees browser players
+  in the lobby before starting.
+
 ### FLV carries frame sizes
 
 A raw H.264 stream only shows where a frame ends when the next frame begins, which costs a frame
@@ -4617,3 +4704,5 @@ H.264 decoder, so it cannot serve as the guest's decoder.
   slot after the host's own.
 - Aligning sound with picture, and per-program sound capture on Linux.
 - Error correction and connections across the internet.
+- Publishing the join page. The lobby's browser link points at GitHub Pages, where the page has
+  to be put before the link works for anyone.

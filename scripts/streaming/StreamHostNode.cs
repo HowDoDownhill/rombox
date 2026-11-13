@@ -16,6 +16,8 @@ public partial class StreamHostNode : Node
     private StreamEncoderProcess encoder;
     private StreamHostPads pads;
     private IStreamAudioCapture audio;
+    private StreamBrowserGuests browserGuests;
+    private bool ownsBrowserGuests;
 
     private double secondsSinceStats;
     private long framesAtLastStats;
@@ -33,6 +35,10 @@ public partial class StreamHostNode : Node
     }
 
     public int Port => session?.Port ?? port;
+
+    // Guests who joined from a web page before the stream existed, as a lobby collects them.
+    // Set before the node joins the tree. Left unset, the node accepts browsers by itself.
+    public StreamBrowserGuests BrowserGuests { get; set; }
     public bool IsCapturing => encoder != null;
 
     public override void _Ready()
@@ -48,6 +54,7 @@ public partial class StreamHostNode : Node
         }
 
         pads = new StreamHostPads(session, StreamVirtualPadBackends.Create(Log), Log);
+        StartBrowserGuests();
 
         if (initialTarget != null)
         {
@@ -66,6 +73,33 @@ public partial class StreamHostNode : Node
 
         pads.AllowsUnreservedPads = false;
         return pads.Reserve(guestId, padCount);
+    }
+
+    private void StartBrowserGuests()
+    {
+        browserGuests = BrowserGuests;
+
+        if (browserGuests == null && StreamBrowserGuests.IsSupported)
+        {
+            try
+            {
+                browserGuests = new StreamBrowserGuests(session.Port + StreamProtocol.BrowserPortOffset, Log);
+                ownsBrowserGuests = true;
+                Log($"[Stream] browser join code: {browserGuests.JoinCode}");
+            }
+            catch (Exception failure)
+            {
+                Log($"[Stream] browsers cannot join a game hosted here: {failure.Message}");
+            }
+        }
+
+        if (browserGuests == null)
+        {
+            Log("[Stream] browsers cannot join a game hosted here. That needs Windows 11, or libmsquic on Linux.");
+            return;
+        }
+
+        browserGuests.Attach(session);
     }
 
     public bool StartCapture(StreamCaptureTarget target)
@@ -150,7 +184,17 @@ public partial class StreamHostNode : Node
         encoder = null;
         pads?.Dispose();
         pads = null;
+        // Closing the session tells every guest the game has ended, browsers included, so it
+        // comes before they are let go.
         session?.Dispose();
         session = null;
+        browserGuests?.Detach();
+
+        if (ownsBrowserGuests)
+        {
+            browserGuests.Dispose();
+        }
+
+        browserGuests = null;
     }
 }

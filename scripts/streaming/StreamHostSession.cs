@@ -7,6 +7,23 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
+// How urgent a message to a browser guest is, which decides what is dropped when its connection
+// falls behind.
+public enum StreamMessageKind
+{
+    Control,
+    Sound,
+    PictureKeyframe,
+    Picture
+}
+
+// The way to reach a guest that is connected by something other than the host's UDP socket.
+public interface IStreamGuestLink
+{
+    // message is handed over for good and may be sent from another thread.
+    void Send(byte[] message, StreamMessageKind kind);
+}
+
 // The host's side of the connection: accepts guests, splits each encoded frame into UDP
 // packets and sends them to every guest.
 public sealed class StreamHostSession : IDisposable
@@ -21,6 +38,8 @@ public sealed class StreamHostSession : IDisposable
         public long LastHeardMs;
         public uint LastInputSequence;
         public bool HasInputSequence;
+        // Set for a guest in a web browser; null for a RomBox guest, which is sent UDP packets.
+        public IStreamGuestLink Link;
     }
 
     private readonly Socket socket;
@@ -28,6 +47,7 @@ public sealed class StreamHostSession : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<IPEndPoint, Guest> guests = new Dictionary<IPEndPoint, Guest>();
     private readonly object guestLock = new object();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<IPEndPoint, IStreamGuestLink> links = new System.Collections.Concurrent.ConcurrentDictionary<IPEndPoint, IStreamGuestLink>();
     private readonly byte[] chunkBuffer = new byte[StreamProtocol.VideoChunkHeaderSize + StreamProtocol.MaxChunkPayload];
     private readonly Thread receiveThread;
     private readonly Timer housekeepingTimer;
@@ -101,6 +121,14 @@ public sealed class StreamHostSession : IDisposable
             return;
         }
 
+        uint hostTime = ClockMs;
+        SendWholeFrame(targets, frame, frameId, isKeyframe, hostTime);
+
+        if (targets.All(guest => guest.Link != null))
+        {
+            return;
+        }
+
         int chunkCount = (frame.Length + StreamProtocol.MaxChunkPayload - 1) / StreamProtocol.MaxChunkPayload;
 
         if (chunkCount > ushort.MaxValue)
@@ -108,8 +136,6 @@ public sealed class StreamHostSession : IDisposable
             log?.Invoke($"[Stream] skipped a {frame.Length}-byte frame; it is too large to send.");
             return;
         }
-
-        uint hostTime = ClockMs;
 
         for (int chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++)
         {
@@ -120,9 +146,67 @@ public sealed class StreamHostSession : IDisposable
 
             foreach (Guest guest in targets)
             {
-                Send(chunkBuffer, headerSize + length, guest.EndPoint);
+                if (guest.Link == null)
+                {
+                    Send(chunkBuffer, headerSize + length, guest.EndPoint);
+                }
             }
         }
+    }
+
+    // A browser guest's connection carries messages of any size, so it gets the frame as a
+    // single chunk. One copy is shared by all of them.
+    private void SendWholeFrame(Guest[] targets, byte[] frame, uint frameId, bool isKeyframe, uint hostTime)
+    {
+        byte[] message = null;
+
+        foreach (Guest guest in targets)
+        {
+            if (guest.Link == null)
+            {
+                continue;
+            }
+
+            if (message == null)
+            {
+                message = new byte[StreamProtocol.VideoChunkHeaderSize + frame.Length];
+                int headerSize = StreamProtocol.WriteVideoChunkHeader(message, frameId, 0, 1, isKeyframe, hostTime);
+                Buffer.BlockCopy(frame, 0, message, headerSize, frame.Length);
+            }
+
+            guest.Link.Send(message, isKeyframe ? StreamMessageKind.PictureKeyframe : StreamMessageKind.Picture);
+            BytesSent += message.Length;
+        }
+    }
+
+    // A guest in a web browser. Its messages are the same packets a RomBox guest sends by UDP,
+    // handed over with Receive, and everything for it goes out through the link. endPoint only
+    // has to tell this guest apart from the others.
+    public void AddLink(IPEndPoint endPoint, IStreamGuestLink link)
+    {
+        links[endPoint] = link;
+    }
+
+    public void RemoveLink(IPEndPoint endPoint)
+    {
+        if (links.TryRemove(endPoint, out _))
+        {
+            RemoveGuest(endPoint, "left");
+        }
+    }
+
+    public void Receive(IPEndPoint endPoint, byte[] message)
+    {
+        if (!disposed && links.ContainsKey(endPoint) && StreamProtocol.TryReadHeader(message, out StreamPacketType type))
+        {
+            HandlePacket(type, message, message.Length, endPoint);
+        }
+    }
+
+    // A browser guest fell behind and had frames dropped; it can carry on from a keyframe.
+    public void RequestKeyframe()
+    {
+        KeyframeRequested?.Invoke();
     }
 
     // One Opus frame. Called from the audio capture thread only.
@@ -144,7 +228,7 @@ public sealed class StreamHostSession : IDisposable
 
         foreach (Guest guest in targets)
         {
-            Send(audioBuffer, StreamProtocol.AudioHeaderSize + opusFrame.Length, guest.EndPoint);
+            Send(audioBuffer, StreamProtocol.AudioHeaderSize + opusFrame.Length, guest.EndPoint, StreamMessageKind.Sound);
         }
     }
 
@@ -245,7 +329,8 @@ public sealed class StreamHostSession : IDisposable
 
             if (isNew)
             {
-                guests[sender] = new Guest { EndPoint = sender, GuestId = guestId };
+                links.TryGetValue(sender, out IStreamGuestLink link);
+                guests[sender] = new Guest { EndPoint = sender, GuestId = guestId, Link = link };
             }
 
             guests[sender].LastHeardMs = clock.ElapsedMilliseconds;
@@ -348,8 +433,16 @@ public sealed class StreamHostSession : IDisposable
         }
     }
 
-    private void Send(byte[] packet, int length, IPEndPoint endPoint)
+    private void Send(byte[] packet, int length, IPEndPoint endPoint, StreamMessageKind kind = StreamMessageKind.Control)
     {
+        if (!links.IsEmpty && links.TryGetValue(endPoint, out IStreamGuestLink link))
+        {
+            // The link sends from another thread, so it gets a copy of its own.
+            link.Send(packet.AsSpan(0, length).ToArray(), kind);
+            BytesSent += length;
+            return;
+        }
+
         try
         {
             socket.SendTo(packet, 0, length, SocketFlags.None, endPoint);

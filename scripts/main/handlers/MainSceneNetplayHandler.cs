@@ -16,6 +16,14 @@ public class MainSceneNetplayHandler
     private StreamHostNode streamHost;
     private StreamGuestView streamView;
 
+    // The guests who joined the lobby from a web page, while this player hosts.
+    private StreamBrowserGuests browserGuests;
+    private Button lobbyCopyBrowserLinkButton;
+
+    // Where the join page lives. A link to it ends in the host's address and the code that lets
+    // the page trust this lobby's connection.
+    private const string BrowserJoinPage = "https://howdodownhill.github.io/rombox/join/";
+
     public MainSceneNetplayHandler(MainScene mainScene, AppInstance appInstance)
     {
         this.mainScene = mainScene;
@@ -54,6 +62,7 @@ public class MainSceneNetplayHandler
         if (mainScene.lobbyCopyCodeButton != null)
         {
             mainScene.lobbyCopyCodeButton.Pressed += CopyJoinCodeToClipboard;
+            AddCopyBrowserLinkButton();
         }
 
         if (appInstance.downloadManager != null)
@@ -89,6 +98,7 @@ public class MainSceneNetplayHandler
 
         Input.JoyConnectionChanged -= OnControllersChanged;
         StopStreaming();
+        CloseBrowserGuests();
 
         if (appInstance.downloadManager != null)
         {
@@ -187,6 +197,7 @@ public class MainSceneNetplayHandler
         isLocallyReady = false;
         lastPushedRomId = 0;
         lastReportedReadinessSignature = null;
+        OpenBrowserGuests();
 
         appInstance.netplayDiscovery?.StartAdvertising(0, "", appInstance.netplayLobby.ResolveLobbyPort(), 1);
 
@@ -224,6 +235,7 @@ public class MainSceneNetplayHandler
     public void LeaveLobby()
     {
         StopStreaming();
+        CloseBrowserGuests();
         appInstance.netplayLobby?.LeaveLobby();
         appInstance.netplayDiscovery?.StopAdvertising();
         appInstance.netplayManager?.EndSession();
@@ -476,6 +488,116 @@ public class MainSceneNetplayHandler
         {
             mainScene.lobbyCopyCodeButton.Text = "Copied";
         }
+    }
+
+    // The copy-code row of the lobby, made a second time for the browser link.
+    private void AddCopyBrowserLinkButton()
+    {
+        if (mainScene.lobbyCopyCodeButton.GetParent() is not Control codeRow || codeRow.GetParent() == null)
+        {
+            return;
+        }
+
+        var linkRow = (Control)codeRow.Duplicate();
+        codeRow.GetParent().AddChild(linkRow);
+        codeRow.GetParent().MoveChild(linkRow, codeRow.GetIndex() + 1);
+        lobbyCopyBrowserLinkButton = linkRow.GetChildren().OfType<Button>().FirstOrDefault();
+
+        if (lobbyCopyBrowserLinkButton == null)
+        {
+            linkRow.QueueFree();
+            return;
+        }
+
+        lobbyCopyBrowserLinkButton.Name = "LobbyCopyBrowserLinkButton";
+        lobbyCopyBrowserLinkButton.Text = CopyBrowserLinkText;
+        lobbyCopyBrowserLinkButton.Visible = false;
+        lobbyCopyBrowserLinkButton.Pressed += CopyBrowserLinkToClipboard;
+    }
+
+    private const string CopyBrowserLinkText = "Copy Browser Link";
+
+    private void OpenBrowserGuests()
+    {
+        CloseBrowserGuests();
+
+        if (!StreamBrowserGuests.IsSupported)
+        {
+            GD.Print("[Stream] browsers cannot join a lobby hosted here. That needs Windows 11, or libmsquic on Linux.");
+            return;
+        }
+
+        try
+        {
+            browserGuests = new StreamBrowserGuests(StreamProtocol.DefaultPort + StreamProtocol.BrowserPortOffset, line => GD.Print(line));
+        }
+        catch (System.Exception failure)
+        {
+            GD.Print($"[Stream] browsers cannot join a lobby hosted here: {failure.Message}");
+            return;
+        }
+
+        GD.Print($"[Stream] browser join code: {browserGuests.JoinCode}");
+
+        // Raised on a worker thread; the lobby is redrawn on the main one.
+        browserGuests.GuestsChanged += () => Callable.From(RefreshLobbyPanel).CallDeferred();
+    }
+
+    private void CloseBrowserGuests()
+    {
+        browserGuests?.Dispose();
+        browserGuests = null;
+    }
+
+    // The link a guest opens in a browser. It names the host's address, as the join code does.
+    private string BuildBrowserLink()
+    {
+        if (browserGuests == null)
+        {
+            return null;
+        }
+
+        var portMapper = appInstance.netplayPortMapper;
+        string address = portMapper != null && portMapper.IsPortMapped(browserGuests.Port) && !string.IsNullOrEmpty(portMapper.ExternalAddress)
+            ? portMapper.ExternalAddress
+            : appInstance.netplayManager?.ResolveLocalHostAddress();
+
+        if (string.IsNullOrEmpty(address))
+        {
+            return null;
+        }
+
+        // An IPv6 address goes in brackets, as in any web address.
+        string hostPart = address.Contains(':') ? $"[{address}]" : address;
+        return $"{BrowserJoinPage}#{hostPart}:{browserGuests.JoinCode}";
+    }
+
+    private void CopyBrowserLinkToClipboard()
+    {
+        string link = BuildBrowserLink();
+
+        if (link == null)
+        {
+            return;
+        }
+
+        DisplayServer.ClipboardSet(link);
+        GD.Print("[Netplay] Browser link copied to the clipboard.");
+
+        if (lobbyCopyBrowserLinkButton != null)
+        {
+            lobbyCopyBrowserLinkButton.Text = "Copied";
+        }
+    }
+
+    private static string DescribeControllers(int count)
+    {
+        return count switch
+        {
+            0 => "no controller",
+            1 => "1 controller",
+            _ => $"{count} controllers"
+        };
     }
 
     private GameActionState ResolveLobbyGameAction()
@@ -918,6 +1040,12 @@ public class MainSceneNetplayHandler
             mainScene.lobbyCopyCodeButton.Text = "Copy Code";
         }
 
+        if (lobbyCopyBrowserLinkButton != null)
+        {
+            lobbyCopyBrowserLinkButton.Visible = lobby.IsHosting && browserGuests != null;
+            lobbyCopyBrowserLinkButton.Text = CopyBrowserLinkText;
+        }
+
         if (mainScene.lobbyStatusLabel != null)
         {
             mainScene.lobbyStatusLabel.Text = DescribeLobbyState(lobby);
@@ -1102,6 +1230,25 @@ public class MainSceneNetplayHandler
 
             mainScene.lobbyPlayerList.AddChild(memberRow);
         }
+
+        // Guests in a web browser. They need nothing installed, so they are always ready.
+        StreamBrowserGuests.Guest[] inBrowsers = appInstance.netplayLobby.IsHosting && browserGuests != null ? browserGuests.Snapshot() : System.Array.Empty<StreamBrowserGuests.Guest>();
+
+        for (int index = 0; index < inBrowsers.Length; index++)
+        {
+            var browserRow = new Label
+            {
+                Text = $"Browser player {index + 1}   Ready, {DescribeControllers(inBrowsers[index].ControllerCount)}",
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            if (boldMemberFont != null)
+            {
+                browserRow.AddThemeFontOverride("font", boldMemberFont);
+            }
+
+            mainScene.lobbyPlayerList.AddChild(browserRow);
+        }
     }
 
 
@@ -1130,14 +1277,7 @@ public class MainSceneNetplayHandler
                 return "No game selected";
             }
 
-            string controllers = LocalControllerCount switch
-            {
-                0 => "no controller",
-                1 => "1 controller",
-                _ => $"{LocalControllerCount} controllers"
-            };
-
-            return $"{(isLocallyReady ? "Ready" : "Not ready")}, {controllers}";
+            return $"{(isLocallyReady ? "Ready" : "Not ready")}, {DescribeControllers(LocalControllerCount)}";
         }
 
         var lobbyGameAction = ResolveLobbyGameAction();
@@ -1372,7 +1512,7 @@ public class MainSceneNetplayHandler
         hasHostedGameRunning = true;
         StopStreaming();
 
-        streamHost = new StreamHostNode(StreamProtocol.DefaultPort, null, appInstance.configManager?.BuildStreamEncoderSettings());
+        streamHost = new StreamHostNode(StreamProtocol.DefaultPort, null, appInstance.configManager?.BuildStreamEncoderSettings()) { BrowserGuests = browserGuests };
         mainScene.AddChild(streamHost);
 
         int controllersBefore = Input.GetConnectedJoypads().Count;
@@ -1381,6 +1521,11 @@ public class MainSceneNetplayHandler
         foreach (var member in lobby.Members.Where(member => member.PeerId != lobby.LocalPeerId))
         {
             controllersReserved += streamHost.ReservePads((uint)member.PeerId, member.ControllerCount);
+        }
+
+        foreach (StreamBrowserGuests.Guest inBrowser in browserGuests?.Snapshot() ?? System.Array.Empty<StreamBrowserGuests.Guest>())
+        {
+            controllersReserved += streamHost.ReservePads(inBrowser.GuestId, inBrowser.ControllerCount);
         }
 
         // The emulator's controller settings are written from the controllers Godot can see, so
@@ -1586,6 +1731,7 @@ public class MainSceneNetplayHandler
     private void OnLobbyClosed(string reason)
     {
         StopStreaming();
+        CloseBrowserGuests();
         activeJoinCode = null;
         isLocallyReady = false;
         lastReportedReadinessSignature = null;
