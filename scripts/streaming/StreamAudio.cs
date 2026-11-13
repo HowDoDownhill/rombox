@@ -33,7 +33,7 @@ public static class StreamAudioCaptures
 
         if (OperatingSystem.IsLinux())
         {
-            return new PulseAudioCapture(ffmpegPath, log);
+            return new PulseAudioCapture(ffmpegPath, target?.ProcessId ?? 0, log);
         }
 
         log?.Invoke("[Stream] game audio is not captured on this system yet.");

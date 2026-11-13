@@ -70,6 +70,17 @@ copy_tree "install_scripts" "build/linux/install_scripts"
 rm -rf "build/linux/tools"
 copy_tree "tools/7zip" "build/linux/tools/7zip"
 
+# Guests in a web browser reach a Linux host through MsQuic, which most Linux systems lack.
+# The library goes beside the .NET assemblies, where .NET looks for it first, and its license
+# files go in tools. It is kept out of git; tools/msquic/README.md says where it comes from.
+if [ -f "tools/msquic/linux/libmsquic.so.2" ]; then
+    cp "tools/msquic/linux/libmsquic.so.2" "build/linux/data_rombox_linuxbsd_x86_64/libmsquic.so.2"
+    mkdir -p "build/linux/tools/msquic/linux"
+    cp tools/msquic/linux/*.txt "build/linux/tools/msquic/linux/"
+else
+    echo "tools/msquic/linux is missing; browsers cannot join a game hosted by this Linux build."
+fi
+
 chmod +x "build/linux/rombox.x86_64" "build/linux/tools/7zip/linux/7zz"
 
 # The macOS app keeps its data in Application Support, so install_scripts travels inside the

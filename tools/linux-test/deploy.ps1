@@ -148,6 +148,11 @@ function Copy-RuntimeDataIntoBuild {
     # The Windows FFmpeg binaries are about 155 MB and no use on the test machine.
     $windowsFfmpeg = Join-Path $LinuxBuildDir 'tools\ffmpeg\windows'
     if (Test-Path $windowsFfmpeg) { Remove-Item $windowsFfmpeg -Recurse -Force }
+
+    # MsQuic, for guests in a web browser, goes beside the .NET assemblies as build.sh puts it.
+    $msquic = Join-Path $ProjectRoot 'tools\msquic\linux\libmsquic.so.2'
+    $assemblies = Join-Path $LinuxBuildDir 'data_rombox_linuxbsd_x86_64'
+    if ((Test-Path $msquic) -and (Test-Path $assemblies)) { Copy-Item $msquic $assemblies -Force }
 }
 
 # Only these paths ship. The build folder also accumulates runtime data (config.cfg

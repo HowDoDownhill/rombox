@@ -62,6 +62,17 @@ xcopy "install_scripts" "build\linux\install_scripts" /E /I /Y /Q
 if exist "build\linux\tools" rmdir /s /q "build\linux\tools"
 xcopy "tools\7zip" "build\linux\tools\7zip" /E /I /Y /Q
 
+:: Guests in a web browser reach a Linux host through MsQuic, which most Linux systems lack.
+:: The library goes beside the .NET assemblies, where .NET looks for it first, and its license
+:: files go in tools. It is kept out of git; tools\msquic\README.md says where it comes from.
+if exist "tools\msquic\linux\libmsquic.so.2" (
+    copy /y "tools\msquic\linux\libmsquic.so.2" "build\linux\data_rombox_linuxbsd_x86_64\libmsquic.so.2" >nul
+    if not exist "build\linux\tools\msquic\linux" mkdir "build\linux\tools\msquic\linux"
+    copy /y "tools\msquic\linux\*.txt" "build\linux\tools\msquic\linux\" >nul
+) else (
+    echo tools\msquic\linux is missing; browsers cannot join a game hosted by this Linux build.
+)
+
 :: The macOS app keeps its data in Application Support, so install_scripts travels inside the
 :: package as one zip. Godot skips folders holding a .gdignore, which install_scripts has.
 echo Packing install_scripts for macOS...

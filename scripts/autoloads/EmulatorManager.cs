@@ -2305,7 +2305,29 @@ public partial class EmulatorManager : Node
 
         DiscreteGpuPreference.ApplyToProcess(processStartInfo, appInstance?.configManager?.PreferDiscreteGpu ?? true);
         ApplyLaunchEnvironment(processStartInfo, emulatorMetadata, workingDirectory);
+        ApplyStreamHostEnvironment(processStartInfo);
         return processStartInfo;
+    }
+
+    // Linux: a game hosted for guests is captured as an X11 window, so on a Wayland desktop the
+    // emulator is told to open its window through XWayland. Taking WAYLAND_DISPLAY away does it
+    // for most programs; the three settings name X11 for Qt, SDL and GTK outright.
+    private void ApplyStreamHostEnvironment(ProcessStartInfo processStartInfo)
+    {
+        if (!OperatingSystem.IsLinux() || appInstance?.inputLayer == null || !appInstance.inputLayer.IsStreamSessionRequested)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("DISPLAY")))
+        {
+            return;
+        }
+
+        processStartInfo.Environment.Remove("WAYLAND_DISPLAY");
+        processStartInfo.Environment["QT_QPA_PLATFORM"] = "xcb";
+        processStartInfo.Environment["SDL_VIDEODRIVER"] = "x11";
+        processStartInfo.Environment["GDK_BACKEND"] = "x11";
     }
 
     private void ApplyLaunchEnvironment(ProcessStartInfo processStartInfo, EmulatorMeta emulatorMetadata, string emulatorInstallDirectory)

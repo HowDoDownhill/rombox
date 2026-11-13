@@ -13,6 +13,11 @@ public sealed class StreamCaptureTarget
     public string WindowExe;
     public string WindowTitle;
     public long X11WindowId;
+    // Linux: the program whose sound is captured. 0 captures the whole desktop's sound.
+    public int ProcessId;
+    // Linux: the window's size when it was found, or 0 when unknown.
+    public int X11Width;
+    public int X11Height;
 
     public static StreamCaptureTarget Parse(string text)
     {
@@ -26,6 +31,20 @@ public sealed class StreamCaptureTarget
             case "hwnd": target.WindowHandle = long.Parse(value, CultureInfo.InvariantCulture); break;
             case "exe": target.WindowExe = value; break;
             case "x11": target.X11WindowId = Convert.ToInt64(value, value.StartsWith("0x") ? 16 : 10); break;
+            // Linux: a running program, by process id. Its window and its sound are captured.
+            case "pid":
+                target.ProcessId = int.Parse(value, CultureInfo.InvariantCulture);
+                X11Windows.Found? window = X11Windows.FindForProcess(target.ProcessId);
+                target.X11WindowId = window?.WindowId ?? 0;
+                target.X11Width = window?.Width ?? 0;
+                target.X11Height = window?.Height ?? 0;
+
+                if (target.X11WindowId == 0)
+                {
+                    Godot.GD.Print($"[Stream] no window found: {X11Windows.LastProblem}.");
+                }
+
+                break;
             default: target.WindowTitle = value; break;
         }
 
@@ -150,6 +169,7 @@ public sealed class StreamEncoderProcess : IDisposable
             string display = Environment.GetEnvironmentVariable("DISPLAY") ?? ":0";
             string window = target.X11WindowId != 0 ? $"-window_id 0x{target.X11WindowId:X} " : "";
             input = $"-f x11grab -framerate {settings.FrameRate} -draw_mouse 0 {window}-i {display}";
+            limiter = LinuxScaling();
         }
 
         string encoderFilter = StreamEncoderArguments.VideoFilter(Encoder, capturesGpuFrames);
@@ -158,6 +178,35 @@ public sealed class StreamEncoderProcess : IDisposable
 
         return $"-hide_banner -loglevel warning -nostats {StreamEncoderArguments.DeviceOptions(Encoder)} {input} {filterArgument}-fps_mode passthrough "
             + $"{StreamEncoderArguments.EncoderOptions(Encoder, settings.BitrateKbps, settings.FrameRate, declaredFrameRate)} -an -f flv -flush_packets 1 pipe:1";
+    }
+
+    // Linux: the picture is shrunk to fit the size limit, never enlarged, with even sides.
+    //
+    // Shrinking on the processor is slow: a game filling a 3840x2400 screen came out at 41
+    // frames a second and the host's own sound stuttered. With an NVIDIA encoder and a window
+    // of known size, the frame is handed to the graphics card as it is and shrunk there.
+    private string LinuxScaling()
+    {
+        int width = target.X11Width;
+        int height = target.X11Height;
+
+        if (width <= 0 || height <= 0)
+        {
+            return $"scale=w='min(iw,{settings.MaximumWidth})':h='min(ih,{settings.MaximumHeight})':force_original_aspect_ratio=decrease:force_divisible_by=2";
+        }
+
+        double shrink = Math.Min(1.0, Math.Min(settings.MaximumWidth / (double)width, settings.MaximumHeight / (double)height));
+        int outputWidth = Math.Max(2, (int)Math.Round(width * shrink) & ~1);
+        int outputHeight = Math.Max(2, (int)Math.Round(height * shrink) & ~1);
+
+        if (outputWidth == width && outputHeight == height)
+        {
+            return "";
+        }
+
+        return Encoder == "h264_nvenc"
+            ? $"hwupload_cuda,scale_cuda=w={outputWidth}:h={outputHeight}:interp_algo=bilinear"
+            : $"scale=w={outputWidth}:h={outputHeight}:flags=fast_bilinear";
     }
 
     // A window wider than the widest shape loses its sides, and one larger than the limit is

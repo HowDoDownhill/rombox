@@ -4659,9 +4659,8 @@ page's test controller reached the host as an Xbox pad in both.
 
 **Limits.**
 
-- Hosting for browsers needs Windows 11, or Linux with libmsquic installed. .NET's QUIC does not
-  run on Windows 10. Such a host still serves RomBox guests, and the lobby hides the link button.
-  A Linux host has not been tried.
+- Hosting for browsers needs Windows 11 or Linux. .NET's QUIC does not run on Windows 10. Such
+  a host still serves RomBox guests, and the lobby hides the link button.
 - The page needs WebTransport and WebCodecs: current Chrome, Edge and Firefox. Safari is untried.
 - The host's router must let UDP 55451 in, as with the other ports. There is no relay.
 - Phones connect but have no on-screen buttons.
@@ -4675,6 +4674,51 @@ page's test controller reached the host as an Xbox pad in both.
   internet is not asked.
 - Anyone who reaches the port can connect, as with the UDP stream. The host sees browser players
   in the lobby before starting.
+
+### Hosting on Linux
+
+A Linux host streams the game's own window and the game's own sound, as a Windows host does.
+Tried on the Arch box (KDE on Wayland, RTX 3060) hosting Banjo-Tooie in gopher64 from the lobby,
+with a Windows guest: 60 fps, sound, and the guest's controller plugged in before launch.
+
+**The window.** ffmpeg's `x11grab` captures one X11 window by id. `X11Windows` finds the id: it
+reads the desktop's window list (`_NET_CLIENT_LIST`) and each window's owner (`_NET_WM_PID`)
+through libxcb and picks the largest window owned by the emulator or a program it started.
+AppImage emulators run as a child of what RomBox launched, so the whole family is searched.
+libxcb was chosen over Xlib because Xlib ends the whole program when a window vanishes mid-query
+unless a process-wide error handler is installed, and Godot owns that handler.
+
+**Wayland.** x11grab cannot see a window drawn straight to Wayland. When a game is launched for
+a hosted session, `ApplyStreamHostEnvironment` takes `WAYLAND_DISPLAY` out of the emulator's
+environment and names X11 for Qt, SDL and GTK, so the window opens through XWayland. A game that
+still opens no X11 window within 15 seconds gets the whole display streamed.
+
+**The sound.** `pactl` lists what each program plays and `parec --monitor-stream=N` records one
+of those, leaving the host's other programs out. Finding the game's entry takes two steps on
+PipeWire: a program that speaks to PipeWire directly has no process id on its sound, only a
+client number, and the process id is on the client's entry. The capture looks again whenever
+the game's sound goes away. Without `pactl` and `parec` the whole desktop's sound is sent.
+
+**Two things that made the first run choppy.** The user heard stutter on the stream and on the
+host's own speakers.
+
+- Shrinking on the processor. The game filled a 3840x2400 screen and swscale shrank each frame
+  to fit 1080p: 41 fps captured. With an NVIDIA encoder the frame now goes to the graphics card
+  as it is (`hwupload_cuda,scale_cuda`): 60 fps. Other encoders still shrink on the processor,
+  with the cheaper `fast_bilinear`.
+- Asking PipeWire for 10 ms pieces. PipeWire runs every program at the pace of the most
+  demanding one, so the request shrank the whole system's step and the game's own sound could
+  not keep up. The recording now asks for 22 ms, just above PipeWire's usual 1024-sample step.
+
+**Browser guests.** They need libmsquic, which Arch only has in the AUR and Microsoft's NuGet
+packages only carry for Windows. The Linux build ships version 2.4.20 from Microsoft's Ubuntu
+package (`tools/msquic/README.md`), placed beside `System.Net.Quic.dll`, where .NET finds it
+without anything installed. It needs the system's OpenSSL 3 and libnuma. Edge on the Windows PC
+joined the Arch host this way: 59 fps, sound, and its controller plugged in through uinput.
+
+**Not done.** The capture does not follow a window that changes size.
+Hardware shrinking exists for NVIDIA only. `--netplay-local-only` hosts without asking the
+router for ports, for tests on the home network.
 
 ### FLV carries frame sizes
 
@@ -4706,13 +4750,13 @@ H.264 decoder, so it cannot serve as the guest's decoder.
 
 - Keyframes on request. The ffmpeg program cannot be told to send one, so the host sends a keyframe
   every second and a guest that loses packets waits for the next one.
-- Linux capture under Wayland. Arch's FFmpeg 9.0.2 has `x11grab` and `kmsgrab` but no PipeWire
-  source, so the prototype captures X11 windows only (XWayland apps included). PipeWire through the
-  screen-cast portal is a separate piece of work.
+- Linux capture of windows drawn straight to Wayland. Arch's FFmpeg 9.0.2 has `x11grab` and
+  `kmsgrab` but no PipeWire source. Hosted games are steered to XWayland instead (see Hosting on
+  Linux); PipeWire through the screen-cast portal is a separate piece of work.
 - The driver notice and install for hosts, which wait for the hosting screen.
 - Telling emulators which controller is which player. A guest's controller takes the next free
   slot after the host's own.
-- Aligning sound with picture, and per-program sound capture on Linux.
+- Aligning sound with picture.
 - Error correction and connections across the internet.
 - Publishing the join page. The lobby's browser link points at GitHub Pages, where the page has
   to be put before the link works for anyone.

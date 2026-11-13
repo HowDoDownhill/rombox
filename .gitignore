@@ -78,6 +78,9 @@ AGENTS.md
 # FFmpeg binaries for game streaming: about 155 MB, fetched as tools/ffmpeg/README.md describes
 /tools/ffmpeg/*/
 
+# MsQuic for Linux, fetched as tools/msquic/README.md describes
+/tools/msquic/*/
+
 # Local scratch: API dumps and the script that fetches them carry server data and tokens
 fetch.ps1
 scratch_*.json

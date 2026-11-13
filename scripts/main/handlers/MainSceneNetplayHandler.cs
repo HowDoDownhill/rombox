@@ -1522,6 +1522,7 @@ public class MainSceneNetplayHandler
     private const double ControllerArrivalTimeoutSeconds = 3.0;
     private const double EmulatorWindowTimeoutSeconds = 60.0;
     private const double EmulatorWindowSettleSeconds = 2.0;
+    private const double LinuxWindowTimeoutSeconds = 15.0;
 
     // Starts the game for everyone: plugs in a controller for each of the guests' controllers,
     // launches the emulator so it sets up every player, then streams its window to the guests.
@@ -1604,11 +1605,35 @@ public class MainSceneNetplayHandler
                 continue;
             }
 
-            // Linux: the whole X display, until capture can follow one program's window.
+            // Linux: the game's own X11 window and its own sound. A game that opened no X11
+            // window in time (one drawing straight to Wayland, say) gets the whole display.
             if (!System.OperatingSystem.IsWindows())
             {
+                int emulatorId;
+
+                try
+                {
+                    emulatorId = emulator.Id;
+                }
+                catch (System.Exception)
+                {
+                    continue;
+                }
+
+                X11Windows.Found? window = X11Windows.FindForProcess(emulatorId);
+
+                if (window == null && secondsWaited < LinuxWindowTimeoutSeconds)
+                {
+                    continue;
+                }
+
+                // The first window can be a splash; the game window may also still be growing to full screen.
                 await mainScene.ToSignal(mainScene.GetTree().CreateTimer(EmulatorWindowSettleSeconds), SceneTreeTimer.SignalName.Timeout);
-                return new StreamCaptureTarget();
+                window = X11Windows.FindForProcess(emulatorId);
+                GD.Print(window != null
+                    ? $"[Stream] streaming the game's window, {window.Value.Width}x{window.Value.Height}, after {secondsWaited:0.0}s."
+                    : $"[Stream] the whole display is streamed: {X11Windows.LastProblem}.");
+                return new StreamCaptureTarget { X11WindowId = window?.WindowId ?? 0, X11Width = window?.Width ?? 0, X11Height = window?.Height ?? 0, ProcessId = emulatorId };
             }
 
             try

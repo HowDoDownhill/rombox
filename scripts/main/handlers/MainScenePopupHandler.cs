@@ -286,7 +286,9 @@ public class MainScenePopupHandler
 
         int lobbyPort = appInstance.netplayLobby.ResolveLobbyPort();
 
-        bool portsMapped = appInstance.netplayPortMapper != null && await appInstance.netplayPortMapper.TryMapPortsAsync(hostPort, lobbyPort, hostPort + StreamProtocol.BrowserPortOffset);
+        // --netplay-local-only leaves the router alone, for tests on the home network.
+        bool asksRouter = !OS.GetCmdlineUserArgs().Contains("--netplay-local-only");
+        bool portsMapped = asksRouter && appInstance.netplayPortMapper != null && await appInstance.netplayPortMapper.TryMapPortsAsync(hostPort, lobbyPort, hostPort + StreamProtocol.BrowserPortOffset);
         string externalAddress = portsMapped ? appInstance.netplayPortMapper.ExternalAddress : null;
         bool isInternetReachable = portsMapped
             && !string.IsNullOrEmpty(externalAddress)
