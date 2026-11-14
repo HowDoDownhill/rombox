@@ -1,3 +1,22 @@
+RomBox - Version 1.3.96 Changelog (test build)
+
+✨ New Features
+
+    Type the Host's Code: Join Session now opens the code for typing when no lobby is found on your home network. Type it, paste it with Ctrl+V, or enter it with a controller: Left and Right move along the code, Up and Down change the character. A code you already copied is filled in, ready to confirm.
+    4K Streaming: Session Settings > Picture Size now offers 2160p (4K). It needs a fast upload, so raise Picture Quality with it.
+
+🔧 Changes
+
+    Going Back to a Full Release: RomBox asks once whether to go back after you turn off Get Test Builds Early. Turning the switch on and off again makes it ask again.
+    Lobby Checks: A streamed session runs one copy of the game, on the host. The lobby no longer asks a host to change their emulator's version and no longer compares game files.
+    Linux Hosts Follow the Game's Window: When the game goes full screen, is resized, or opens its real window after a launcher, guests keep seeing it.
+
+🐛 Fixes
+
+    Update Prompt: An update offered after another prompt in the same session, such as the Steam offer, showed that prompt's choices and no Install button. It now shows Install.
+
+---
+
 RomBox - Version 1.3.95 Changelog (test build)
 
 ✨ New Features
