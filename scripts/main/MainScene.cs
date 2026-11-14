@@ -181,6 +181,7 @@ public partial class MainScene : Control
             panelStack.Register(startMenuPanel);
             startMenuPanel.BiosViewRequested += PopupHandler.PopulateBiosSelector;
             startMenuPanel.NetplayCancelRequested += PopupHandler.OnNetplayCancelPressed;
+            startMenuPanel.JoinCodeEntered += PopupHandler.OnJoinCodeEntered;
             startMenuPanel.Closed += ReturnFocusToGameList;
 
             if (startMenuPanel.launchEmulatorButton != null) startMenuPanel.launchEmulatorButton.Pressed += PopupHandler.OnLaunchEmulatorPressed;
@@ -440,6 +441,15 @@ public partial class MainScene : Control
                 break;
             case "downloads": SectionHandler.ShowSection(MainSceneSectionHandler.Section.Downloads, false); break;
             case "start": ToggleStartMenu(); break;
+            case "join-code":
+                // The join view with a made-up code typed in: two keys, then a controller step up.
+                ToggleStartMenu();
+                await ToSignal(GetTree().CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
+                startMenuPanel?.ShowJoinCodeEntry("", "Type the host's code, or press Ctrl+V to paste it. Then press Enter.");
+                Input.ParseInputEvent(new InputEventKey { Keycode = Key.Key7, Unicode = '7', Pressed = true });
+                Input.ParseInputEvent(new InputEventKey { Keycode = Key.K, Unicode = 'k', Pressed = true });
+                Input.ParseInputEvent(new InputEventAction { Action = "ui_up", Pressed = true });
+                break;
             case "jump": OpenSystemJumpPopup(); break;
             case "carousel": CaptureGameListView(0, 3); break;
             case "glyphs": SimulateControllerInput(); break;

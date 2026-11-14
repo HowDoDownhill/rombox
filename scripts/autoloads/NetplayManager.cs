@@ -12,8 +12,8 @@ public enum NetplayRole
 
 public partial class NetplayManager : Node
 {
-    private const string JoinCodeAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-    private const int JoinCodeLength = 10;
+    public const string JoinCodeAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    public const int JoinCodeLength = 10;
     private const int FallbackPort = 55435;
 
     private AppInstance appInstance;
@@ -299,7 +299,9 @@ public partial class NetplayManager : Node
         return decoded.ToArray();
     }
 
-    private static string NormaliseJoinCode(string joinCode)
+    // Upper case, without spaces or dashes, and with the letters a code never contains read as
+    // the digits they look like.
+    public static string NormaliseJoinCode(string joinCode)
     {
         var normalised = new StringBuilder(joinCode.Length);
 

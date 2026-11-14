@@ -360,11 +360,26 @@ public class MainScenePopupHandler
             return;
         }
 
+        // A code already copied is filled in, ready to confirm.
         string clipboardText = DisplayServer.ClipboardGet();
+        bool hasCopiedCode = appInstance.netplayManager.TryParseJoinCode(clipboardText, out _, out _);
+        mainScene.startMenuPanel?.ShowJoinCodeEntry(hasCopiedCode ? clipboardText : "", hasCopiedCode ? CopiedCodeHelp : JoinCodeEntryHelp);
+    }
 
-        if (!appInstance.netplayManager.TryParseJoinCode(clipboardText, out string hostAddress, out int netplayPort))
+    private const string JoinCodeEntryHelp = "Type the host's code, or press Ctrl+V to paste it. Then press Enter.\n"
+        + "With a controller: Left and Right move along the code, Up and Down change the character, and Select joins.";
+    private const string CopiedCodeHelp = "This is the code you copied. Press Enter or Select to join, or change it first.";
+
+    public void OnJoinCodeEntered(string joinCode)
+    {
+        if (appInstance.netplayManager == null || appInstance.netplayLobby == null)
         {
-            mainScene.startMenuPanel?.ShowNetplayView("----------", "No lobby found on this network, and the clipboard does not contain a join code.\nCopy the host's code, then choose Join again.");
+            return;
+        }
+
+        if (!appInstance.netplayManager.TryParseJoinCode(joinCode, out string hostAddress, out int netplayPort))
+        {
+            mainScene.startMenuPanel?.ShowJoinCodeEntry(joinCode, "That code doesn't lead to a host. Check it with the host and try again.\n" + JoinCodeEntryHelp);
             return;
         }
 
