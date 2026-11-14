@@ -442,10 +442,23 @@ public partial class MainScene : Control
             case "downloads": SectionHandler.ShowSection(MainSceneSectionHandler.Section.Downloads, false); break;
             case "start": ToggleStartMenu(); break;
             case "join-code":
-                // The join view with a made-up code typed in: two keys, then a controller step up.
+                // The join view with a code typed in. --ui-capture-code=<code> types that code
+                // and presses Enter, which joins; without it, two keys and a controller step up.
                 ToggleStartMenu();
                 await ToSignal(GetTree().CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
                 startMenuPanel?.ShowJoinCodeEntry("", "Type the host's code, or press Ctrl+V to paste it. Then press Enter.");
+
+                if (CaptureArgument("--ui-capture-code=") is string typedCode)
+                {
+                    foreach (char character in typedCode)
+                    {
+                        Input.ParseInputEvent(new InputEventKey { Unicode = char.ToLowerInvariant(character), Pressed = true });
+                    }
+
+                    Input.ParseInputEvent(new InputEventAction { Action = "ui_accept", Pressed = true });
+                    break;
+                }
+
                 Input.ParseInputEvent(new InputEventKey { Keycode = Key.Key7, Unicode = '7', Pressed = true });
                 Input.ParseInputEvent(new InputEventKey { Keycode = Key.K, Unicode = 'k', Pressed = true });
                 Input.ParseInputEvent(new InputEventAction { Action = "ui_up", Pressed = true });
