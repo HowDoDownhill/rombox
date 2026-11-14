@@ -1,3 +1,37 @@
+RomBox - Version 1.4.0 Changelog
+
+✨ New Features
+
+    Play Together by Streaming: Host Session now streams the host's game to everyone who joins. Guests need no game files and no emulator, and it works for every console. The host picks a game and presses Start Game, and each guest sees and hears the game and plays with their own controller.
+    Join From a Web Browser: A guest can play without installing RomBox. When you host, press Copy Browser Link in the lobby and send the link to your guest. They open it in Chrome, Edge or Firefox, press Join, and see, hear and play the game there. A browser guest with no controller can play on the keyboard.
+    Type the Host's Code: Join Session opens the code for typing when no lobby is found on your home network. Type it, paste it with Ctrl+V, or enter it with a controller. A code you already copied is filled in, ready to confirm.
+    Session Settings: A new section in Settings for playing together. When you host, choose the Picture Quality (5 to 50 Mbit/s), the Picture Size (720p up to 2160p, which is 4K) and whether a game wider than 16:9 is sent whole or as its middle. When you join, you can turn off the smoothing that evens out an uneven connection, and hide the connection details at the top of the picture.
+    Hosting on Windows and Linux: The host sends only the game's window and only the game's sound, at 60 frames a second. Hosting and joining also work with games in your own folders.
+
+🔧 Changes
+
+    Sessions Stream Now: Host Session and Join Session no longer use the emulators' own netplay. The lobby no longer asks for matching emulator versions or matching game files.
+    Hosting on Windows Needs a Driver: The first time you host, RomBox explains the ViGEmBus driver and asks before installing it. Without it guests can watch and listen but can't play. Guests don't need it.
+    Nintendo 64 Buttons (gopher64): The B button on your controller is now B in the game. It was on X, and B did nothing. If you made your own layout in gopher64, RomBox leaves it as it is.
+    Going Back From a Test Build: RomBox asks once whether to go back to the latest full release after you turn off Get Test Builds Early.
+
+🐛 Fixes
+
+    Update Prompt: An update offered after another prompt in the same session, such as the Steam offer, showed that prompt's choices and no Install button. It now shows Install.
+
+⚠️ Good to Know
+
+    Playing across the internet needs the host's router to open ports 55440, 55450 and 55451 (UDP). RomBox asks the router to do it. If the router refuses, forward those ports to the host.
+    Higher Picture Quality and larger Picture Sizes need more upload speed from the host. 4K needs a fast upload.
+    A lost connection can freeze or smear the picture for up to a second.
+    Hosting for browser guests needs Windows 11 or Linux. On Windows 10 the link button is hidden, and guests with RomBox can still join.
+    A browser guest should join before you press Start Game. One who joins later can watch and listen but has no controller. Phones and tablets can open the link, but there are no on-screen buttons yet.
+    A guest on your own home network may be asked by their browser to let the page reach devices on the local network. They need to allow it.
+    Joining on Linux needs FFmpeg installed (the ffmpeg package). On Linux with an AMD or Intel graphics card, hosting a game larger than 1080p may fall short of 60 frames a second.
+    macOS can't host or join yet.
+
+---
+
 RomBox - Version 1.3.96 Changelog (test build)
 
 ✨ New Features
