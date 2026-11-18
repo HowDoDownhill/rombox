@@ -171,7 +171,7 @@ public sealed class GameDetailsLayout
     {
         var placeholder = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore };
         var style = new StyleBoxFlat { BgColor = new Color(0, 0, 0, PlaceholderAlpha) };
-        style.SetCornerRadiusAll(8);
+        style.SetCornerRadiusAll(2);
         placeholder.AddThemeStyleboxOverride("panel", style);
         return placeholder;
     }

@@ -131,9 +131,9 @@ public partial class GameCard : Control, ICarouselItem, IGameListItem
 
     private bool focusStyleChosen;
 
-    private const int CardCornerRadius = 8;
-    private const int SimpleRingWidth = 4;
-    private const int SimpleRingGap = FocusHighlight.RingGap;
+    private const int CardCornerRadius = 2;
+    private const int RingWidth = 3;
+    private const int RingGap = FocusHighlight.RingGap;
 
     // The scene's styles are shared by every card, so recolouring them once recolours all cards.
     private static StyleBoxFlat cardStyle;
@@ -176,12 +176,11 @@ public partial class GameCard : Control, ICarouselItem, IGameListItem
 
         if (ringFocusStyle != null)
         {
-            bool ring = Appearance.IsSimple;
             ringFocusStyle.ShadowColor = shadow;
             ringFocusStyle.BorderColor = Appearance.Accent;
-            ringFocusStyle.SetBorderWidthAll(ring ? SimpleRingWidth : 0);
-            ringFocusStyle.SetExpandMarginAll(ring ? SimpleRingGap : 0);
-            ringFocusStyle.SetCornerRadiusAll(ring ? CardCornerRadius + SimpleRingGap : CardCornerRadius);
+            ringFocusStyle.SetBorderWidthAll(RingWidth);
+            ringFocusStyle.SetExpandMarginAll(RingGap);
+            ringFocusStyle.SetCornerRadiusAll(CardCornerRadius + 2);
         }
     }
 

@@ -72,6 +72,7 @@ public partial class SetupWizard : Control
         SavedAppearance.Apply(config);
         BuildFrame();
 
+        PageLook.Surface(this, "Panel");
         var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 

@@ -47,6 +47,7 @@ public partial class LoginScreen : Control
 
         SavedAppearance.Apply(appInstance.configManager);
 
+        PageLook.Surface(this, "TextureRect/Background/PanelContainer");
         var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 

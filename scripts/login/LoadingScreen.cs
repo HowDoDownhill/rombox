@@ -24,6 +24,7 @@ public partial class LoadingScreen : Control
 
         SavedAppearance.Apply(appInstance.configManager);
 
+        PageLook.Surface(this, "TextureRect/Panel");
         var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 

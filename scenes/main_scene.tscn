@@ -5,7 +5,6 @@
 [ext_resource type="Material" uid="uid://dhmv62s1oow6i" path="res://addons/fishui/assets/materials/moving_background.tres" id="2_movbg"]
 [ext_resource type="PackedScene" uid="uid://cew2a8jxcgu6t" path="res://scenes/games_list/game_list_entry.tscn" id="2_rt2n2"]
 [ext_resource type="Script" uid="uid://cwtykxfgbvhv6" path="res://scripts/ui/VerticalCarousel.cs" id="3_gubc5"]
-[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://addons/fishui/assets/materials/mica_panel.tres" id="3_mica"]
 [ext_resource type="Script" uid="uid://cm85euea7rnm8" path="res://scripts/ui/SettingsPanel.cs" id="3_setpanel"]
 [ext_resource type="Script" uid="uid://bm6hm7bjuwnmc" path="res://addons/fishui/shell/UiPanel.cs" id="3_uipanel"]
 [ext_resource type="PackedScene" uid="uid://cffanb3xjob1c" path="res://scenes/downloads_list/download_entry.tscn" id="4_pu3yx"]
@@ -122,13 +121,12 @@ grow_vertical = 2
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.1
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
 
 [node name="Panel" type="Panel" parent="Background/VBoxContainer/HeaderContainer" unique_id=2010479366]
-material = ExtResource("3_mica")
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.1
@@ -184,7 +182,6 @@ visibleItemsHalfCount = 3
 preloadItemsHalfCount = 3
 
 [node name="Panel" type="Panel" parent="Background/VBoxContainer/GamesListContainer/HBoxContainer" unique_id=1330960290]
-material = ExtResource("3_mica")
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -395,7 +392,6 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="SettingsTreePanel" type="Panel" parent="Background/VBoxContainer/SettingsMenuContainer/HBoxContainer" unique_id=1546846272]
-material = ExtResource("3_mica")
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.3
@@ -424,7 +420,6 @@ size_flags_vertical = 3
 theme_override_constants/separation = 5
 
 [node name="Panel" type="Panel" parent="Background/VBoxContainer/SettingsMenuContainer/HBoxContainer" unique_id=1892134041]
-material = ExtResource("3_mica")
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -448,13 +443,12 @@ size_flags_horizontal = 3
 layout_mode = 2
 size_flags_vertical = 3
 size_flags_stretch_ratio = 0.1
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
 
 [node name="Panel" type="Panel" parent="Background/VBoxContainer/FooterButtonsContainer" unique_id=1828947604]
-material = ExtResource("3_mica")
 layout_mode = 2
 
 [node name="GameListFooter" type="HBoxContainer" parent="Background/VBoxContainer/FooterButtonsContainer/Panel" unique_id=1733423683]

@@ -240,6 +240,13 @@ public partial class MainScene : Control
         UpdaterHandler.InitUpdater();
         ApplyTheme();
 
+        PageLook.Bar(this, "Background/VBoxContainer/HeaderContainer/Panel");
+        PageLook.Bar(this, "Background/VBoxContainer/FooterButtonsContainer/Panel");
+        PageLook.Surface(this, "Background/VBoxContainer/GamesListContainer/HBoxContainer/Panel");
+        PageLook.Surface(this, "Background/VBoxContainer/DownloadsPageContainer/DownloadsPage");
+        PageLook.Surface(this, "Background/VBoxContainer/SettingsMenuContainer/HBoxContainer/SettingsTreePanel");
+        PageLook.Surface(this, "Background/VBoxContainer/SettingsMenuContainer/HBoxContainer/Panel");
+
         var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 
