@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" uid="uid://bvyjn1xypupv8" path="res://scripts/ui/StartMenuPanel.cs" id="1_stmenu"]
-[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://assets/materials/mica_panel.tres" id="2_mica"]
+[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://addons/fishui/assets/materials/mica_panel.tres" id="2_mica"]
 [ext_resource type="Script" uid="uid://bgqglerkcylxx" path="res://addons/SmoothScroll/smooth_scroll_container.gd" id="3_smooth"]
 [ext_resource type="Script" uid="uid://b7h0k2h2qwlqv" path="res://addons/SmoothScroll/scroll_damper/expo_scroll_damper.gd" id="4_damper"]
 

@@ -1,9 +1,0 @@
-[gd_resource type="ShaderMaterial" format=3 uid="uid://b822n10q6f56b"]
-
-[ext_resource type="Shader" uid="uid://byhma5romwgsa" path="res://assets/shaders/mica_panel.gdshader" id="1_mica"]
-
-[resource]
-shader = ExtResource("1_mica")
-shader_parameter/blur_radius = 150.0
-shader_parameter/mix_color = Color(0, 0, 0, 0.4)
-shader_parameter/luminosity_floor = 0.14

@@ -6,7 +6,7 @@ public partial class GameCard : Control, ICarouselItem, IGameListItem
     private const float RevealDuration = 0.18f;
 
     private static readonly ShaderMaterial MicaMaterial =
-        GD.Load<ShaderMaterial>("res://assets/materials/mica_panel.tres");
+        GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
 
     private Control body;
     private PanelContainer cardPanel;

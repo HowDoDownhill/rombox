@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/ProgressPanel.cs" id="1_progress"]
-[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://assets/materials/mica_panel.tres" id="2_mica"]
+[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://addons/fishui/assets/materials/mica_panel.tres" id="2_mica"]
 
 [node name="ProgressPanel" type="Control" node_paths=PackedStringArray("ContentRoot", "statusLabel", "progressBar")]
 visible = false

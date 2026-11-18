@@ -1,0 +1,3 @@
+[submodule "addons/fishui"]
+	path = addons/fishui
+	url = https://github.com/HowDoDownhill/fishui.git

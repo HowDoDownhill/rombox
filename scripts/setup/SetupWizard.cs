@@ -69,10 +69,10 @@ public partial class SetupWizard : Control
             && config.ControllerMappingConsent == ConfigManager.ControllerMappingConsentUnasked;
         showsSteamStep = !OS.HasFeature("android") && (offersSteamShortcut || asksControllerMethodOnly);
 
-        Appearance.ApplySaved(config);
+        SavedAppearance.Apply(config);
         BuildFrame();
 
-        var micaMaterial = GD.Load<ShaderMaterial>("res://assets/materials/mica_panel.tres");
+        var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 
         ShowStep(Step.Welcome);
@@ -317,7 +317,7 @@ public partial class SetupWizard : Control
 
     private void ApplyPreview()
     {
-        Appearance.ApplySaved(config);
+        SavedAppearance.Apply(config);
     }
 
     private void BuildSource()

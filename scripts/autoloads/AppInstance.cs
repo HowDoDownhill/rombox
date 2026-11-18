@@ -55,6 +55,9 @@ public partial class AppInstance : Node
         dataBus = GetNode<DataBus>("/root/DataBus");
         controllerManager = GetNode<ControllerManager>("/root/ControllerManager");
 
+        SteamShortcuts.Configure(AppIdentity.DisplayName, AppIdentity.FileBaseName, "res://assets/icons/rombox.png", "res://assets/steam/",
+            AppIdentity.LegacyDisplayName, AppIdentity.LegacyFileBaseName);
+
         if (LegacyNameMigration.RelaunchUnderNewNameIfNeeded())
         {
             GetTree().Quit();
@@ -68,7 +71,10 @@ public partial class AppInstance : Node
         }
 
         LegacyNameMigration.RemoveLegacyFilesInBackground();
-        AddChild(new UiSounds(this));
+        UiSounds.SelectActions.Add("Select");
+        UiSounds.BackActions.Add("Back");
+        UiSounds.InputBelongsElsewhere = () => IsControllerInUseElsewhere;
+        AddChild(new UiSounds());
         StreamCommandLine.StartIfRequested(this);
         Callable.From(ApplyDiscreteGpuPreference).CallDeferred();
     }

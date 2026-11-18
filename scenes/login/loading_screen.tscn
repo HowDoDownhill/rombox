@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://bp0a3h05nfwws"]
 
 [ext_resource type="Script" uid="uid://c1c22gg5ecr81" path="res://scripts/login/LoadingScreen.cs" id="1_ep5rh"]
-[ext_resource type="Material" uid="uid://dhmv62s1oow6i" path="res://assets/materials/moving_background.tres" id="2_movbg"]
-[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://assets/materials/mica_panel.tres" id="3_mica"]
+[ext_resource type="Material" uid="uid://dhmv62s1oow6i" path="res://addons/fishui/assets/materials/moving_background.tres" id="2_movbg"]
+[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://addons/fishui/assets/materials/mica_panel.tres" id="3_mica"]
 
 [node name="LoadingScreen" type="Control" unique_id=1334140658 node_paths=PackedStringArray("progressBar", "statusLabel")]
 layout_mode = 3

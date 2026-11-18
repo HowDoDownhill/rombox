@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/ChangelogPanel.cs" id="1_chglog"]
-[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://assets/materials/mica_panel.tres" id="2_mica"]
+[ext_resource type="Material" uid="uid://b822n10q6f56b" path="res://addons/fishui/assets/materials/mica_panel.tres" id="2_mica"]
 
 [node name="ChangelogPanel" type="Control" node_paths=PackedStringArray("ContentRoot", "notesLabel", "acceptButton", "cancelButton")]
 visible = false

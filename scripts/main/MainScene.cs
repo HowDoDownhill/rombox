@@ -240,7 +240,7 @@ public partial class MainScene : Control
         UpdaterHandler.InitUpdater();
         ApplyTheme();
 
-        var micaMaterial = GD.Load<ShaderMaterial>("res://assets/materials/mica_panel.tres");
+        var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 
         NetplayHandler.ApplyStartupSessionArguments();

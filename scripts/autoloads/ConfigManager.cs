@@ -53,7 +53,8 @@ public partial class ConfigManager : Node
     public string AppTheme { get; private set; }
     public string AppBackground { get; private set; }
     public string AppStyle { get; private set; } = Appearance.GlassStyle;
-    public bool UiSoundsEnabled { get; private set; } = true;
+    // FishUI plays the sounds, so the setting lives there.
+    public bool UiSoundsEnabled { get => UiSounds.Enabled; private set => UiSounds.Enabled = value; }
 
     // Off by default. When on, the updater also offers test builds, which GitHub marks as
     // pre-releases.
@@ -73,17 +74,17 @@ public partial class ConfigManager : Node
 
     public static readonly (string Name, string ShaderPath)[] BackgroundStyles = new (string, string)[]
     {
-        ("Flow", "res://assets/shaders/backgrounds/bg_flow.gdshader"),
-        ("Mesh", "res://assets/shaders/backgrounds/bg_mesh.gdshader"),
-        ("Silk", "res://assets/shaders/backgrounds/bg_silk.gdshader"),
-        ("Horizon", "res://assets/shaders/backgrounds/bg_horizon.gdshader"),
-        ("Blobs", "res://assets/shaders/backgrounds/bg_blobs.gdshader"),
-        ("Waves", "res://assets/shaders/backgrounds/bg_waves.gdshader"),
-        ("Aurora", "res://assets/shaders/backgrounds/bg_aurora.gdshader"),
-        ("Bokeh", "res://assets/shaders/backgrounds/bg_bokeh.gdshader"),
-        ("Grid", "res://assets/shaders/backgrounds/bg_grid.gdshader"),
-        ("Gradient", "res://assets/shaders/backgrounds/bg_gradient.gdshader"),
-        ("Solid", "res://assets/shaders/backgrounds/bg_solid.gdshader")
+        ("Flow", "res://addons/fishui/assets/shaders/backgrounds/bg_flow.gdshader"),
+        ("Mesh", "res://addons/fishui/assets/shaders/backgrounds/bg_mesh.gdshader"),
+        ("Silk", "res://addons/fishui/assets/shaders/backgrounds/bg_silk.gdshader"),
+        ("Horizon", "res://addons/fishui/assets/shaders/backgrounds/bg_horizon.gdshader"),
+        ("Blobs", "res://addons/fishui/assets/shaders/backgrounds/bg_blobs.gdshader"),
+        ("Waves", "res://addons/fishui/assets/shaders/backgrounds/bg_waves.gdshader"),
+        ("Aurora", "res://addons/fishui/assets/shaders/backgrounds/bg_aurora.gdshader"),
+        ("Bokeh", "res://addons/fishui/assets/shaders/backgrounds/bg_bokeh.gdshader"),
+        ("Grid", "res://addons/fishui/assets/shaders/backgrounds/bg_grid.gdshader"),
+        ("Gradient", "res://addons/fishui/assets/shaders/backgrounds/bg_gradient.gdshader"),
+        ("Solid", "res://addons/fishui/assets/shaders/backgrounds/bg_solid.gdshader")
     };
 
     public static string BackgroundShaderPath(string styleName)

@@ -22,9 +22,9 @@ public partial class LoadingScreen : Control
         StartupTimeline.Mark("loading screen");
         appInstance = GetNode<AppInstance>("/root/AppInstance");
 
-        Appearance.ApplySaved(appInstance.configManager);
+        SavedAppearance.Apply(appInstance.configManager);
 
-        var micaMaterial = GD.Load<ShaderMaterial>("res://assets/materials/mica_panel.tres");
+        var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
 
         AttemptLoadFromCacheAsync();
