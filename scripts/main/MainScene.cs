@@ -255,6 +255,7 @@ public partial class MainScene : Control
 
         overlays = new OverlayHost { RoutesInput = true, FocusFallback = () => ActiveGameList?.GrabFocus() };
         AddChild(overlays);
+        AddChords();
 
         NetplayHandler.ApplyStartupSessionArguments();
         OfferControllerLayerOnceTheInterfaceHasSettled();
@@ -455,6 +456,25 @@ public partial class MainScene : Control
             case "downloads": SectionHandler.ShowSection(MainSceneSectionHandler.Section.Downloads, false); break;
             case "start": ToggleStartMenu(); break;
             case "confirm": PopupHandler.OnUninstallEmulatorPressed(true); break;
+            case "ring": ToggleQuickActions(); break;
+            case "ring-chord":
+                // Both triggers together open the ring. Neither press reaches the system switcher.
+                IsAutomatedInputRunning = true;
+                Input.ParseInputEvent(new InputEventJoypadMotion { Axis = JoyAxis.TriggerLeft, AxisValue = 1 });
+                Input.ParseInputEvent(new InputEventJoypadMotion { Axis = JoyAxis.TriggerRight, AxisValue = 1 });
+                break;
+            case "menu-chord":
+                IsAutomatedInputRunning = true;
+                Input.ParseInputEvent(new InputEventJoypadButton { ButtonIndex = JoyButton.LeftShoulder, Pressed = true });
+                Input.ParseInputEvent(new InputEventJoypadButton { ButtonIndex = JoyButton.RightShoulder, Pressed = true });
+                break;
+            case "shoulder":
+                // One shoulder button alone still changes system, after the short wait.
+                IsAutomatedInputRunning = true;
+                Input.ParseInputEvent(new InputEventJoypadButton { ButtonIndex = JoyButton.RightShoulder, Pressed = true });
+                await ToSignal(GetTree().CreateTimer(0.3), SceneTreeTimer.SignalName.Timeout);
+                Input.ParseInputEvent(new InputEventJoypadButton { ButtonIndex = JoyButton.RightShoulder, Pressed = false });
+                break;
             case "confirm-back":
                 // The question opens, then B closes it. Focus should be back on the game list.
                 IsAutomatedInputRunning = true;
@@ -830,6 +850,51 @@ public partial class MainScene : Control
             PopupHandler.RefreshEmulatorMenuOptions();
             startMenuPanel.Open();
         }
+    }
+
+    // The shoulder buttons and triggers change system the moment they go down, so a press waits
+    // a tenth of a second to see whether its partner follows.
+    private const double ChordWindowSeconds = 0.1;
+
+    // LB with RB opens the menu. LT with RT opens a ring of the actions used most.
+    private void AddChords()
+    {
+        ChordWatcher chords = new ChordWatcher { Window = ChordWindowSeconds, HoldsBackSingles = true, Enabled = ChordsAreAvailable };
+        AddChild(chords);
+        chords.Add(ToggleStartMenu, Key.F4, PadInput.LB, PadInput.RB);
+        chords.Add(ToggleQuickActions, Key.F5, PadInput.LT, PadInput.RT);
+    }
+
+    private bool ChordsAreAvailable()
+    {
+        if (SectionHandler.IsTransitioning || ShouldFrontendIgnoreInput())
+        {
+            return false;
+        }
+
+        return !InputHandler.isListeningForControllerAssignment && !InputHandler.isListeningForEmulatorCloseHotkeys && !InputHandler.isListeningForInput;
+    }
+
+    private void ToggleQuickActions()
+    {
+        if (overlays.Top is RadialMenu openRing)
+        {
+            overlays.Close(openRing);
+            return;
+        }
+
+        if (HasOpenPanel || SectionHandler.CurrentSection != MainSceneSectionHandler.Section.GameList)
+        {
+            return;
+        }
+
+        overlays.ShowRadial("Quick actions", new (string, Action)[]
+        {
+            ("Random Game", PopupHandler.OnRandomGamePressed),
+            ("Downloads", DownloadHandler.SwapLists),
+            ("Settings", PopupHandler.OnSettingsMenuPressed),
+            ("Installed Only", OnFilterInstalledGamesPressed),
+        });
     }
 
     private void OnFilterInstalledGamesPressed()
