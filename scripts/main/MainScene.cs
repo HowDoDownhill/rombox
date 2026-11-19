@@ -101,6 +101,9 @@ public partial class MainScene : Control
     public SystemJumpPopup systemJumpPopup;
     public ReleasePickerPopup releasePickerPopup;
     public UiPanelStack panelStack = new UiPanelStack();
+
+    // FishUI's overlays: questions, the quick panel and the radial menu. It reads its own input.
+    public OverlayHost overlays;
     private ulong leftBumperPressedTime = 0;
     private ulong rightBumperPressedTime = 0;
 
@@ -249,6 +252,9 @@ public partial class MainScene : Control
 
         var micaMaterial = GD.Load<ShaderMaterial>("res://addons/fishui/assets/materials/mica_panel.tres");
         MicaShadow.AttachToAll(this, micaMaterial, panelShadowColor, panelShadowSize, panelShadowOffset);
+
+        overlays = new OverlayHost { RoutesInput = true, FocusFallback = () => ActiveGameList?.GrabFocus() };
+        AddChild(overlays);
 
         NetplayHandler.ApplyStartupSessionArguments();
         OfferControllerLayerOnceTheInterfaceHasSettled();
@@ -448,6 +454,14 @@ public partial class MainScene : Control
                 break;
             case "downloads": SectionHandler.ShowSection(MainSceneSectionHandler.Section.Downloads, false); break;
             case "start": ToggleStartMenu(); break;
+            case "confirm": PopupHandler.OnUninstallEmulatorPressed(true); break;
+            case "confirm-back":
+                // The question opens, then B closes it. Focus should be back on the game list.
+                IsAutomatedInputRunning = true;
+                PopupHandler.OnUninstallEmulatorPressed(true);
+                await ToSignal(GetTree().CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
+                SimulateAction("ui_cancel");
+                break;
             case "join-code":
                 // The join view with a code typed in. --ui-capture-code=<code> types that code
                 // and presses Enter, which joins; without it, two keys and a controller step up.
@@ -494,7 +508,7 @@ public partial class MainScene : Control
 
         Image capturedFrame = GetViewport().GetTexture().GetImage();
         Error saveResult = capturedFrame.SavePng(capturePath);
-        string openPanel = panelStack.TopPanel?.Name ?? "none";
+        string openPanel = panelStack.TopPanel?.Name ?? overlays.Top?.GetType().Name ?? "none";
         string cardSizes = ActiveGameList == null ? "none" : string.Join(" ", ActiveGameList.BoundCards.Values.Select(card => $"{card.Size.X:0}x{card.Size.Y:0}").Distinct());
         GD.Print($"[Layout] card sizes {cardSizes}");
         GD.Print($"[Layout] captured {capturedFrame.GetWidth()}x{capturedFrame.GetHeight()} (canvas {GetViewportRect().Size}, carousel {gameList?.Size}, details {detailsPanel?.Size}, open panel {openPanel}, section {SectionHandler?.CurrentSection}) to {capturePath}: {saveResult}");
@@ -925,10 +939,18 @@ public partial class MainScene : Control
         PopupHandler.RefreshEmulatorMenuOptions();
     }
 
-    private void OnDeleteButtonPressed()
+    private async void OnDeleteButtonPressed()
     {
-        if (GameListHandler.currentlySelectedGame == null) return;
-        GameListHandler.DeleteLocalGame(GameListHandler.currentlySelectedGame);
+        Game game = GameListHandler.currentlySelectedGame;
+        if (game == null) return;
+
+        bool sure = await overlays.ConfirmHoldAsync($"Delete {game.Name}?",
+            "This removes the downloaded game from this device. Your saves stay, and you can download the game again.",
+            "Hold to delete", "Keep It");
+
+        if (!sure) return;
+
+        GameListHandler.DeleteLocalGame(game);
         GameListHandler.ApplyFiltersAndRefresh();
         GameListHandler.UpdateDetailsPanelButtons(GameListHandler.currentlySelectedGame);
     }
@@ -1204,7 +1226,7 @@ public partial class MainScene : Control
 
     public bool IsAutomatedInputRunning { get; set; }
 
-    public bool HasOpenPanel => panelStack.HasOpenPanel;
+    public bool HasOpenPanel => panelStack.HasOpenPanel || overlays is { HasOverlay: true };
 
     public override void _Input(InputEvent @event)
     {
@@ -1303,6 +1325,12 @@ public partial class MainScene : Control
         if (ShouldFrontendIgnoreInput())
         {
             GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        // An open overlay takes the input. The overlay layer reads it for itself.
+        if (overlays is { HasOverlay: true })
+        {
             return;
         }
 

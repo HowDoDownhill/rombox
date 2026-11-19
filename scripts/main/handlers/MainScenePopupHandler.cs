@@ -479,18 +479,33 @@ public class MainScenePopupHandler
         mainScene.OpenReleasePicker(mappedEmulator);
     }
 
-    public void OnUninstallEmulatorPressed()
+    public void OnUninstallEmulatorPressed() => OnUninstallEmulatorPressed(false);
+
+    // asksEvenIfMissing shows the question with no emulator installed, for a layout capture.
+    public async void OnUninstallEmulatorPressed(bool asksEvenIfMissing)
     {
         string mappedEmulator = GetCurrentEmulator();
+        bool isInstalled = !string.IsNullOrEmpty(mappedEmulator) && appInstance.emulatorManager.IsEmulatorInstalled(mappedEmulator);
 
-        if (string.IsNullOrEmpty(mappedEmulator) || !appInstance.emulatorManager.IsEmulatorInstalled(mappedEmulator))
+        if (!isInstalled && !asksEvenIfMissing)
         {
             return;
         }
 
-        appInstance.emulatorManager.UninstallEmulator(mappedEmulator);
-
+        string emulatorName = string.IsNullOrEmpty(mappedEmulator) ? "the emulator" : appInstance.emulatorManager.GetEmulatorDisplayName(mappedEmulator);
         mainScene.startMenuPanel?.Close();
+
+        bool sure = await mainScene.overlays.ConfirmHoldAsync($"Uninstall {emulatorName}?",
+            "Your saves stay. Games that use it need it installed again before they start.",
+            "Hold to uninstall", "Keep It");
+
+        if (!sure || !isInstalled)
+        {
+            mainScene.gameList?.GrabFocus();
+            return;
+        }
+
+        appInstance.emulatorManager.UninstallEmulator(mappedEmulator);
 
         if (mainScene.GameListHandler.currentlySelectedGame != null)
         {
