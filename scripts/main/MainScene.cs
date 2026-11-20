@@ -482,6 +482,12 @@ public partial class MainScene : Control
                 await ToSignal(GetTree().CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
                 SimulateAction("ui_cancel");
                 break;
+            case "bios":
+                // The menu's BIOS picker.
+                ToggleStartMenu();
+                await ToSignal(GetTree().CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
+                startMenuPanel?.ShowBiosView();
+                break;
             case "join-code":
                 // The join view with a code typed in. --ui-capture-code=<code> types that code
                 // and presses Enter, which joins; without it, two keys and a controller step up.

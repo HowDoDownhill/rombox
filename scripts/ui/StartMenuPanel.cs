@@ -54,6 +54,7 @@ public partial class StartMenuPanel : UiPanel
     private const float DimBehindMenu = 0.35f;
     private const int HeadingInset = 18;
     private const int HeadingGap = 14;
+    private const float FocusedOptionMargin = 64.0f;
 
     private ColorRect backdrop;
     private Tween slideTween;
@@ -65,6 +66,7 @@ public partial class StartMenuPanel : UiPanel
         Transition = PanelTransition.Fade;
         AddBackdrop();
         StyleOptions();
+        KeepFocusedOptionInView();
         AboutToOpen += SlideIn;
     }
 
@@ -73,6 +75,16 @@ public partial class StartMenuPanel : UiPanel
         backdrop = new ColorRect { Color = new Color(0, 0, 0, DimBehindMenu), MouseFilter = MouseFilterEnum.Ignore };
         AddChild(backdrop);
         MoveChild(backdrop, 0);
+    }
+
+    // The focused option keeps a margin from the top and bottom of the list, wide enough that
+    // the first option of a group brings its heading into view with it.
+    private void KeepFocusedOptionInView()
+    {
+        if (optionsList?.GetParent() is ScrollContainer scroll)
+        {
+            FocusScroller.KeepVisible(scroll, optionsList, FocusedOptionMargin, vertical: true);
+        }
     }
 
     // Options read from the left. Each heading stands a little apart from the group above it,
