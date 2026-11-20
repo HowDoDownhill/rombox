@@ -862,7 +862,26 @@ public partial class MainScene : Control
         ChordWatcher chords = new ChordWatcher { Window = ChordWindowSeconds, HoldsBackSingles = true, Enabled = ChordsAreAvailable };
         AddChild(chords);
         chords.Add(ToggleStartMenu, Key.F4, PadInput.LB, PadInput.RB);
-        chords.Add(ToggleQuickActions, Key.F5, PadInput.LT, PadInput.RT);
+        chords.Add("Quick Actions", null, ToggleQuickActions, Key.F5, PadInput.LT, PadInput.RT);
+        AddChordPrompts(chords);
+    }
+
+    // The ring's prompt sits at the left of the game list's footer. The menu already has its
+    // prompt there, under the Options button.
+    private void AddChordPrompts(ChordWatcher chords)
+    {
+        if (gameListFooter == null) return;
+
+        var prompts = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore };
+        prompts.AddThemeConstantOverride("separation", 32);
+
+        foreach (Button prompt in chords.BuildPrompts())
+        {
+            prompts.AddChild(prompt);
+        }
+
+        gameListFooter.AddChild(prompts);
+        gameListFooter.MoveChild(prompts, 0);
     }
 
     private bool ChordsAreAvailable()

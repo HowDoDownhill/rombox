@@ -48,30 +48,114 @@ public partial class StartMenuPanel : UiPanel
 
     public bool IsBiosViewOpen => biosView != null && biosView.Visible;
 
-    private static readonly Vector2 MinimumPanelSize = new Vector2(400, 600);
-    private const float PanelInset = 20.0f;
+    // The menu is a panel against the right edge of the window, as tall as the window.
+    private const float MinimumPanelWidth = 460.0f;
+    private const float SlideDistance = 48.0f;
+    private const float DimBehindMenu = 0.35f;
+    private const int HeadingInset = 18;
+    private const int HeadingGap = 14;
+
+    private ColorRect backdrop;
+    private Tween slideTween;
 
     public override void _Ready()
     {
         base._Ready();
         CloseOnOutsidePress = true;
-        AboutToOpen += FitPanelToMenu;
+        Transition = PanelTransition.Fade;
+        AddBackdrop();
+        StyleOptions();
+        AboutToOpen += SlideIn;
+    }
+
+    private void AddBackdrop()
+    {
+        backdrop = new ColorRect { Color = new Color(0, 0, 0, DimBehindMenu), MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(backdrop);
+        MoveChild(backdrop, 0);
+    }
+
+    // Options read from the left. Each heading stands a little apart from the group above it,
+    // and shows only while one of its group's options does.
+    private void StyleOptions()
+    {
+        if (optionsList == null) return;
+
+        bool isFirstHeading = true;
+
+        foreach (Node child in optionsList.GetChildren())
+        {
+            if (child is Button option)
+            {
+                option.Alignment = HorizontalAlignment.Left;
+                option.VisibilityChanged += ShowHeadingsInUse;
+            }
+            else if (child is Label heading)
+            {
+                var spaced = new StyleBoxEmpty { ContentMarginLeft = HeadingInset, ContentMarginTop = isFirstHeading ? 0 : HeadingGap };
+                heading.AddThemeStyleboxOverride("normal", spaced);
+                isFirstHeading = false;
+            }
+        }
+
+        ShowHeadingsInUse();
+    }
+
+    private void ShowHeadingsInUse()
+    {
+        if (optionsList == null) return;
+
+        Label heading = null;
+
+        foreach (Node child in optionsList.GetChildren())
+        {
+            if (child is Label nextHeading)
+            {
+                heading = nextHeading;
+                heading.Visible = false;
+            }
+            else if (child is Button { Visible: true } && heading != null)
+            {
+                heading.Visible = true;
+            }
+        }
     }
 
     private void FitPanelToMenu()
     {
-        Vector2 contentSize = menuView != null ? menuView.GetCombinedMinimumSize() + new Vector2(PanelInset, PanelInset) : Vector2.Zero;
-        Vector2 panelSize = new Vector2(Mathf.Max(MinimumPanelSize.X, contentSize.X), Mathf.Max(MinimumPanelSize.Y, contentSize.Y));
+        ShowHeadingsInUse();
 
-        OffsetLeft = -panelSize.X / 2.0f;
-        OffsetRight = panelSize.X / 2.0f;
-        OffsetTop = -panelSize.Y / 2.0f;
-        OffsetBottom = panelSize.Y / 2.0f;
+        float contentWidth = menuView != null ? menuView.GetCombinedMinimumSize().X : 0.0f;
+        float panelWidth = Mathf.Max(MinimumPanelWidth, contentWidth);
+
+        OffsetLeft = -panelWidth;
+        OffsetRight = 0;
+        OffsetTop = 0;
+        OffsetBottom = 0;
+
+        // The dim covers the whole window, with room to spare for the slide.
+        Vector2 windowSize = GetViewportRect().Size;
+        backdrop.Position = new Vector2(panelWidth - windowSize.X - SlideDistance, 0);
+        backdrop.Size = new Vector2(windowSize.X + SlideDistance * 2, windowSize.Y);
+    }
+
+    private void SlideIn()
+    {
+        FitPanelToMenu();
+
+        float restingLeft = OffsetLeft;
+        OffsetLeft += SlideDistance;
+        OffsetRight += SlideDistance;
+
+        slideTween?.Kill();
+        slideTween = CreateTween().SetParallel(true).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        slideTween.TweenProperty(this, "offset_left", restingLeft, OpenDuration);
+        slideTween.TweenProperty(this, "offset_right", 0.0f, OpenDuration);
     }
 
     public void ShowMenuView()
     {
-        FitPanelToMenu();
+        if (!IsOpen) FitPanelToMenu();
         if (menuView != null) menuView.Visible = true;
         if (biosView != null) biosView.Visible = false;
         if (netplayView != null) netplayView.Visible = false;

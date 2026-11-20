@@ -13,42 +13,37 @@ script = ExtResource("4_damper")
 
 [node name="StartMenuPanel" type="Control" node_paths=PackedStringArray("ContentRoot", "menuView", "biosView", "optionsList", "biosList", "launchEmulatorButton", "updateEmulatorButton", "uninstallEmulatorButton", "selectBiosButton", "favoriteGameButton", "hostNetplayButton", "joinNetplayButton", "netplayView", "netplayCodeLabel", "netplayInfoLabel", "assignControllersButton", "settingsButton", "randomGameButton", "refreshAllGamesButton", "refreshCurrentSystemButton", "openRomsFolderButton", "quitButton")]
 visible = false
-custom_minimum_size = Vector2(400, 600)
 layout_mode = 3
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -300.0
-offset_right = 200.0
-offset_bottom = 300.0
-grow_horizontal = 2
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -460.0
+grow_horizontal = 0
 grow_vertical = 2
 script = ExtResource("1_stmenu")
 ContentRoot = NodePath("Panel")
 menuView = NodePath("Panel/StartMenuContainer")
 biosView = NodePath("Panel/BiosSelectorContainer")
-optionsList = NodePath("Panel/StartMenuContainer/StartMenu")
+optionsList = NodePath("Panel/StartMenuContainer/Scroll/StartMenu")
 biosList = NodePath("Panel/BiosSelectorContainer/SmoothScrollContainer/MarginContainer/BiosSelector")
-launchEmulatorButton = NodePath("Panel/StartMenuContainer/StartMenu/LaunchEmulatorButton")
-updateEmulatorButton = NodePath("Panel/StartMenuContainer/StartMenu/UpdateEmulatorButton")
-uninstallEmulatorButton = NodePath("Panel/StartMenuContainer/StartMenu/UninstallEmulatorButton")
-selectBiosButton = NodePath("Panel/StartMenuContainer/StartMenu/SelectBiosButton")
-favoriteGameButton = NodePath("Panel/StartMenuContainer/StartMenu/FavoriteGameButton")
-hostNetplayButton = NodePath("Panel/StartMenuContainer/StartMenu/HostNetplayButton")
-joinNetplayButton = NodePath("Panel/StartMenuContainer/StartMenu/JoinNetplayButton")
+launchEmulatorButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/LaunchEmulatorButton")
+updateEmulatorButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/UpdateEmulatorButton")
+uninstallEmulatorButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/UninstallEmulatorButton")
+selectBiosButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/SelectBiosButton")
+favoriteGameButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/FavoriteGameButton")
+hostNetplayButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/HostNetplayButton")
+joinNetplayButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/JoinNetplayButton")
 netplayView = NodePath("Panel/NetplayContainer")
 netplayCodeLabel = NodePath("Panel/NetplayContainer/NetplayView/NetplayCodeLabel")
 netplayInfoLabel = NodePath("Panel/NetplayContainer/NetplayView/NetplayInfoLabel")
-assignControllersButton = NodePath("Panel/StartMenuContainer/StartMenu/AssignControllersButton")
-settingsButton = NodePath("Panel/StartMenuContainer/StartMenu/SettingsButton")
-randomGameButton = NodePath("Panel/StartMenuContainer/StartMenu/RandomGameButton")
-refreshAllGamesButton = NodePath("Panel/StartMenuContainer/StartMenu/RefreshAllGamesButton")
-refreshCurrentSystemButton = NodePath("Panel/StartMenuContainer/StartMenu/RefreshCurrentSystemsGamesButton")
-openRomsFolderButton = NodePath("Panel/StartMenuContainer/StartMenu/OpenRomsFolderButton")
-quitButton = NodePath("Panel/StartMenuContainer/StartMenu/QuitButton")
+assignControllersButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/AssignControllersButton")
+settingsButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/SettingsButton")
+randomGameButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/RandomGameButton")
+refreshAllGamesButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/RefreshAllGamesButton")
+refreshCurrentSystemButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/RefreshCurrentSystemsGamesButton")
+openRomsFolderButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/OpenRomsFolderButton")
+quitButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/QuitButton")
 
 [node name="Panel" type="Panel" parent="."]
 material = ExtResource("2_mica")
@@ -56,10 +51,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 10.0
-offset_top = 10.0
-offset_right = -10.0
-offset_bottom = -10.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -70,84 +61,109 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 16
 
-[node name="StartMenu" type="VBoxContainer" parent="Panel/StartMenuContainer"]
+[node name="Scroll" type="ScrollContainer" parent="Panel/StartMenuContainer"]
 layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="StartMenu" type="VBoxContainer" parent="Panel/StartMenuContainer/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 5
 
-[node name="LaunchEmulatorButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="EmulatorHeading" type="Label" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"CaptionLabel"
+layout_mode = 2
+text = "Emulator"
+
+[node name="LaunchEmulatorButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Launch Current Emulator"
 
-[node name="UpdateEmulatorButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="UpdateEmulatorButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Update Current Emulator"
 
-[node name="UninstallEmulatorButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="UninstallEmulatorButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Uninstall Current Emulator"
 
-[node name="SelectBiosButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="SelectBiosButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Select Bios For Emulator"
 
-[node name="FavoriteGameButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="LibraryHeading" type="Label" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"CaptionLabel"
+layout_mode = 2
+text = "Library"
+
+[node name="FavoriteGameButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Add to Favorites"
 
-[node name="HostNetplayButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="RandomGameButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"ListButton"
+layout_mode = 2
+text = "Jump to Random Game"
+
+[node name="RefreshAllGamesButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"ListButton"
+layout_mode = 2
+text = "Refresh All Games"
+
+[node name="RefreshCurrentSystemsGamesButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"ListButton"
+layout_mode = 2
+text = "Refresh Current System"
+
+[node name="OpenRomsFolderButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"ListButton"
+layout_mode = 2
+text = "Open ROMs Folder"
+
+[node name="PlayTogetherHeading" type="Label" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"CaptionLabel"
+layout_mode = 2
+text = "Play Together"
+
+[node name="HostNetplayButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Host Session"
 
-[node name="JoinNetplayButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="JoinNetplayButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Join Session"
 
-[node name="AssignControllersButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="AssignControllersButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Assign Controllers"
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="SettingsButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="RomBoxHeading" type="Label" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"CaptionLabel"
+layout_mode = 2
+text = "RomBox"
+
+[node name="SettingsButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Settings"
 
-[node name="RandomGameButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
-theme_type_variation = &"ListButton"
-layout_mode = 2
-text = "Jump to Random Game"
-
-[node name="RefreshAllGamesButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
-theme_type_variation = &"ListButton"
-layout_mode = 2
-text = "Refresh All Games"
-
-[node name="RefreshCurrentSystemsGamesButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
-theme_type_variation = &"ListButton"
-layout_mode = 2
-text = "Refresh Current System
-"
-
-[node name="OpenRomsFolderButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
-theme_type_variation = &"ListButton"
-layout_mode = 2
-text = "Open ROMs Folder"
-
-[node name="QuitButton" type="Button" parent="Panel/StartMenuContainer/StartMenu"]
+[node name="QuitButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Quit"
