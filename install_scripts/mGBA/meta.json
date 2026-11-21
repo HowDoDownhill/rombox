@@ -41,6 +41,7 @@
   "settings_fields": [
     {
       "id": "fullscreen",
+      "category": "Display",
       "label": "Start in Fullscreen",
       "type": "boolean",
       "default_value_bool": true,
@@ -49,6 +50,7 @@
     },
     {
       "id": "video_scale",
+      "category": "Display",
       "label": "Window Scale",
       "type": "dropdown",
       "default_value_string": "3",
@@ -66,6 +68,7 @@
     },
     {
       "id": "vsync",
+      "category": "Display",
       "label": "VSync",
       "type": "dropdown",
       "default_value_string": "0",
@@ -79,6 +82,7 @@
     },
     {
       "id": "integer_scaling",
+      "category": "Display",
       "label": "Integer Scaling",
       "type": "dropdown",
       "default_value_string": "0",
@@ -92,6 +96,7 @@
     },
     {
       "id": "interframe_blending",
+      "category": "Display",
       "label": "Interframe Blending",
       "type": "dropdown",
       "default_value_string": "0",
@@ -105,6 +110,7 @@
     },
     {
       "id": "skip_bios",
+      "category": "System",
       "label": "Skip BIOS Intro",
       "type": "dropdown",
       "default_value_string": "0",

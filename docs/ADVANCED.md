@@ -196,6 +196,7 @@ applied as a launch argument or written into the emulator's config file.
 | Field | Meaning |
 |---|---|
 | `id`, `label` | Identifier and on-screen name |
+| `category` | Heading the setting sits under on the settings page, such as `Display`, `System` or `Controllers`. Settings with the same category are shown together. |
 | `type` | `boolean`, `dropdown` or `hidden` |
 | `default_value_bool`, `default_value_string` | Defaults; strings accept macros such as `{game_id}` |
 | `launch_arg_true`, `launch_arg_false` | Arguments for a boolean |
@@ -213,6 +214,34 @@ Most emulators ship a controller config in `install_scripts/<emulator>/default_c
 Controller Setup set to Steam Input and the app started from Steam (Windows), the app also points each emulator at every
 player's controller on every launch; see [Controller setup](CONTROLLERS.md). Dolphin identifies pads by name: if yours shows as disconnected,
 select it once in Dolphin's own controller settings.
+
+### Multitap
+
+DuckStation and PCSX2 have a **Multitap** setting on the system's settings page: Off, In Port 1 or
+In Port 2. Pick the port the game expects its multitap in. With a multitap in port 1, players 1 to
+4 sit on its four slots. With one in port 2, player 1 stays in port 1 and players 2 to 4 sit on the
+multitap. RomBox plays up to four controllers.
+
+In `meta.json` this is `port_layouts` inside `controller_config`. `setting_id` names the dropdown
+in `settings_fields`, and each of its values has a layout: `ports` lists the port number each
+player gets, in player order, and `config_values` are `Section/Key` entries written to the
+controller config file before every launch.
+
+### Wii Bluetooth adapter (Dolphin)
+
+**Use a Wii Bluetooth Adapter for Wii Remotes** hands a USB Bluetooth adapter to Dolphin, such as
+a Wii or Wii U Bluetooth module on a USB adapter board. Wii Remotes then connect as they do to a
+console, with their speaker and add-ons working. It is offered on Windows and Linux.
+
+Set the adapter up once before turning it on:
+
+- Windows: install the WinUSB driver for the adapter with [Zadig](https://zadig.akeo.ie/). Windows
+  stops using that adapter for its own Bluetooth.
+- Linux: add a udev rule that gives your user access to the adapter.
+
+Dolphin's [Bluetooth Passthrough guide](https://wiki.dolphin-emu.org/index.php?title=Bluetooth_Passthrough)
+has the steps for both. To pair a remote, open Dolphin with **Start > Launch Current Emulator**,
+open **Controllers**, press **Sync**, then press the red button on the remote.
 
 ## Custom themes
 

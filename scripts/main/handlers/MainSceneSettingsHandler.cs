@@ -1085,9 +1085,17 @@ public class MainSceneSettingsHandler
 
         string currentOperatingSystem = OS.GetName().ToLower();
 
-        foreach (var field in meta.SettingsFields)
+        var shownFields = meta.SettingsFields.Where(field => !string.IsNullOrEmpty(field.Id) && field.AppliesTo(currentOperatingSystem)).ToList();
+        var categoryOrder = shownFields.Select(field => field.Category ?? "").Distinct().OrderBy(category => category == "" ? 0 : 1).ToList();
+        string shownCategory = "";
+
+        foreach (var field in shownFields.OrderBy(field => categoryOrder.IndexOf(field.Category ?? "")))
         {
-            if (string.IsNullOrEmpty(field.Id) || !field.AppliesTo(currentOperatingSystem)) continue;
+            if ((field.Category ?? "") != shownCategory)
+            {
+                shownCategory = field.Category ?? "";
+                AddSettingsCategoryHeader(vbox, shownCategory);
+            }
 
             bool hasValue = userSettings.TryGetValue(field.Id, out System.Text.Json.JsonElement element);
 
@@ -1145,6 +1153,20 @@ public class MainSceneSettingsHandler
             entry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(fieldBox);
             vbox.AddChild(entry);
         }
+    }
+
+    private static void AddSettingsCategoryHeader(VBoxContainer vbox, string categoryName)
+    {
+        Label categoryLabel = new Label();
+        categoryLabel.Text = categoryName;
+        categoryLabel.ThemeTypeVariation = "CaptionLabel";
+
+        MarginContainer categoryMargin = new MarginContainer();
+        categoryMargin.AddThemeConstantOverride("margin_top", 16);
+        categoryMargin.AddThemeConstantOverride("margin_bottom", 4);
+        categoryMargin.AddThemeConstantOverride("margin_left", 5);
+        categoryMargin.AddChild(categoryLabel);
+        vbox.AddChild(categoryMargin);
     }
 
     private void AddSavesStayWithOtherEmulatorWarning(VBoxContainer vbox, string selectedEmulatorDisplayName, List<string> emulatorsHoldingSaves)

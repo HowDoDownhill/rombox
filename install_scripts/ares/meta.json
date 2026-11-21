@@ -61,6 +61,7 @@
   "settings_fields": [
     {
       "id": "fullscreen",
+      "category": "Display",
       "label": "Start in Fullscreen",
       "type": "boolean",
       "default_value_bool": true,
@@ -69,6 +70,7 @@
     },
     {
       "id": "video_output",
+      "category": "Display",
       "label": "Scaling Mode",
       "type": "dropdown",
       "default_value_string": "Scale",
@@ -81,6 +83,7 @@
     },
     {
       "id": "aspect_correction",
+      "category": "Display",
       "label": "Aspect Correction",
       "type": "dropdown",
       "default_value_string": "Standard",
@@ -93,6 +96,7 @@
     },
     {
       "id": "color_emulation",
+      "category": "Display",
       "label": "Color Emulation",
       "type": "boolean",
       "default_value_bool": true,
@@ -101,6 +105,7 @@
     },
     {
       "id": "interframe_blending",
+      "category": "Display",
       "label": "Interframe Blending",
       "type": "boolean",
       "default_value_bool": false,
@@ -109,6 +114,7 @@
     },
     {
       "id": "overscan",
+      "category": "Display",
       "label": "Show Overscan Borders",
       "type": "boolean",
       "default_value_bool": false,
@@ -117,6 +123,7 @@
     },
     {
       "id": "fast_boot",
+      "category": "System",
       "label": "Fast Boot (Skip BIOS Intro)",
       "type": "boolean",
       "default_value_bool": true,
@@ -125,6 +132,7 @@
     },
     {
       "id": "megadrive_tmss",
+      "category": "System",
       "label": "Mega Drive TMSS Boot Screen",
       "type": "boolean",
       "default_value_bool": false,
@@ -133,6 +141,7 @@
     },
     {
       "id": "auto_save_memory",
+      "category": "System",
       "label": "Auto-Save Memory",
       "type": "boolean",
       "default_value_bool": true,

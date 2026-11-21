@@ -67,6 +67,7 @@
   "settings_fields": [
     {
       "id": "fullscreen",
+      "category": "Display",
       "label": "Start in Fullscreen",
       "type": "boolean",
       "default_value_bool": true,

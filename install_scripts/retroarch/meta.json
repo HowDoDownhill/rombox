@@ -113,6 +113,7 @@
   "settings_fields": [
     {
       "id": "fullscreen",
+      "category": "Display",
       "label": "Start in Fullscreen",
       "type": "boolean",
       "default_value_bool": true,
@@ -121,6 +122,7 @@
     },
     {
       "id": "video_driver",
+      "category": "Display",
       "label": "Video Driver",
       "type": "dropdown",
       "operating_systems": [
@@ -137,6 +139,7 @@
     },
     {
       "id": "menu_combo",
+      "category": "Controllers",
       "label": "Open RetroArch Menu With",
       "type": "dropdown",
       "apply_on_launch": true,

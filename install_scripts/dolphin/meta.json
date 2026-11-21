@@ -56,6 +56,7 @@
   "settings_fields": [
     {
       "id": "fullscreen",
+      "category": "Display",
       "label": "Start in Fullscreen",
       "type": "boolean",
       "default_value_bool": true,
@@ -64,6 +65,7 @@
     },
     {
       "id": "video_backend",
+      "category": "Display",
       "label": "Video Backend",
       "type": "dropdown",
       "default_value_string": "Vulkan",
@@ -78,6 +80,7 @@
     },
     {
       "id": "video_backend_macos",
+      "category": "Display",
       "label": "Video Backend",
       "type": "dropdown",
       "default_value_string": "Metal",
@@ -88,6 +91,16 @@
         "OpenGL": "OGL"
       },
       "launch_arg_format": "-C Dolphin.Display.GFXBackend={value}"
+    },
+    {
+      "id": "bluetooth_passthrough",
+      "category": "Controllers",
+      "label": "Use a Wii Bluetooth Adapter for Wii Remotes",
+      "type": "boolean",
+      "default_value_bool": false,
+      "operating_systems": ["windows", "linux"],
+      "launch_arg_true": "-C Dolphin.BluetoothPassthrough.Enabled=True",
+      "launch_arg_false": "-C Dolphin.BluetoothPassthrough.Enabled=False"
     }
   ],
   "preserve_on_reinstall": [

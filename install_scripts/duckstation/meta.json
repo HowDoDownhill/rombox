@@ -54,6 +54,7 @@
   "settings_fields": [
     {
       "id": "internal_resolution",
+      "category": "Display",
       "label": "Internal Resolution",
       "type": "dropdown",
       "default_value_string": "1",
@@ -75,6 +76,7 @@
     },
     {
       "id": "aspect_ratio",
+      "category": "Display",
       "label": "Aspect Ratio",
       "type": "dropdown",
       "default_value_string": "Auto (Game Native)",
@@ -105,6 +107,7 @@
     },
     {
       "id": "vsync",
+      "category": "Display",
       "label": "VSync",
       "type": "dropdown",
       "default_value_string": "false",
@@ -118,10 +121,39 @@
         "Off": "false",
         "On": "true"
       }
+    },
+    {
+      "id": "multitap",
+      "category": "Controllers",
+      "label": "Multitap (Up to 4 Players)",
+      "type": "dropdown",
+      "default_value_string": "off",
+      "options": {
+        "Off": "off",
+        "In Port 1": "port1",
+        "In Port 2": "port2"
+      }
     }
   ],
   "controller_config": {
     "max_controllers": 2,
+    "port_layouts": {
+      "setting_id": "multitap",
+      "layouts": {
+        "off": {
+          "ports": [1, 2],
+          "config_values": { "ControllerPorts/MultitapMode": "Disabled" }
+        },
+        "port1": {
+          "ports": [1, 3, 4, 5, 2],
+          "config_values": { "ControllerPorts/MultitapMode": "Port1Only" }
+        },
+        "port2": {
+          "ports": [1, 2, 6, 7, 8],
+          "config_values": { "ControllerPorts/MultitapMode": "Port2Only" }
+        }
+      }
+    },
     "config_file_relative_path": {
       "default": "settings.ini",
       "macos": "home/Library/Application Support/DuckStation/settings.ini"

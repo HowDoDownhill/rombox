@@ -98,6 +98,7 @@
   "settings_fields": [
     {
       "id": "upscale",
+      "category": "Display",
       "label": "Upscale",
       "type": "dropdown",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -117,6 +118,7 @@
     },
     {
       "id": "ssaa",
+      "category": "Display",
       "label": "SSAA",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -126,6 +128,7 @@
     },
     {
       "id": "integer_scaling",
+      "category": "Display",
       "label": "Integer Scaling",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -135,6 +138,7 @@
     },
     {
       "id": "fullscreen",
+      "category": "Display",
       "label": "Fullscreen",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -144,6 +148,7 @@
     },
     {
       "id": "widescreen",
+      "category": "Display",
       "label": "Widescreen",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -153,6 +158,7 @@
     },
     {
       "id": "vsync",
+      "category": "Display",
       "label": "VSync",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -162,6 +168,7 @@
     },
     {
       "id": "crt",
+      "category": "Display",
       "label": "CRT Filter",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -171,6 +178,7 @@
     },
     {
       "id": "overclock",
+      "category": "System",
       "label": "Overclock",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -180,6 +188,7 @@
     },
     {
       "id": "disable_expansion_pak",
+      "category": "System",
       "label": "Disable Expansion Pak",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -189,6 +198,7 @@
     },
     {
       "id": "usb",
+      "category": "System",
       "label": "Enable USB",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -198,6 +208,7 @@
     },
     {
       "id": "rewind",
+      "category": "System",
       "label": "Enable Rewind",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},
@@ -207,6 +218,7 @@
     },
     {
       "id": "emulate_vru",
+      "category": "Controllers",
       "label": "Emulate VRU",
       "type": "boolean",
       "config_file_relative_path": {"default": "portable_data/config/config.json", "macos": "home/Library/Application Support/gopher64/config.json"},

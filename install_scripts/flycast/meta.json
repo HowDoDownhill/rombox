@@ -83,6 +83,7 @@
   "settings_fields": [
     {
       "id": "internal_resolution",
+      "category": "Display",
       "label": "Internal Resolution",
       "type": "dropdown",
       "default_value_string": "480",
@@ -97,6 +98,7 @@
     },
     {
       "id": "widescreen",
+      "category": "Display",
       "label": "Widescreen (16:9)",
       "type": "boolean",
       "default_value_bool": false,
@@ -105,6 +107,7 @@
     },
     {
       "id": "vsync",
+      "category": "Display",
       "label": "VSync",
       "type": "boolean",
       "default_value_bool": true,
@@ -113,6 +116,7 @@
     },
     {
       "id": "show_fps",
+      "category": "Display",
       "label": "Show FPS Counter",
       "type": "boolean",
       "default_value_bool": false,
@@ -121,6 +125,7 @@
     },
     {
       "id": "mipmaps",
+      "category": "Display",
       "label": "Use Mipmaps",
       "type": "boolean",
       "default_value_bool": true,

@@ -197,7 +197,7 @@ public partial class InputLayer : Node
 
     private int ResolveMaximumPlayers(EmulatorMeta emulatorMetadata)
     {
-        int metadataMaximum = emulatorMetadata?.ControllerConfig?.MaxControllers ?? 0;
+        int metadataMaximum = emulatorMetadata?.ControllerConfig?.PortCount ?? 0;
         return metadataMaximum > 0 ? Math.Min(metadataMaximum, MaximumPlayers) : MaximumPlayers;
     }
 

@@ -767,6 +767,9 @@ public class EmulatorSettingField
     [JsonPropertyName("label")]
     public string Label { get; set; }
 
+    [JsonPropertyName("category")]
+    public string Category { get; set; }
+
     [JsonPropertyName("type")]
     public string Type { get; set; }
 
@@ -973,6 +976,39 @@ public class ControllerConfig
 
     [JsonPropertyName("enabled_key_path")]
     public string EnabledKeyPath { get; set; }
+
+    [JsonPropertyName("port_layouts")]
+    public PortLayouts PortLayouts { get; set; }
+
+    [JsonIgnore]
+    public PortLayout ActivePortLayout { get; set; }
+
+    public int PortCount => ActivePortLayout?.Ports != null && ActivePortLayout.Ports.Count > 0 ? ActivePortLayout.Ports.Count : MaxControllers;
+
+    public int ResolvePortNumber(ControllerSection controllerSection, int playerIndex)
+    {
+        return ActivePortLayout?.Ports != null && playerIndex < ActivePortLayout.Ports.Count
+            ? ActivePortLayout.Ports[playerIndex]
+            : controllerSection.PortStart + playerIndex;
+    }
+}
+
+public class PortLayouts
+{
+    [JsonPropertyName("setting_id")]
+    public string SettingId { get; set; }
+
+    [JsonPropertyName("layouts")]
+    public Dictionary<string, PortLayout> Layouts { get; set; }
+}
+
+public class PortLayout
+{
+    [JsonPropertyName("ports")]
+    public List<int> Ports { get; set; }
+
+    [JsonPropertyName("config_values")]
+    public Dictionary<string, string> ConfigValues { get; set; }
 }
 
 public class ControllerSection
@@ -1698,6 +1734,56 @@ public partial class EmulatorManager : Node
             WriteSettingToConfigFile(configurationFilePath, settingField.ResolveConfigSection(operatingSystem), configKey, stringValue, stringValue);
             GD.Print($"Applied {emulatorName} setting {settingField.Id} = {stringValue} to {configFileRelativePath}.");
         }
+    }
+
+    private void ApplyPortLayout(string emulatorName, EmulatorMeta emulatorMetadata, string emulatorInstallDirectory, string operatingSystem)
+    {
+        ControllerConfig controllerConfig = emulatorMetadata.ControllerConfig;
+        PortLayouts portLayouts = controllerConfig?.PortLayouts;
+
+        if (portLayouts?.Layouts == null || string.IsNullOrEmpty(portLayouts.SettingId))
+        {
+            return;
+        }
+
+        string selectedLayoutName = LoadEmulatorSettings(emulatorName).TryGetValue(portLayouts.SettingId, out JsonElement savedValue) && savedValue.ValueKind == JsonValueKind.String
+            ? savedValue.GetString()
+            : emulatorMetadata.SettingsFields?.Find(field => field.Id == portLayouts.SettingId)?.DefaultValueString;
+
+        if (string.IsNullOrEmpty(selectedLayoutName) || !portLayouts.Layouts.TryGetValue(selectedLayoutName, out PortLayout portLayout))
+        {
+            return;
+        }
+
+        controllerConfig.ActivePortLayout = portLayout;
+
+        string configFileRelativePath = controllerConfig.ResolveConfigFileRelativePath(operatingSystem);
+
+        if (portLayout.ConfigValues == null || string.IsNullOrEmpty(configFileRelativePath))
+        {
+            return;
+        }
+
+        string configurationFilePath = Path.Combine(emulatorInstallDirectory, configFileRelativePath);
+
+        if (!File.Exists(configurationFilePath))
+        {
+            return;
+        }
+
+        foreach (var configValue in portLayout.ConfigValues)
+        {
+            int separatorIndex = configValue.Key.IndexOf('/');
+
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            WriteSettingToConfigFile(configurationFilePath, configValue.Key.Substring(0, separatorIndex), configValue.Key.Substring(separatorIndex + 1), configValue.Value, configValue.Value);
+        }
+
+        GD.Print($"Applied {emulatorName} port layout {selectedLayoutName}: players use ports [{string.Join(", ", portLayout.Ports ?? new List<int>())}].");
     }
 
     public Dictionary<string, JsonElement> LoadEmulatorSettings(string emulatorSlug)
@@ -2650,6 +2736,7 @@ public partial class EmulatorManager : Node
 
             GameSystem currentGameSystem = appInstance.dataBus.systems.FirstOrDefault(s => s.Id == game.PlatformId);
             ApplyLaunchTimeSettings(mappedEmulatorName, emulatorMetadata, emulatorInstallDirectory, currentOperatingSystem);
+            ApplyPortLayout(mappedEmulatorName, emulatorMetadata, emulatorInstallDirectory, currentOperatingSystem);
             ApplyControllerMappings(emulatorMetadata, emulatorInstallDirectory, currentGameSystem);
             appInstance.inputLayer?.BeginSession(game.System?.Slug, emulatorMetadata);
 
@@ -2866,6 +2953,7 @@ public partial class EmulatorManager : Node
 
             launchArguments = AppendDynamicSettingsToArguments(launchArguments, emulatorName, emulatorMetadata);
             ApplyLaunchTimeSettings(emulatorName, emulatorMetadata, emulatorInstallDirectory, currentOperatingSystem);
+            ApplyPortLayout(emulatorName, emulatorMetadata, emulatorInstallDirectory, currentOperatingSystem);
             appInstance.inputLayer?.BeginSession(currentGameSystem?.Slug, emulatorMetadata);
 
             await WriteInputLayerDeviceBindings(emulatorMetadata, emulatorInstallDirectory, fullExecutablePath);
@@ -3223,7 +3311,7 @@ public partial class EmulatorManager : Node
 
         var iniUpdater = new IniConfigurationUpdater();
         var flatUpdater = new FlatConfigurationUpdater();
-        int portCount = controllerConfig.MaxControllers > 0 ? controllerConfig.MaxControllers : inputLayer.ActivePlayerCount;
+        int portCount = controllerConfig.PortCount > 0 ? controllerConfig.PortCount : inputLayer.ActivePlayerCount;
 
         foreach (var staticValue in controllerSection.StaticValues ?? new Dictionary<string, string>())
         {
@@ -3243,7 +3331,7 @@ public partial class EmulatorManager : Node
 
         for (int playerIndex = 0; playerIndex < portCount; playerIndex++)
         {
-            string portNumber = (controllerSection.PortStart + playerIndex).ToString();
+            string portNumber = controllerConfig.ResolvePortNumber(controllerSection, playerIndex).ToString();
             bool playerIsPresent = playerIndex < inputLayer.ActivePlayerCount;
             string sectionName = writesSections ? controllerSection.SectionTemplate.Replace("{port}", portNumber) : "";
 
@@ -3412,7 +3500,7 @@ public partial class EmulatorManager : Node
             }
 
             bindingValue = devicePattern.Replace(bindingValue, deviceReplacement);
-            string bindingKey = mapping.Key.Replace("{port}", (controllerSection.PortStart + playerIndex).ToString());
+            string bindingKey = mapping.Key.Replace("{port}", controllerConfig.ResolvePortNumber(controllerSection, playerIndex).ToString());
 
             if (controllerConfig.Format == SectionDeviceIndexRewriter.IndentedSectionStyle)
             {

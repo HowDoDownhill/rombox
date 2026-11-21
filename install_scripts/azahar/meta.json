@@ -39,6 +39,7 @@
   "settings_fields": [
     {
       "id": "fullscreen",
+      "category": "Display",
       "label": "Start in Fullscreen",
       "type": "boolean",
       "default_value_bool": true,
@@ -47,6 +48,7 @@
     },
     {
       "id": "internal_resolution",
+      "category": "Display",
       "label": "Internal Resolution",
       "type": "dropdown",
       "default_value_string": "1",
@@ -62,6 +64,7 @@
     },
     {
       "id": "vsync",
+      "category": "Display",
       "label": "VSync",
       "type": "dropdown",
       "default_value_string": "true",
