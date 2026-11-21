@@ -1,3 +1,25 @@
+RomBox - Version 1.4.90 Changelog (test build)
+
+✨ New Features
+
+    Quick Actions Ring: Pull LT and RT together to open a ring with Random Game, Downloads, Settings and Installed Only. Point the stick or D-pad at one and press A.
+    Open the Menu With LB and RB: Press both shoulder buttons together to open the menu. The Options button still opens it too.
+    Multitap (DuckStation and PCSX2): A new Multitap setting on the PlayStation and PlayStation 2 settings pages. Choose Off, In Port 1 or In Port 2 to match what the game expects, and play with up to four controllers.
+    Wii Bluetooth Adapter (Dolphin): Turn on Use a Wii Bluetooth Adapter for Wii Remotes to hand a USB Bluetooth adapter to Dolphin, so Wii Remotes connect as they do to a console. It needs a one-time driver setup, described in the Advanced guide. Windows and Linux.
+
+🔧 Changes
+
+    New Look: The top and bottom bars now run to the edges of the window, panels are flat, and the selected game has a coloured ring in both styles.
+    The Menu Is a Side Panel: The menu slides in from the right edge. Its options sit under four headings: Emulator, Library, Play Together and RomBox.
+    Emulator Settings Have Headings: A system's settings are grouped under headings such as Display, System and Controllers.
+    Asks Before Deleting: Deleting a game or uninstalling an emulator now asks first, and you hold the button down to confirm. Your saves stay.
+
+⚠️ Good to Know
+
+    The shoulder buttons and triggers still change system. Each press now waits a tenth of a second to see whether you are pressing both.
+
+---
+
 RomBox - Version 1.4.0 Changelog
 
 ✨ New Features
