@@ -82,7 +82,7 @@ each button does right now.
 | Play, download or confirm | A | Enter |
 | Back | B | Escape (in menus) |
 | Previous or next system | LB or RB | Page Up or Page Down |
-| Pick a system from a list | Hold LB or RB | |
+| Pick a system from a list | Hold RB | |
 | Jump to the next letter | Left or Right (carousel and list views) | Left or Right |
 | Show installed games only | B | |
 | Downloads | Y | Backspace |

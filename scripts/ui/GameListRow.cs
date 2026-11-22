@@ -9,9 +9,15 @@ public partial class GameListRow : Control, IGameListItem
 
     private readonly Label titleLabel = new Label();
     private readonly TextureRect installedIcon = new TextureRect { Material = Appearance.LogoMaterial };
+    private readonly GameBadge badge = new GameBadge();
     private bool selected;
 
     public bool ShowsCover => false;
+
+    public string Badge
+    {
+        set => badge.Text = value;
+    }
 
     public static float HeightForText(float textHeight)
     {
@@ -38,6 +44,7 @@ public partial class GameListRow : Control, IGameListItem
         titleLabel.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         titleLabel.MouseFilter = MouseFilterEnum.Ignore;
         row.AddChild(titleLabel);
+        row.AddChild(badge);
 
         installedIcon.CustomMinimumSize = new Vector2(IconSize, IconSize);
         installedIcon.SizeFlagsVertical = SizeFlags.ShrinkCenter;

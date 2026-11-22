@@ -361,7 +361,7 @@ public sealed class GameDetailsLayout
         {
             if (label != "Size" && label != "Emulator" && !string.IsNullOrEmpty(value))
             {
-                values.Add(value);
+                values.Add(label == "Recomp Available" ? $"Recomp available: {value}" : label == "Recomp" ? $"Recomp: {value}" : value);
             }
         }
 

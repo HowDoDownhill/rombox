@@ -179,6 +179,24 @@ public partial class AssetManager : Node
         }
     }
 
+    // A recomp's artwork comes from RecompLauncher's catalog. The library server has none for it.
+    private static void AddRecompArtwork(List<AssetDownloadItem> items, Game game, string assetsDirectoryPath)
+    {
+        string coverPath = Path.Combine(assetsDirectoryPath, "covers_2d", $"{game.Id}.png");
+
+        if (!string.IsNullOrEmpty(game.PathCoverLarge) && !File.Exists(coverPath))
+        {
+            items.Add(new AssetDownloadItem(game.Id, "box2d", game.PathCoverLarge, coverPath));
+        }
+
+        string logoPath = Path.Combine(assetsDirectoryPath, "marquees", $"{game.Id}.png");
+
+        if (!string.IsNullOrEmpty(game.RecompLogoUrl) && !File.Exists(logoPath))
+        {
+            items.Add(new AssetDownloadItem(game.Id, "marquee", game.RecompLogoUrl, logoPath));
+        }
+    }
+
     private List<AssetDownloadItem> BuildAssetDownloadItems(Game game)
     {
         var items = new List<AssetDownloadItem>();
@@ -186,6 +204,12 @@ public partial class AssetManager : Node
 
         if (string.IsNullOrEmpty(assetsDirectoryPath))
         {
+            return items;
+        }
+
+        if (game.IsRecomp)
+        {
+            AddRecompArtwork(items, game, assetsDirectoryPath);
             return items;
         }
 

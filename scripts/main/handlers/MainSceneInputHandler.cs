@@ -367,17 +367,40 @@ public class MainSceneInputHandler
             return;
         }
 
+        InputLayer inputLayer = appInstance.inputLayer;
+
+        if (inputLayer == null || !(inputLayer.UsesSteamInput || inputLayer.ResolveConsent() == InputLayerConsent.SteamInput))
+        {
+            return;
+        }
+
         VBoxContainer vbox = new VBoxContainer();
         parentContainer.AddChild(vbox);
 
         vbox.AddChild(new HSeparator());
 
-        Label title = new Label();
-        title.Text = "Controller Mappings";
-        title.ThemeTypeVariation = "MutedLabel";
-        vbox.AddChild(title);
+        VBoxContainer sectionBox = vbox;
 
-        int maxControllers = meta.ControllerConfig.MaxControllers > 0 ? meta.ControllerConfig.MaxControllers : 1;
+        Button toggleButton = new Button();
+        toggleButton.ThemeTypeVariation = "ListButton";
+        toggleButton.Text = "Show Controller Mappings";
+
+        var toggleEntry = settingsListEntryScene.Instantiate<MarginContainer>();
+        toggleEntry.AddChild(toggleButton);
+        sectionBox.AddChild(toggleEntry);
+
+        vbox = new VBoxContainer();
+        vbox.Visible = false;
+        sectionBox.AddChild(vbox);
+
+        VBoxContainer mappingsBox = vbox;
+        toggleButton.Pressed += () =>
+        {
+            mappingsBox.Visible = !mappingsBox.Visible;
+            toggleButton.Text = mappingsBox.Visible ? "Hide Controller Mappings" : "Show Controller Mappings";
+        };
+
+        int maxControllers = meta.ControllerConfig.RemappablePlayerCount;
 
         var allMappings = appInstance.configManager.PlatformInputMappings.ContainsKey(systemSlug)
             ? appInstance.configManager.PlatformInputMappings[systemSlug]

@@ -1149,6 +1149,37 @@ public class MainSceneSettingsHandler
                 fieldBox.AddChild(optionButton);
             }
 
+            else if (field.Type == "usb_bluetooth_adapter")
+            {
+                CarouselButton adapterButton = new CarouselButton();
+                string savedIdentifier = hasValue && element.ValueKind == System.Text.Json.JsonValueKind.String ? element.GetString() : "";
+                var adapterChoices = new List<(string Label, string Identifier)> { ("Automatic", "") };
+
+                foreach (UsbBluetoothAdapter adapter in UsbBluetoothAdapters.List())
+                {
+                    string adapterName = string.IsNullOrEmpty(adapter.Name) ? "Bluetooth Adapter" : adapter.Name;
+                    adapterChoices.Add(($"{adapterName} ({adapter.Identifier})", adapter.Identifier));
+                }
+
+                if (!adapterChoices.Any(choice => choice.Identifier == savedIdentifier))
+                {
+                    adapterChoices.Add(($"Not Found ({savedIdentifier})", savedIdentifier));
+                }
+
+                for (int choiceIndex = 0; choiceIndex < adapterChoices.Count; choiceIndex++)
+                {
+                    adapterButton.AddItem(adapterChoices[choiceIndex].Label, choiceIndex);
+                    adapterButton.SetItemMetadata(choiceIndex, adapterChoices[choiceIndex].Identifier);
+                }
+
+                adapterButton.Select(adapterChoices.FindIndex(choice => choice.Identifier == savedIdentifier));
+                adapterButton.ItemSelected += (long index) =>
+                {
+                    appInstance.emulatorManager.SaveEmulatorSetting(slug, field.Id, adapterButton.GetItemMetadata((int)index).AsString());
+                };
+                fieldBox.AddChild(adapterButton);
+            }
+
             var entry = settingsListEntryScene.Instantiate<SettingsListEntry>();
             entry.GetNode<MarginContainer>("PanelContainer/ContentMargin").AddChild(fieldBox);
             vbox.AddChild(entry);

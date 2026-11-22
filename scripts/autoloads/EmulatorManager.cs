@@ -983,6 +983,8 @@ public class ControllerConfig
     [JsonIgnore]
     public PortLayout ActivePortLayout { get; set; }
 
+    public int RemappablePlayerCount => Math.Min(InputLayer.MaximumPlayers, Math.Max(Math.Max(MaxControllers, 1), PortLayouts?.Layouts?.Values.Max(layout => layout.Ports?.Count ?? 0) ?? 0));
+
     public int PortCount => ActivePortLayout?.Ports != null && ActivePortLayout.Ports.Count > 0 ? ActivePortLayout.Ports.Count : MaxControllers;
 
     public int ResolvePortNumber(ControllerSection controllerSection, int playerIndex)
@@ -1085,6 +1087,7 @@ public partial class EmulatorManager : Node
     private readonly HashSet<string> installingEmulators = new HashSet<string>();
     private Process activeEmulatorProcess = null;
     private Game activeGame = null;
+    private bool activeSessionIsRecomp;
     private DateTime activeSessionStart;
 
     private AppInstance appInstance;
@@ -1140,7 +1143,7 @@ public partial class EmulatorManager : Node
         DateTime sessionEnd = DateTime.UtcNow;
         GD.Print(activeGame != null
             ? $"[Emulator] session ended for {activeGame.Name} after {(sessionEnd - activeSessionStart).TotalSeconds:0}s."
-            : "[Emulator] session ended (launched without a game).");
+            : activeSessionIsRecomp ? "[Recomps] the recomp closed." : "[Emulator] session ended (launched without a game).");
 
         bool joinedSomeoneElsesSession = appInstance.netplayManager?.Role == NetplayRole.Join;
 
@@ -1158,6 +1161,7 @@ public partial class EmulatorManager : Node
 
         activeEmulatorProcess = null;
         activeGame = null;
+        activeSessionIsRecomp = false;
         SetFrontendBackgrounded(false);
         appInstance.inputLayer?.EndSession();
         appInstance.netplayManager?.EndSession();
@@ -1210,7 +1214,7 @@ public partial class EmulatorManager : Node
             return true;
         }
 
-        if (OperatingSystem.IsWindows())
+        if (OperatingSystem.IsWindows() || activeSessionIsRecomp)
         {
             return false;
         }
@@ -2328,6 +2332,17 @@ public partial class EmulatorManager : Node
                 }
             }
 
+            else if (settingField.Type == "usb_bluetooth_adapter")
+            {
+                string adapterIdentifier = hasUserOverride && settingElement.ValueKind == JsonValueKind.String ? settingElement.GetString() : "";
+                UsbBluetoothAdapters.TryParseIdentifier(adapterIdentifier, out int vendorId, out int productId);
+
+                if (!string.IsNullOrEmpty(settingField.LaunchArgFormat))
+                {
+                    settingsArgumentParts.Add(settingField.LaunchArgFormat.Replace("{vid}", vendorId.ToString()).Replace("{pid}", productId.ToString()));
+                }
+            }
+
             else if (settingField.Type == "dropdown" || settingField.Type == "string")
             {
                 string stringSettingValue = settingField.DefaultValueString;
@@ -2466,12 +2481,88 @@ public partial class EmulatorManager : Node
 
         try
         {
-            await LaunchEmulatorWithGameInternal(game);
+            if (game.IsRecomp)
+            {
+                LaunchRecomp(game);
+            }
+
+            else
+            {
+                await LaunchEmulatorWithGameInternal(game);
+            }
         }
 
         finally
         {
             SetEmulatorLaunching(false);
+        }
+    }
+
+    // A recomp is its own program. RecompLauncher starts it, and its --play process stays open
+    // until the game closes, which is what ends the session here.
+    private void LaunchRecomp(Game game)
+    {
+        try
+        {
+            RecompLauncher.AddRomFolders(appInstance.configManager, new[] { appInstance.configManager.RomsPath, appInstance.configManager.LocalLibraryPath });
+            ProcessStartInfo startInfo = RecompLauncher.BuildPlayStartInfo(appInstance.configManager, game.RecompId);
+
+            if (startInfo == null)
+            {
+                GD.PrintErr($"Cannot start {game.Name}: RecompLauncher was not found.");
+                return;
+            }
+
+            GD.Print($"Starting recomp {game.RecompId} through RecompLauncher: {startInfo.FileName}");
+            Process recompProcess = Process.Start(startInfo);
+
+            if (recompProcess == null)
+            {
+                GD.PrintErr("Failed to start RecompLauncher. Process.Start returned null.");
+                return;
+            }
+
+            activeEmulatorProcess = recompProcess;
+            activeGame = null;
+            activeSessionIsRecomp = true;
+            activeSessionStart = DateTime.UtcNow;
+            BeginEmulatorLivenessGrace();
+            SetFrontendBackgrounded(true);
+        }
+
+        catch (Exception exception)
+        {
+            GD.PrintErr($"An exception occurred while starting the recomp: {exception.Message}");
+        }
+    }
+
+    // Opens RecompLauncher's full-screen view, where recomps are found, installed and set up.
+    // RomBox's game folders are added to its scan list first, so it can offer the player's own copies.
+    public bool OpenRecompLauncher(string recompId = null)
+    {
+        if (IsEmulatorLaunching || IsEmulatorRunning)
+        {
+            return false;
+        }
+
+        RecompLauncher.AddRomFolders(appInstance.configManager, new[] { appInstance.configManager.RomsPath, appInstance.configManager.LocalLibraryPath });
+        ProcessStartInfo startInfo = RecompLauncher.BuildBigPictureStartInfo(appInstance.configManager, recompId);
+
+        if (startInfo == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            using Process launcherProcess = Process.Start(startInfo);
+            return launcherProcess != null;
+        }
+
+        catch (Exception exception)
+        {
+            GD.PrintErr($"Could not open RecompLauncher: {exception.Message}");
+            return false;
         }
     }
 
@@ -2813,6 +2904,22 @@ public partial class EmulatorManager : Node
 
         if (closingProcess == null || closingProcess.HasExited)
         {
+            return;
+        }
+
+        if (activeSessionIsRecomp)
+        {
+            // RecompLauncher owns the game. Ending this process tree leaves any other copy of the launcher alone.
+            try
+            {
+                closingProcess.Kill(true);
+            }
+
+            catch (Exception killFailure)
+            {
+                GD.PrintErr($"Could not close the recomp: {killFailure.Message}");
+            }
+
             return;
         }
 
@@ -3364,6 +3471,11 @@ public partial class EmulatorManager : Node
                     : controllerSection.BindingKeyPrefixTemplate.Replace("{port}", portNumber);
 
                 RewriteSectionDeviceBindings(controllerSection, controllerConfig, configFilePath, sectionName, playerIndex, inputLayer, bindingKeyPrefix, deviceView);
+
+                if (controllerConfig.Format == "ini")
+                {
+                    WritePlayerButtonRemaps(controllerSection, controllerConfig, configFilePath, sectionName, playerIndex, inputLayer, deviceView);
+                }
             }
 
             if (writesSections && playerIsPresent && controllerSection.BindingValueReplacements != null)
@@ -3492,7 +3604,7 @@ public partial class EmulatorManager : Node
 
         foreach (var mapping in controllerSection.Mappings)
         {
-            string bindingValue = ResolveDeviceBindingMacros(mapping.Value, playerIndex, inputLayer, deviceView);
+            string bindingValue = ResolveDeviceBindingMacros(ResolvePlatformMacros(mapping.Value, ResolveRemapSystemSlug(inputLayer), controllerConfig, playerIndex), playerIndex, inputLayer, deviceView);
 
             if (bindingValue.Contains('{'))
             {
@@ -3518,6 +3630,62 @@ public partial class EmulatorManager : Node
         if (writtenBindingCount > 0)
         {
             GD.Print($"[InputLayer] wrote {writtenBindingCount} binding(s) into [{sectionName}] for {deviceReplacement}");
+        }
+    }
+
+    private static string ResolveRemapSystemSlug(InputLayer inputLayer)
+    {
+        return inputLayer.IsSteamInputSession ? inputLayer.SessionSystemSlug : null;
+    }
+
+    private void WritePlayerButtonRemaps(ControllerSection controllerSection, ControllerConfig controllerConfig, string configFilePath, string sectionName, int playerIndex, InputLayer inputLayer, EmulatorDeviceView deviceView)
+    {
+        string systemSlug = ResolveRemapSystemSlug(inputLayer);
+
+        if (controllerSection.Mappings == null
+            || string.IsNullOrEmpty(systemSlug)
+            || !appInstance.configManager.PlatformInputMappings.TryGetValue(systemSlug, out var systemRemaps)
+            || !systemRemaps.TryGetValue(playerIndex, out var playerRemaps)
+            || playerRemaps.Count == 0)
+        {
+            return;
+        }
+
+        var iniUpdater = new IniConfigurationUpdater();
+        int writtenRemapCount = 0;
+
+        foreach (var mapping in controllerSection.Mappings)
+        {
+            if (!playerRemaps.Keys.Any(platformButton => mapping.Value.Contains($"{{Platform_{platformButton}}}")))
+            {
+                continue;
+            }
+
+            string bindingValue = ResolveDeviceBindingMacros(ResolvePlatformMacros(mapping.Value, systemSlug, controllerConfig, playerIndex), playerIndex, inputLayer, deviceView);
+
+            if (string.IsNullOrEmpty(bindingValue) || bindingValue.Contains('{'))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(controllerSection.DeviceBindingPattern) && !string.IsNullOrEmpty(controllerSection.DeviceBindingTemplate))
+            {
+                string deviceReplacement = ResolveDeviceBindingMacros(controllerSection.DeviceBindingTemplate, playerIndex, inputLayer, deviceView);
+
+                if (!string.IsNullOrEmpty(deviceReplacement))
+                {
+                    bindingValue = System.Text.RegularExpressions.Regex.Replace(bindingValue, controllerSection.DeviceBindingPattern, deviceReplacement);
+                }
+            }
+
+            string bindingKey = mapping.Key.Replace("{port}", controllerConfig.ResolvePortNumber(controllerSection, playerIndex).ToString());
+            iniUpdater.UpdateValue(configFilePath, sectionName, bindingKey, bindingValue, bindingValue);
+            writtenRemapCount++;
+        }
+
+        if (writtenRemapCount > 0)
+        {
+            GD.Print($"[InputLayer] wrote {writtenRemapCount} remapped button(s) into [{sectionName}] for player {playerIndex + 1}");
         }
     }
 
@@ -3617,7 +3785,7 @@ public partial class EmulatorManager : Node
 
                     foreach (var mapping in sectionDef.Mappings)
                     {
-                        string resolvedValue = ResolvePlatformMacros(mapping.Value, currentGameSystem, controllerConfig, portOffset)
+                        string resolvedValue = ResolvePlatformMacros(mapping.Value, currentGameSystem?.Slug, controllerConfig, portOffset)
                             .Replace("{sdl_index}", sdlIndex.ToString())
                             .Replace("{controller_name}", controllerName);
                         iniUpdater.UpdateValue(configFilePath, sectionName, mapping.Key, resolvedValue, resolvedValue);
@@ -3635,9 +3803,9 @@ public partial class EmulatorManager : Node
         }
     }
 
-    private string ResolvePlatformMacros(string value, GameSystem system, ControllerConfig config, int playerIndex)
+    private string ResolvePlatformMacros(string value, string systemSlug, ControllerConfig config, int playerIndex)
     {
-        if (string.IsNullOrEmpty(value) || system == null || config.PlatformLayout == null) return value;
+        if (string.IsNullOrEmpty(value) || config.PlatformLayout == null) return value;
 
         string result = value;
 
@@ -3649,11 +3817,12 @@ public partial class EmulatorManager : Node
             if (result.Contains(macro))
             {
                 string mappedSdlInput = defaultSdlInput;
-                if (appInstance.configManager.PlatformInputMappings.ContainsKey(system.Slug) &&
-                    appInstance.configManager.PlatformInputMappings[system.Slug].ContainsKey(playerIndex) &&
-                    appInstance.configManager.PlatformInputMappings[system.Slug][playerIndex].ContainsKey(platformButton))
+                if (!string.IsNullOrEmpty(systemSlug) &&
+                    appInstance.configManager.PlatformInputMappings.ContainsKey(systemSlug) &&
+                    appInstance.configManager.PlatformInputMappings[systemSlug].ContainsKey(playerIndex) &&
+                    appInstance.configManager.PlatformInputMappings[systemSlug][playerIndex].ContainsKey(platformButton))
                 {
-                    mappedSdlInput = appInstance.configManager.PlatformInputMappings[system.Slug][playerIndex][platformButton];
+                    mappedSdlInput = appInstance.configManager.PlatformInputMappings[systemSlug][playerIndex][platformButton];
                 }
 
                 string emulatorSpecificString = "";

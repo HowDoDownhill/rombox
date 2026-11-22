@@ -31,6 +31,7 @@ public partial class InputLayer : Node
 
     public bool IsSessionActive { get; private set; }
     public bool IsSteamInputSession { get; private set; }
+    public string SessionSystemSlug { get; private set; }
     public string LastSessionFailureReason { get; private set; } = "";
 
     public override void _Ready()
@@ -152,6 +153,7 @@ public partial class InputLayer : Node
 
         IsSessionActive = true;
         IsSteamInputSession = UsesSteamInput;
+        SessionSystemSlug = systemSlug;
         LastSessionFailureReason = "";
 
         GD.Print($"[InputLayer] session started for '{systemSlug}' with {sessionPlayers.Count} player(s){(IsSteamInputSession ? ", Steam Input" : "")}: {string.Join("; ", sessionPlayers.Select(DescribePlayerForLog))}.");
@@ -210,6 +212,7 @@ public partial class InputLayer : Node
 
         IsSessionActive = false;
         IsSteamInputSession = false;
+        SessionSystemSlug = null;
         sessionPlayers.Clear();
 
         GD.Print("[InputLayer] session ended.");

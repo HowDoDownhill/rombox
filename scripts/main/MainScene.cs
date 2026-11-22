@@ -100,11 +100,11 @@ public partial class MainScene : Control
 
     public SystemJumpPopup systemJumpPopup;
     public ReleasePickerPopup releasePickerPopup;
+    private ReleasePickerPopup recompPickerPopup;
     public UiPanelStack panelStack = new UiPanelStack();
 
     // FishUI's overlays: questions, the quick panel and the radial menu. It reads its own input.
     public OverlayHost overlays;
-    private ulong leftBumperPressedTime = 0;
     private ulong rightBumperPressedTime = 0;
 
     public override void _Ready()
@@ -162,6 +162,12 @@ public partial class MainScene : Control
 
         panelStack.Register(releasePickerPopup);
 
+        recompPickerPopup = new ReleasePickerPopup();
+        AddChild(recompPickerPopup);
+        recompPickerPopup.ReleaseChosen += OnRecompChosen;
+        recompPickerPopup.Closed += OnReleasePickerClosed;
+        panelStack.Register(recompPickerPopup);
+
         systemJumpPopup = new SystemJumpPopup();
         AddChild(systemJumpPopup);
         panelStack.Register(systemJumpPopup);
@@ -203,6 +209,24 @@ public partial class MainScene : Control
             {
                 startMenuPanel.openRomsFolderButton.Visible = !OS.HasFeature("android");
                 startMenuPanel.openRomsFolderButton.Pressed += PopupHandler.OnOpenRomsFolderPressed;
+            }
+
+            if (!OS.HasFeature("android"))
+            {
+                RecompLauncher.AddRomFolders(appInstance.configManager, new[] { appInstance.configManager.RomsPath, appInstance.configManager.LocalLibraryPath });
+            }
+
+            if (startMenuPanel.openRecompLauncherButton != null)
+            {
+                startMenuPanel.openRecompLauncherButton.Visible = !OS.HasFeature("android") && RecompLauncher.IsInstalled(appInstance.configManager);
+                startMenuPanel.openRecompLauncherButton.Pressed += OnOpenRecompLauncherPressed;
+            }
+
+            if (startMenuPanel.getRecompButton != null)
+            {
+                startMenuPanel.getRecompButton.Pressed += OnGetRecompPressed;
+                startMenuPanel.AboutToOpen += UpdateGetRecompButton;
+                UpdateGetRecompButton();
             }
 
             if (startMenuPanel.quitButton != null) startMenuPanel.quitButton.Pressed += PopupHandler.OnQuitPressed;
@@ -568,6 +592,11 @@ public partial class MainScene : Control
             SimulateAction("Back");
         }
 
+        if (what == NotificationApplicationFocusIn)
+        {
+            RefreshRecomps();
+        }
+
         if (what == NotificationApplicationResumed && GameListHandler?.currentlySelectedGame != null)
         {
             GameListHandler.UpdateDetailsPanelButtons(GameListHandler.currentlySelectedGame);
@@ -728,6 +757,8 @@ public partial class MainScene : Control
 
     public void GetCache()
     {
+        RecompLibrary.Merge(appInstance);
+
         if (IsBrowsingCollections)
         {
             GameListHandler.gameSystems = appInstance.dataBus.collectionSystems;
@@ -1019,8 +1050,69 @@ public partial class MainScene : Control
         }
     }
 
+    private void UpdateGetRecompButton()
+    {
+        Game selectedGame = GameListHandler?.currentlySelectedGame;
+        startMenuPanel.getRecompButton.Visible = selectedGame != null
+            && selectedGame.HasAvailableRecomp
+            && !OS.HasFeature("android")
+            && RecompLauncher.IsInstalled(appInstance.configManager);
+    }
+
+    private void OnGetRecompPressed()
+    {
+        Game selectedGame = GameListHandler?.currentlySelectedGame;
+
+        if (selectedGame == null || !selectedGame.HasAvailableRecomp)
+        {
+            return;
+        }
+
+        startMenuPanel?.Close();
+        recompChoices = selectedGame.AvailableRecomps.ToList();
+        recompPickerPopup.Open();
+        recompPickerPopup.PopulateChoices($"Recomps of {selectedGame.Name}", "Pick one to open it in RecompLauncher and install it", recompChoices.Select(recomp => recomp.ProjectName).ToList());
+    }
+
+    private List<CatalogRecomp> recompChoices = new List<CatalogRecomp>();
+
+    private void OnRecompChosen(int index)
+    {
+        if (index < 0 || index >= recompChoices.Count)
+        {
+            return;
+        }
+
+        CatalogRecomp chosenRecomp = recompChoices[index];
+        recompPickerPopup.Close();
+        appInstance.emulatorManager.OpenRecompLauncher(chosenRecomp.Id);
+    }
+
+    private void OnOpenRecompLauncherPressed()
+    {
+        startMenuPanel?.Close();
+        appInstance.emulatorManager.OpenRecompLauncher();
+    }
+
+    // Recomps installed or removed in RecompLauncher show up when RomBox is back in front.
+    private void RefreshRecomps()
+    {
+        if (GameListHandler == null || appInstance?.dataBus == null || !RecompLibrary.Merge(appInstance))
+        {
+            return;
+        }
+
+        GameListHandler.games = appInstance.dataBus.gameCache;
+        GameListHandler.ApplyFiltersAndRefresh();
+    }
+
     private void OnEmulatorLaunchStateChanged()
     {
+        if (!appInstance.emulatorManager.IsEmulatorLaunching && !appInstance.emulatorManager.IsEmulatorRunning)
+        {
+            RefreshRecomps();
+        }
+
         if (GameListHandler.currentlySelectedGame != null)
         {
             GameListHandler.UpdateDetailsPanelButtons(GameListHandler.currentlySelectedGame);
@@ -1034,6 +1126,12 @@ public partial class MainScene : Control
         Game game = GameListHandler.currentlySelectedGame;
         if (game == null) return;
 
+        if (game.IsRecomp)
+        {
+            await DeleteRecomp(game);
+            return;
+        }
+
         bool sure = await overlays.ConfirmHoldAsync($"Delete {game.Name}?",
             "This removes the downloaded game from this device. Your saves stay, and you can download the game again.",
             "Hold to delete", "Keep It");
@@ -1043,6 +1141,28 @@ public partial class MainScene : Control
         GameListHandler.DeleteLocalGame(game);
         GameListHandler.ApplyFiltersAndRefresh();
         GameListHandler.UpdateDetailsPanelButtons(GameListHandler.currentlySelectedGame);
+    }
+
+    private async System.Threading.Tasks.Task DeleteRecomp(Game game)
+    {
+        bool sure = await overlays.ConfirmHoldAsync($"Delete {game.RecompProjectName}?",
+            $"This removes the recomp of {game.Name} from this device. Your own copy of the game stays, and you can install the recomp again.",
+            "Hold to delete", "Keep It");
+
+        if (!sure) return;
+
+        var removal = RecompLauncher.UninstallRecomp(appInstance.configManager, game.RecompId);
+
+        if (!removal.Succeeded)
+        {
+            progressPanel?.ShowStatus($"{game.RecompProjectName} was not deleted. {removal.Error}");
+            await ToSignal(GetTree().CreateTimer(4.0f), "timeout");
+            progressPanel?.Close();
+            gameList?.GrabFocus();
+            return;
+        }
+
+        RefreshRecomps();
     }
 
     public void UpdateHeaderLabel()
@@ -1484,7 +1604,19 @@ public partial class MainScene : Control
 
         if(@event.IsActionPressed("CylceSystemUp") && (downloadsListContainer == null || !downloadsListContainer.IsOpen))
         {
-            rightBumperPressedTime = Time.GetTicksMsec();
+            // Holding the right bumper opens the system list. Every other way to press this switches at once.
+            if (@event is InputEventJoypadButton { ButtonIndex: JoyButton.RightShoulder })
+            {
+                rightBumperPressedTime = Time.GetTicksMsec();
+                return;
+            }
+
+            if (systemCarousel != null && systemCarousel.Next())
+            {
+                GameListHandler.BeginQuickSwitchFade();
+            }
+
+            GetViewport().SetInputAsHandled();
             return;
         }
         else if (@event.IsActionReleased("CylceSystemUp"))
@@ -1503,19 +1635,11 @@ public partial class MainScene : Control
 
         if (@event.IsActionPressed("CycleSystemDown") && (downloadsListContainer == null || !downloadsListContainer.IsOpen))
         {
-            leftBumperPressedTime = Time.GetTicksMsec();
-            return;
-        }
-        else if (@event.IsActionReleased("CycleSystemDown"))
-        {
-            if (leftBumperPressedTime > 0 && Time.GetTicksMsec() - leftBumperPressedTime < 250)
+            if (systemCarousel != null && systemCarousel.Previous())
             {
-                if (systemCarousel != null && systemCarousel.Previous())
-                {
-                    GameListHandler.BeginQuickSwitchFade();
-                }
+                GameListHandler.BeginQuickSwitchFade();
             }
-            leftBumperPressedTime = 0;
+
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -1700,13 +1824,6 @@ public partial class MainScene : Control
 
         if (rightBumperPressedTime > 0 && currentTime - rightBumperPressedTime >= 250)
         {
-            rightBumperPressedTime = 0;
-            leftBumperPressedTime = 0;
-            OpenSystemJumpPopup();
-        }
-        else if (leftBumperPressedTime > 0 && currentTime - leftBumperPressedTime >= 250)
-        {
-            leftBumperPressedTime = 0;
             rightBumperPressedTime = 0;
             OpenSystemJumpPopup();
         }

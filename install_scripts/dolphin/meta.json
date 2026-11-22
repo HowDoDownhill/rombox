@@ -101,6 +101,14 @@
       "operating_systems": ["windows", "linux"],
       "launch_arg_true": "-C Dolphin.BluetoothPassthrough.Enabled=True",
       "launch_arg_false": "-C Dolphin.BluetoothPassthrough.Enabled=False"
+    },
+    {
+      "id": "bluetooth_passthrough_adapter",
+      "category": "Controllers",
+      "label": "Wii Bluetooth Adapter to Use",
+      "type": "usb_bluetooth_adapter",
+      "operating_systems": ["windows", "linux"],
+      "launch_arg_format": "-C Dolphin.BluetoothPassthrough.VID={vid} -C Dolphin.BluetoothPassthrough.PID={pid}"
     }
   ],
   "preserve_on_reinstall": [

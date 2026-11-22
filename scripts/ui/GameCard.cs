@@ -106,6 +106,28 @@ public partial class GameCard : Control, ICarouselItem, IGameListItem
         }
     }
 
+    private const float BadgeInset = 8.0f;
+    private GameBadge badge;
+
+    public string Badge
+    {
+        set
+        {
+            if (badge == null)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    return;
+                }
+
+                badge = new GameBadge { Position = new Vector2(CardPadding + BadgeInset, CardPadding + BadgeInset) };
+                Body.AddChild(badge);
+            }
+
+            badge.Text = value;
+        }
+    }
+
     private bool selected;
 
     public bool Selected

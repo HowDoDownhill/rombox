@@ -75,6 +75,14 @@ it move up.
 Steam keeps the controllers' layout and any per-game remapping you set in Steam. Emulators started
 by the app inherit Steam's hooks, so the Steam overlay works in-game.
 
+### Changing buttons
+
+With Steam Input chosen, the settings page for GameCube, Wii, PlayStation and PlayStation 2 has a
+**Show Controller Mappings** button. Open it, pick a console button for a player, and press the
+button on your controller that should do that job. RomBox writes the buttons you changed into the
+emulator before each game started from Steam. Buttons you leave alone keep the emulator's own
+setting.
+
 ## Manual
 
 RomBox writes nothing to emulator controller bindings or device settings. Configure each emulator once from its own

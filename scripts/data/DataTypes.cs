@@ -196,6 +196,27 @@ public class Game
 
     [JsonIgnore]
     public GameSystem System { get; set; }
+
+    // RecompLauncher's id for a recomp installed through it. These games start their own program
+    // and never an emulator.
+    [JsonIgnore]
+    public string RecompId { get; set; }
+
+    [JsonIgnore]
+    public string RecompProjectName { get; set; }
+
+    [JsonIgnore]
+    public string RecompLogoUrl { get; set; }
+
+    [JsonIgnore]
+    public bool IsRecomp => !string.IsNullOrEmpty(RecompId);
+
+    // Recomps of this game that RecompLauncher's catalog offers and that are not installed yet.
+    [JsonIgnore]
+    public List<CatalogRecomp> AvailableRecomps { get; set; }
+
+    [JsonIgnore]
+    public bool HasAvailableRecomp => AvailableRecomps != null && AvailableRecomps.Count > 0;
 }
 
 public class RomMetadatum

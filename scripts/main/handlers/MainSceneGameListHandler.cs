@@ -89,15 +89,20 @@ public partial class MainSceneGameListHandler
     {
         string status = null;
 
-        if (appInstance.Library.Has(LibraryFeatures.Downloads))
+        if (appInstance.Library.Has(LibraryFeatures.Downloads) || game.IsRecomp)
         {
             status = CheckIfGameIsDownloaded(game) ? "Installed" : "Not Installed";
+        }
+
+        if (game.IsRecomp)
+        {
+            status = "Recomp  \u00b7  Installed";
         }
 
         // A disc index is only a few bytes, which says nothing about the game's size.
         string extension = System.IO.Path.GetExtension(game.LocalFilename ?? "").ToLowerInvariant();
         bool sizeIsMeaningful = game.FileSizeBytes > 0 && extension != ".cue" && extension != ".m3u" && extension != ".gdi";
-        string mappedEmulator = appInstance.emulatorManager.GetMappedEmulator(game.PlatformSlug);
+        string mappedEmulator = game.IsRecomp ? null : appInstance.emulatorManager.GetMappedEmulator(game.PlatformSlug);
 
         DetailsLayout.SetFacts(status, status == "Installed", new[]
         {
@@ -105,7 +110,9 @@ public partial class MainSceneGameListHandler
             ("Released", game.ReleaseYear),
             ("Company", game.Company),
             ("Size", sizeIsMeaningful ? DownloadProgressDisplay.FormatBytes(game.FileSizeBytes) : null),
-            ("Emulator", string.IsNullOrEmpty(mappedEmulator) ? null : appInstance.emulatorManager.GetEmulatorDisplayName(mappedEmulator))
+            ("Emulator", string.IsNullOrEmpty(mappedEmulator) ? null : appInstance.emulatorManager.GetEmulatorDisplayName(mappedEmulator)),
+            ("Recomp", game.IsRecomp ? game.RecompProjectName : null),
+            ("Recomp Available", game.HasAvailableRecomp ? string.Join(", ", game.AvailableRecomps.Take(3).Select(recomp => recomp.ProjectName)) : null)
         });
     }
 
@@ -729,6 +736,7 @@ public partial class MainSceneGameListHandler
         cardsWithLoadedCover.Remove(card);
 
         item.Title = game.Name;
+        item.Badge = game.IsRecomp ? "Recomp" : game.HasAvailableRecomp ? "Recomp Available" : null;
         item.Selected = currentlySelectedGame != null && currentlySelectedGame.Id == game.Id;
         item.SetCover(mainScene.placeholderTexture, true);
         item.SetInstalledIcon(null);
@@ -793,6 +801,11 @@ public partial class MainSceneGameListHandler
 
     public bool CheckIfGameIsDownloaded(Game game)
     {
+        if (game.IsRecomp)
+        {
+            return true;
+        }
+
         if (game.Files == null || !game.Files.Any())
         {
             return false;
@@ -1462,11 +1475,31 @@ public partial class MainSceneGameListHandler
         }
     }
 
+    private GameActionState ResolveRecompAction()
+    {
+        if (appInstance.emulatorManager.IsEmulatorLaunching)
+        {
+            return new GameActionState { Kind = GameActionKind.Unavailable, Label = "Starting...", Disabled = true };
+        }
+
+        if (appInstance.emulatorManager.IsEmulatorRunning)
+        {
+            return new GameActionState { Kind = GameActionKind.Unavailable, Label = "Running", Disabled = true };
+        }
+
+        return new GameActionState { Kind = GameActionKind.LaunchGame, Label = "Play", Disabled = false };
+    }
+
     public GameActionState ResolveGameAction(Game game)
     {
         if (game == null)
         {
             return new GameActionState { Kind = GameActionKind.Unavailable, Label = "Play", Disabled = true };
+        }
+
+        if (game.IsRecomp)
+        {
+            return ResolveRecompAction();
         }
 
         string mappedEmulator = appInstance.emulatorManager.GetMappedEmulator(game.PlatformSlug);
@@ -1574,7 +1607,7 @@ public partial class MainSceneGameListHandler
 
         if (mainScene.deleteBtn != null)
         {
-            SetFooterButtonVisible(mainScene.deleteBtn, appInstance.Library.Has(LibraryFeatures.Downloads));
+            SetFooterButtonVisible(mainScene.deleteBtn, appInstance.Library.Has(LibraryFeatures.Downloads) || game.IsRecomp);
             mainScene.deleteBtn.Disabled = isInLobby
                 || !isGameDownloadedLocally
                 || appInstance.emulatorManager.IsEmulatorLaunching

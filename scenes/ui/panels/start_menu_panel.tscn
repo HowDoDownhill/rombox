@@ -11,7 +11,7 @@ script = ExtResource("4_damper")
 [sub_resource type="Resource" id="Resource_drag"]
 script = ExtResource("4_damper")
 
-[node name="StartMenuPanel" type="Control" node_paths=PackedStringArray("ContentRoot", "menuView", "biosView", "optionsList", "biosList", "launchEmulatorButton", "updateEmulatorButton", "uninstallEmulatorButton", "selectBiosButton", "favoriteGameButton", "hostNetplayButton", "joinNetplayButton", "netplayView", "netplayCodeLabel", "netplayInfoLabel", "assignControllersButton", "settingsButton", "randomGameButton", "refreshAllGamesButton", "refreshCurrentSystemButton", "openRomsFolderButton", "quitButton")]
+[node name="StartMenuPanel" type="Control" node_paths=PackedStringArray("ContentRoot", "menuView", "biosView", "optionsList", "biosList", "launchEmulatorButton", "updateEmulatorButton", "uninstallEmulatorButton", "selectBiosButton", "favoriteGameButton", "hostNetplayButton", "joinNetplayButton", "netplayView", "netplayCodeLabel", "netplayInfoLabel", "assignControllersButton", "settingsButton", "randomGameButton", "refreshAllGamesButton", "refreshCurrentSystemButton", "openRomsFolderButton", "openRecompLauncherButton", "getRecompButton", "quitButton")]
 visible = false
 layout_mode = 3
 anchors_preset = 11
@@ -43,6 +43,8 @@ randomGameButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/RandomGam
 refreshAllGamesButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/RefreshAllGamesButton")
 refreshCurrentSystemButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/RefreshCurrentSystemsGamesButton")
 openRomsFolderButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/OpenRomsFolderButton")
+openRecompLauncherButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/OpenRecompLauncherButton")
+getRecompButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/GetRecompButton")
 quitButton = NodePath("Panel/StartMenuContainer/Scroll/StartMenu/QuitButton")
 
 [node name="Panel" type="Panel" parent="."]
@@ -130,6 +132,16 @@ text = "Refresh Current System"
 theme_type_variation = &"ListButton"
 layout_mode = 2
 text = "Open ROMs Folder"
+
+[node name="GetRecompButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"ListButton"
+layout_mode = 2
+text = "Get the Recomp of This Game"
+
+[node name="OpenRecompLauncherButton" type="Button" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
+theme_type_variation = &"ListButton"
+layout_mode = 2
+text = "Find and Install Recomps"
 
 [node name="PlayTogetherHeading" type="Label" parent="Panel/StartMenuContainer/Scroll/StartMenu"]
 theme_type_variation = &"CaptionLabel"

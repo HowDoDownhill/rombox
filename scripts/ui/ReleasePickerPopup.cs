@@ -118,6 +118,39 @@ public partial class ReleasePickerPopup : UiPanel
         }
     }
 
+    // A plain list to pick one of. ReleaseChosen carries the picked entry's position.
+    public void PopulateChoices(string title, string status, IReadOnlyList<string> choices)
+    {
+        Releases = new List<ReleaseOption>();
+        titleLabel.Text = title;
+        statusLabel.Text = status;
+        statusLabel.Visible = !string.IsNullOrEmpty(status);
+        ClearReleaseList();
+
+        for (int i = 0; i < choices.Count; i++)
+        {
+            int index = i;
+
+            var entryButton = new Button
+            {
+                Alignment = HorizontalAlignment.Left,
+                CustomMinimumSize = new Vector2(400, 44),
+                Text = choices[i],
+                ThemeTypeVariation = "ListButton"
+            };
+
+            entryButton.Pressed += () => EmitSignal(SignalName.ReleaseChosen, index);
+            releaseListContainer.AddChild(entryButton);
+        }
+
+        UpdateScrollHeight(choices.Count);
+
+        if (releaseListContainer.GetChildCount() > 0)
+        {
+            releaseListContainer.GetChild<Button>(0).GrabFocus();
+        }
+    }
+
     private static string BuildEntryText(ReleaseOption release, string installedVersion)
     {
         string entryText = string.IsNullOrEmpty(release.PublishedDate)

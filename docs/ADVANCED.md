@@ -197,7 +197,7 @@ applied as a launch argument or written into the emulator's config file.
 |---|---|
 | `id`, `label` | Identifier and on-screen name |
 | `category` | Heading the setting sits under on the settings page, such as `Display`, `System` or `Controllers`. Settings with the same category are shown together. |
-| `type` | `boolean`, `dropdown` or `hidden` |
+| `type` | `boolean`, `dropdown`, `hidden`, or `usb_bluetooth_adapter` for a list of USB Bluetooth adapters whose choice fills `{vid}` and `{pid}` in `launch_arg_format` (both `-1` for Automatic) |
 | `default_value_bool`, `default_value_string` | Defaults; strings accept macros such as `{game_id}` |
 | `launch_arg_true`, `launch_arg_false` | Arguments for a boolean |
 | `launch_arg_format` | Argument for a dropdown, such as `-res {value}` |
@@ -233,6 +233,11 @@ controller config file before every launch.
 a Wii or Wii U Bluetooth module on a USB adapter board. Wii Remotes then connect as they do to a
 console, with their speaker and add-ons working. It is offered on Windows and Linux.
 
+**Wii Bluetooth Adapter to Use** picks which adapter Dolphin takes. Automatic lets Dolphin take the
+first one it can open. The list shows the Bluetooth adapters RomBox finds when the settings page
+opens, so plug the adapter in before starting RomBox. On Windows the list also shows adapters that
+were set up before and are unplugged now.
+
 Set the adapter up once before turning it on:
 
 - Windows: install the WinUSB driver for the adapter with [Zadig](https://zadig.akeo.ie/). Windows
@@ -242,6 +247,32 @@ Set the adapter up once before turning it on:
 Dolphin's [Bluetooth Passthrough guide](https://wiki.dolphin-emu.org/index.php?title=Bluetooth_Passthrough)
 has the steps for both. To pair a remote, open Dolphin with **Start > Launch Current Emulator**,
 open **Controllers**, press **Sync**, then press the red button on the remote.
+
+## Recomps
+
+A recomp is a console game rebuilt as its own PC program. RomBox works with
+[RecompLauncher](https://github.com/elripalda/RecompLauncher), which finds, installs, sets up and
+updates them. Install RecompLauncher first; RomBox finds it on Windows and Linux.
+
+- Recomps installed in RecompLauncher appear in the game list of the console they came from, with
+  a **Recomp** badge. A recomp for a console your library has no system for is not listed.
+- A game in your library that has a recomp you have not installed carries a **Recomp Available**
+  badge. Select it and choose **Start > Get the Recomp of This Game** for the list of its recomps.
+  Picking one opens its page in RecompLauncher, where you install it.
+- **Play** starts the recomp through RecompLauncher. No emulator is started.
+- **Delete** removes an installed recomp and its folder. Close RecompLauncher first.
+- **Start > Find and Install Recomps** opens RecompLauncher's full-screen view.
+- New recomps show in RomBox when you come back to it.
+
+When it starts, RomBox tells RecompLauncher which games are in its ROMs folder and your local
+library folder, so RecompLauncher can offer your own copy during setup. It writes this into
+RecompLauncher's `library.json` while RecompLauncher is closed, and keeps the previous file
+beside it as `library.json.rombox-backup`. A copy of RecompLauncher inside RomBox's
+`recomplauncher` folder with a `portable.txt` beside it keeps its data and installed recomps in
+that folder.
+
+Holding the close hotkey ends RomBox's session. It may leave the recomp running when
+RecompLauncher was already open before you pressed Play.
 
 ## Custom themes
 

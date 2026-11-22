@@ -634,6 +634,7 @@ public class MainScenePopupHandler
             appInstance.cacheManager?.SaveCache(appInstance.dataBus.systems, appInstance.dataBus.gameCache);
         }
 
+        RecompLibrary.Merge(appInstance);
         mainScene.GameListHandler.games = appInstance.dataBus.gameCache;
         mainScene.GameListHandler.ApplyFiltersAndRefresh();
 
