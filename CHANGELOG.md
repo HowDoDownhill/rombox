@@ -1,3 +1,22 @@
+RomBox - Version 1.4.92 Changelog (test build)
+
+✨ New Features
+
+    Install RecompLauncher From RomBox: When RecompLauncher isn't found, the menu has Install RecompLauncher. RomBox downloads the newest version into its own folder. On Windows that copy keeps its data and the recomps it installs inside RomBox's folder.
+    Move RecompLauncher Into RomBox (Windows): If RecompLauncher is already installed, Move RecompLauncher Into RomBox copies it and what it remembers into RomBox's folder and uses that copy from then on. Recomps you already installed stay where they are.
+
+🐛 Fixes
+
+    Controller in RecompLauncher When Started From Steam: With Steam Input on, RecompLauncher opened from RomBox did not respond to the controller. RomBox now starts it so it reads your controllers itself.
+
+⚠️ Good to Know
+
+    Steam Input button changes do not apply inside RecompLauncher or a recomp started through it.
+    Move RecompLauncher Into RomBox leaves the copy you had in place. Uninstall it yourself afterwards.
+    On Linux, RecompLauncher's data stays in your user data folder.
+
+---
+
 RomBox - Version 1.4.91 Changelog (test build)
 
 ✨ New Features
