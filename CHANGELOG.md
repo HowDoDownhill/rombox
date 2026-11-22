@@ -1,3 +1,29 @@
+RomBox - Version 1.4.91 Changelog (test build)
+
+✨ New Features
+
+    Recomps: RomBox now works with RecompLauncher, which installs console games rebuilt as their own PC programs. A recomp you install there appears under its console with a Recomp badge, and Play starts it without an emulator.
+    See Which Games Have a Recomp: A game in your library that has a recomp carries a Recomp Available badge. Select it, open the menu and choose Get the Recomp of This Game for a list. Picking one opens its page in RecompLauncher, where you install it.
+    Delete a Recomp: The Delete button removes an installed recomp and its folder. Close RecompLauncher first.
+    Change Buttons (Steam Input): With Controller Setup on Steam Input, the settings pages for GameCube, Wii, PlayStation and PlayStation 2 have Show Controller Mappings. Pick a console button for a player and press the controller button that should do that job.
+    Pick the Wii Bluetooth Adapter (Dolphin): Wii Bluetooth Adapter to Use lists the USB Bluetooth adapters RomBox finds. Automatic leaves the choice to Dolphin.
+
+🔧 Changes
+
+    Only RB Opens the System List: Hold RB to pick a system from a list. Holding LB no longer opens it.
+    Triggers No Longer Change System: LT and RT on their own do nothing in the game list. Pulling both together still opens the Quick Actions ring.
+    Thinner Scroll Bars: Scroll bars are a thin rounded thumb with no track.
+
+⚠️ Good to Know
+
+    Recomps need RecompLauncher installed. RomBox finds it on Windows and Linux; install it from github.com/elripalda/RecompLauncher.
+    Some recomps ask for your game file the first time they start. Choose it in the recomp's own window.
+    When it starts, RomBox tells RecompLauncher which games are in its ROMs folder, so RecompLauncher can offer your own copy during setup. It does this while RecompLauncher is closed.
+    A recomp for a console your library has no system for is not listed.
+    Button changes are written before each game started from Steam, for the buttons you changed. Keyboard keys are not accepted as a button.
+
+---
+
 RomBox - Version 1.4.90 Changelog (test build)
 
 ✨ New Features
