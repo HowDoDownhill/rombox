@@ -252,7 +252,16 @@ open **Controllers**, press **Sync**, then press the red button on the remote.
 
 A recomp is a console game rebuilt as its own PC program. RomBox works with
 [RecompLauncher](https://github.com/elripalda/RecompLauncher), which finds, installs, sets up and
-updates them. Install RecompLauncher first; RomBox finds it on Windows and Linux.
+updates them.
+
+- **Start > Install RecompLauncher** downloads the newest RecompLauncher into RomBox's
+  `recomplauncher` folder, on Windows and Linux. On Windows that copy keeps its data, its browser
+  data and the recomps it installs inside that folder. On Linux the program is in that folder and
+  its data stays in your user data folder.
+- **Start > Move RecompLauncher Into RomBox** appears on Windows when RecompLauncher is installed
+  the usual way. RomBox copies the program and what it remembers into its `recomplauncher` folder
+  and uses that copy from then on. Recomps you already installed stay where they are and keep
+  working. The copy you had is left in place for you to uninstall.
 
 - Recomps installed in RecompLauncher appear in the game list of the console they came from, with
   a **Recomp** badge. A recomp for a console your library has no system for is not listed.

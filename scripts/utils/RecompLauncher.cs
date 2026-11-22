@@ -420,6 +420,14 @@ public static class RecompLauncher
         }
     }
 
+    private static readonly string[] SteamControllerVariables =
+    {
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES",
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT",
+        "SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD",
+        "SteamVirtualGamepadInfo"
+    };
+
     private static ProcessStartInfo BuildStartInfo(ConfigManager configManager, params string[] arguments)
     {
         string executablePath = FindExecutable(configManager);
@@ -439,6 +447,14 @@ public static class RecompLauncher
         foreach (string argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
+        }
+
+        // Started from Steam with Steam Input on, RomBox is told to ignore every physical controller
+        // and read Steam's stand-in pad. That stand-in does not reach RecompLauncher, so with the
+        // same instructions it sees no controller at all. Without them it reads the controllers itself.
+        foreach (string steamControllerVariable in SteamControllerVariables)
+        {
+            startInfo.Environment.Remove(steamControllerVariable);
         }
 
         // The launcher's window is a web view, which keeps its own data in the user's profile unless told otherwise.

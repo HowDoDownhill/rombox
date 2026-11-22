@@ -218,15 +218,19 @@ public partial class MainScene : Control
 
             if (startMenuPanel.openRecompLauncherButton != null)
             {
-                startMenuPanel.openRecompLauncherButton.Visible = !OS.HasFeature("android") && RecompLauncher.IsInstalled(appInstance.configManager);
                 startMenuPanel.openRecompLauncherButton.Pressed += OnOpenRecompLauncherPressed;
             }
 
             if (startMenuPanel.getRecompButton != null)
             {
                 startMenuPanel.getRecompButton.Pressed += OnGetRecompPressed;
-                startMenuPanel.AboutToOpen += UpdateGetRecompButton;
-                UpdateGetRecompButton();
+                startMenuPanel.AboutToOpen += UpdateRecompMenuOptions;
+                UpdateRecompMenuOptions();
+            }
+
+            if (startMenuPanel.moveRecompLauncherButton != null)
+            {
+                startMenuPanel.moveRecompLauncherButton.Pressed += OnMoveRecompLauncherPressed;
             }
 
             if (startMenuPanel.quitButton != null) startMenuPanel.quitButton.Pressed += PopupHandler.OnQuitPressed;
@@ -1050,13 +1054,71 @@ public partial class MainScene : Control
         }
     }
 
-    private void UpdateGetRecompButton()
+    private void UpdateRecompMenuOptions()
     {
+        bool isInstalled = RecompLauncher.IsInstalled(appInstance.configManager);
         Game selectedGame = GameListHandler?.currentlySelectedGame;
-        startMenuPanel.getRecompButton.Visible = selectedGame != null
-            && selectedGame.HasAvailableRecomp
-            && !OS.HasFeature("android")
-            && RecompLauncher.IsInstalled(appInstance.configManager);
+
+        startMenuPanel.getRecompButton.Visible = isInstalled && selectedGame != null && selectedGame.HasAvailableRecomp;
+
+        if (startMenuPanel.openRecompLauncherButton != null)
+        {
+            startMenuPanel.openRecompLauncherButton.Visible = RecompLauncherInstaller.IsSupportedHere;
+            startMenuPanel.openRecompLauncherButton.Text = isInstalled ? "Find and Install Recomps" : "Install RecompLauncher";
+            startMenuPanel.openRecompLauncherButton.Disabled = isInstallingRecompLauncher;
+        }
+
+        if (startMenuPanel.moveRecompLauncherButton != null)
+        {
+            startMenuPanel.moveRecompLauncherButton.Visible = RecompLauncherInstaller.CanMoveIntoRomBox(appInstance.configManager);
+        }
+    }
+
+    private bool isInstallingRecompLauncher;
+
+    private async void InstallRecompLauncher()
+    {
+        if (isInstallingRecompLauncher)
+        {
+            return;
+        }
+
+        isInstallingRecompLauncher = true;
+        progressPanel?.ShowStatus("Getting RecompLauncher...");
+
+        var installation = await RecompLauncherInstaller.InstallAsync(appInstance, status => progressPanel?.SetStatus(status));
+
+        progressPanel?.SetProgress(100);
+        progressPanel?.SetStatus(installation.Succeeded
+            ? "RecompLauncher is installed. Open Find and Install Recomps to set it up."
+            : $"RecompLauncher was not installed. {installation.Error}");
+
+        await ToSignal(GetTree().CreateTimer(4.0f), "timeout");
+        progressPanel?.Close();
+        isInstallingRecompLauncher = false;
+        gameList?.GrabFocus();
+    }
+
+    private async void OnMoveRecompLauncherPressed()
+    {
+        startMenuPanel?.Close();
+
+        bool sure = await overlays.ConfirmHoldAsync("Move RecompLauncher into RomBox?",
+            "RomBox copies RecompLauncher and what it remembers into its own folder and uses that copy from now on. Your installed recomps stay where they are. The copy you have now is left alone, and you can uninstall it afterwards.",
+            "Hold to move", "Not Now");
+
+        if (!sure) return;
+
+        var move = RecompLauncherInstaller.MoveIntoRomBox(appInstance.configManager);
+
+        progressPanel?.ShowStatus(move.Succeeded
+            ? "RecompLauncher now runs from RomBox's folder."
+            : $"RecompLauncher was not moved. {move.Error}", 100);
+
+        await ToSignal(GetTree().CreateTimer(4.0f), "timeout");
+        progressPanel?.Close();
+        RefreshRecomps();
+        gameList?.GrabFocus();
     }
 
     private void OnGetRecompPressed()
@@ -1091,6 +1153,13 @@ public partial class MainScene : Control
     private void OnOpenRecompLauncherPressed()
     {
         startMenuPanel?.Close();
+
+        if (!RecompLauncher.IsInstalled(appInstance.configManager))
+        {
+            InstallRecompLauncher();
+            return;
+        }
+
         appInstance.emulatorManager.OpenRecompLauncher();
     }
 
